@@ -85,6 +85,26 @@ namespace ProcBuild
             return Intersects(new RoomInstance(part, transform));
         }
 
+        public IEnumerable<MyObjectBuilder_CubeBlock> CubeBlocks
+        {
+            get
+            {
+                var i = 0;
+                Color[] cols = { Color.Brown, Color.AliceBlue, Color.HotPink, Color.Aqua, Color.Lime, Color.Chocolate, Color.DarkSalmon };
+                foreach (var room in m_rooms)
+                {
+                    var col = cols[i++ % cols.Length];
+                    foreach (var block in room.m_part.m_grid.CubeBlocks)
+                    {
+                        var cb = BlockTransformations.CopyAndTransform(block, room.Transform);
+                        cb.ColorMaskHSV = col.ColorToHSV();
+                        yield return cb;
+                        //grid.CubeBlocks.Add(cb);
+                    }
+                }
+            }
+        }
+
         public MyObjectBuilder_CubeGrid CubeGrid
         {
             get
@@ -101,13 +121,9 @@ namespace ProcBuild
                     ZMirroxPlane = null,
                     PersistentFlags = MyPersistentEntityFlags2.InScene,
                     DisplayName = "GenGrid_" + GetHashCode(),
-                    //                    EntityId = ((long)SessionCore.RANDOM.Next()) ^ (((long)GetHashCode()) << 31)
                     EntityId = 0
                 };
-                foreach (var room in m_rooms)
-                    foreach (var block in room.m_part.m_grid.CubeBlocks)
-                        grid.CubeBlocks.Add(BlockTransformations.CopyAndTransform(block, room.Transform));
-                grid.DisplayName = "GenGrid";
+                grid.CubeBlocks.Add(CubeBlocks.First());
                 return grid;
             }
         }

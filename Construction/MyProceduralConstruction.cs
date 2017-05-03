@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using VRage;
+using VRage.Game;
 using VRageMath;
 
 namespace ProcBuild.Construction
@@ -41,6 +42,16 @@ namespace ProcBuild.Construction
             m_maxID++;
             return m_maxID;
         }
+
+        public bool CubeExists(Vector3I pos)
+        {
+            return m_rooms.Values.Any(room => room.CubeExists(pos));
+        }
+
+        public MyObjectBuilder_CubeBlock GetCubeAt(Vector3I pos)
+        {
+            return m_rooms.Values.Select(room => room.GetCubeAt(pos)).FirstOrDefault(ob => ob != null);
+        }
     }
 
     public class MyProceduralRoom
@@ -48,7 +59,7 @@ namespace ProcBuild.Construction
         public MyProceduralConstruction Owner { get; private set; }
         public long RoomID { get; private set; }
         public MyPart Prefab { get; private set; }
-        private MatrixI m_transform;
+        private MatrixI m_transform, m_invTransform;
         public MyProceduralMountPoint[] MountPoints { get; private set; }
 
         public MyProceduralRoom()
@@ -78,11 +89,23 @@ namespace ProcBuild.Construction
             set
             {
                 m_transform = value;
+                MatrixI.Invert(ref m_transform, out m_invTransform);
                 BoundingBox = MyUtilities.TransformBoundingBox(Prefab.m_boundingBox, value);
             }
         }
 
         public BoundingBox BoundingBox { get; private set; }
+
+
+        public bool CubeExists(Vector3I pos)
+        {
+            return BoundingBox.Contains((Vector3)pos) == ContainmentType.Contains && Prefab.CubeExists(Vector3I.Transform(pos, ref m_invTransform));
+        }
+
+        public MyObjectBuilder_CubeBlock GetCubeAt(Vector3I pos)
+        {
+            return BoundingBox.Contains((Vector3)pos) == ContainmentType.Contains ? Prefab.GetCubeAt(Vector3I.Transform(pos, ref m_invTransform)) : null;
+        }
     }
 
     public class MyProceduralMountPoint

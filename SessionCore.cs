@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -94,6 +95,10 @@ namespace ProcBuild
                         int.TryParse(messageText.Substring(6).Trim(), out count);
                     MyAPIGateway.Utilities.ShowMessage("ProcBuild", "List Mount Points");
                     Logger.Log("Try spawn");
+                    Stopwatch watch = new Stopwatch();
+                    watch.Reset();
+                    watch.Start();
+
                     var a = PartManager.First();
                     var builder = new MyGridBuilder();
                     builder.Add(a, new MatrixI(Base6Directions.Direction.Forward, Base6Directions.Direction.Up));
@@ -110,20 +115,29 @@ namespace ProcBuild
                                     foreach (var mat in mats)
                                         available.Add(MyTuple.Create(point.Item1, point.Item2, new MyGridBuilder.RoomInstance(type, MyUtilities.Multiply(mat, point.Item1.Transform)), other.Value));
                                 }
-                        available.RemoveWhere(x => builder.Intersects(x.Item3));
-                        var num = available.Count;
-                        Logger.Log("Available {0} of {1}", num, mountPoints.Count);
-                        if (num <= 0) break;
-                        var result = available.ElementAt(SessionCore.RANDOM.Next(0, num));
-                        builder.Add(result.Item3);
-                        result.Item1.m_freeMounts.Remove(result.Item2);
-                        result.Item3.m_freeMounts.Remove(result.Item4);
-                        Logger.Log("Added {0} at \r\n{1}", result.Item3.m_part.m_prefab.Id.SubtypeName, FormatMatrix(result.Item3.Transform));
+                        for (var tri = 0; tri < 10 && available.Any(); tri++)
+                        {
+                            var result = available.ElementAt(SessionCore.RANDOM.Next(0, available.Count - 1));
+                            if (builder.Intersects(result.Item3)) continue;
+                            builder.Add(result.Item3);
+                            result.Item1.m_freeMounts.Remove(result.Item2);
+                            result.Item3.m_freeMounts.Remove(result.Item4);
+                            Logger.Log("Added {0} (number {1}) at {2}", result.Item3.m_part.m_prefab.Id.SubtypeName, builder.Rooms.Count(), result.Item3.Transform.Translation);
+                            break;
+                        }
                     }
+                    var generate = watch.Elapsed;
+                    watch.Restart();
                     var grid = builder.CubeGrid;
+                    var build = watch.Elapsed;
                     grid.PositionAndOrientation = new MyPositionAndOrientation(MyAPIGateway.Session.Player.GetPosition(), Vector3D.Up, Vector3D.Right);
-                    MyAPIGateway.Entities.CreateFromObjectBuilderAndAdd(grid);
-                    MyAPIGateway.Utilities.ShowMessage("ProcBuild", "Didn't die ^^\\_(``/)_/^^");
+                    watch.Restart();
+                    var entity = MyAPIGateway.Entities.CreateFromObjectBuilderAndAdd(grid) as IMyCubeGrid;
+                    if (entity != null)
+                        foreach (var b in builder.CubeBlocks)
+                            entity.AddBlock(b, false);
+                    var add = watch.Elapsed;
+                    MyAPIGateway.Utilities.ShowMessage("ProcBuild", "Generated " + builder.Rooms.Count() + " rooms in " + generate + ", built in " + build + ", added in " + add);
                 }
                 catch (Exception e)
                 {

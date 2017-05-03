@@ -69,7 +69,9 @@ namespace ProcBuild
             points.Add(block);
         }
 
-        public HashSet<MatrixI> GetTransform(MyPartMount otherMount)
+        private MyCache<MyPartMount, HashSet<MatrixI>> m_mountCache = new MyCache<MyPartMount, HashSet<MatrixI>>(128);
+
+        private HashSet<MatrixI> GetTransformInternal(MyPartMount otherMount)
         {
             if (m_blocks.Count == 0) return null;
             var options = new HashSet<MatrixI>();
@@ -88,6 +90,11 @@ namespace ProcBuild
                 init = true;
             }
             return options.Count > 0 ? options : null;
+        }
+
+        public HashSet<MatrixI> GetTransform(MyPartMount otherMount)
+        {
+            return m_mountCache.GetOrCreate(otherMount, GetTransformInternal);
         }
     }
 
@@ -131,7 +138,7 @@ namespace ProcBuild
 
         public IEnumerable<Vector3I> Occupied => m_blocks.Keys;
 
-        public MyObjectBuilder_CubeBlock GetBlockAt(Vector3I pos)
+        public MyObjectBuilder_CubeBlock GetCubeAt(Vector3I pos)
         {
             MyObjectBuilder_CubeBlock block;
             return m_blocks.TryGetValue(pos, out block) ? block : null;

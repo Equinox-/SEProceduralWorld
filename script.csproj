@@ -74,6 +74,7 @@
     <Compile Include="Construction\MyObjectBuilder_ProceduralConstruction.cs" />
     <Compile Include="Construction\MyProceduralConstruction.cs" />
     <Compile Include="Logging.cs" />
+    <Compile Include="MyCache.cs" />
     <Compile Include="MyGridBuilder.cs" />
     <Compile Include="MyPart.cs" />
     <Compile Include="MyPartManager.cs" />
