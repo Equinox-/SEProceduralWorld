@@ -79,6 +79,7 @@
     <Compile Include="MyPart.cs" />
     <Compile Include="MyPartManager.cs" />
     <Compile Include="BlockTransformations.cs" />
+    <Compile Include="MyDesignTool.cs" />
     <Compile Include="MyUtilities.cs" />
     <Compile Include="SessionCore.cs" />
   </ItemGroup>

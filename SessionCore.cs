@@ -13,6 +13,8 @@ using VRage;
 using VRage.Game;
 using VRage.Game.Components;
 using VRage.Game.ModAPI;
+using VRage.ModAPI;
+using VRage.Utils;
 using VRageMath;
 
 namespace ProcBuild
@@ -21,6 +23,14 @@ namespace ProcBuild
     internal class SessionCore : MySessionComponentBase
     {
         public static SessionCore Instance { get; private set; }
+
+        public static void Log(string format, params object[] args)
+        {
+            if (Instance?.Logger != null)
+                Instance.Logger.Log(format, args);
+            else
+                MyLog.Default?.Log(MyLogSeverity.Info, format, args);
+        }
 
         public static readonly Random RANDOM = new Random();
 
@@ -86,6 +96,17 @@ namespace ProcBuild
         private void CommandDispatcher(string messageText, ref bool sendToOthers)
         {
             if (!MyAPIGateway.Session.IsServer || !messageText.StartsWith("/")) return;
+            if (messageText.StartsWith("/export"))
+            {
+                MyAPIGateway.Entities.GetEntities(null, x =>
+                {
+                    var grid = x as IMyCubeGrid;
+                    if (grid != null)
+                        MyDesignTool.Process(grid);
+                    return false;
+                });
+                return;
+            }
             if (messageText.StartsWith("/list"))
             {
                 try
@@ -94,7 +115,6 @@ namespace ProcBuild
                     if (messageText.Length > 6)
                         int.TryParse(messageText.Substring(6).Trim(), out count);
                     MyAPIGateway.Utilities.ShowMessage("ProcBuild", "List Mount Points");
-                    Logger.Log("Try spawn");
                     Stopwatch watch = new Stopwatch();
                     watch.Reset();
                     watch.Start();
@@ -108,13 +128,14 @@ namespace ProcBuild
                         var available = new HashSet<MyTuple<MyGridBuilder.RoomInstance, MyPartMount, MyGridBuilder.RoomInstance, MyPartMount>>();
                         foreach (var type in PartManager)
                             foreach (var point in mountPoints)
-                                foreach (var other in type.MountPoints)
+                                foreach (var other in type.MountPointsOfType(point.Item2.m_mountType))
                                 {
-                                    var mats = point.Item2.GetTransform(other.Value);
+                                    var mats = point.Item2.GetTransform(other);
                                     if (mats == null) continue;
                                     foreach (var mat in mats)
-                                        available.Add(MyTuple.Create(point.Item1, point.Item2, new MyGridBuilder.RoomInstance(type, MyUtilities.Multiply(mat, point.Item1.Transform)), other.Value));
+                                        available.Add(MyTuple.Create(point.Item1, point.Item2, new MyGridBuilder.RoomInstance(type, MyUtilities.Multiply(mat, point.Item1.Transform)), other));
                                 }
+                        Logger.Log("Choose from {0} options", available.Count);
                         for (var tri = 0; tri < 10 && available.Any(); tri++)
                         {
                             var result = available.ElementAt(SessionCore.RANDOM.Next(0, available.Count - 1));

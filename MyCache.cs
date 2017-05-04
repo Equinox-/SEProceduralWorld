@@ -29,13 +29,8 @@ namespace ProcBuild
 
         public TV GetOrCreate(TK key, CreateDelegate del)
         {
-            LinkedListNode<CacheItem> node;
-            if (cache.TryGetValue(key, out node))
-            {
-                lruCache.Remove(node);
-                lruCache.AddLast(node);
-                return node.Value.value;
-            }
+            TV res;
+            if (TryGet(key, out res)) return res;
             if (cache.Count >= capacity)
                 while (cache.Count >= capacity / 1.5)
                 {
@@ -43,10 +38,24 @@ namespace ProcBuild
                     lruCache.RemoveFirst();
                 }
 
-            node = new LinkedListNode<CacheItem>(new CacheItem() {key = key, value = del(key)});
+            var node = new LinkedListNode<CacheItem>(new CacheItem() {key = key, value = del(key)});
             lruCache.AddLast(node);
             cache.Add(key, node);
             return node.Value.value;
+        }
+
+        public bool TryGet(TK key, out TV value)
+        {
+            LinkedListNode<CacheItem> node;
+            if (cache.TryGetValue(key, out node))
+            {
+                lruCache.Remove(node);
+                lruCache.AddLast(node);
+                value = node.Value.value;
+                return true;
+            }
+            value = default(TV);
+            return false;
         }
     }
 }

@@ -40,8 +40,12 @@ namespace ProcBuild
         public MyPart Load(MyPrefabDefinition def)
         {
             MyPart part;
-            if (!m_parts.TryGetValue(def.Id, out part))
-                part = m_parts[def.Id] = new MyPart(def);
+            if (m_parts.TryGetValue(def.Id, out part)) return part;
+            SessionCore.Log("Loading {0}", def.Id.SubtypeName);
+            part = m_parts[def.Id] = new MyPart(def);
+            SessionCore.Log("Loaded {0} with {1} mount points", def.Id.SubtypeName, part.MountPoints.Count());
+            foreach (var type in part.MountPointTypes)
+                SessionCore.Log("    ...of type \"{0}\" there are {1}", type, part.MountPointsOfType(type).Count());
             return part;
         }
 

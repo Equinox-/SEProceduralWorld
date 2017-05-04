@@ -29,7 +29,7 @@ namespace ProcBuild
                 this.m_part = part;
                 this.m_transform = transform;
                 MatrixI.Invert(ref m_transform, out m_invTransform);
-                this.m_freeMounts = new HashSet<MyPartMount>(this.m_part.MountPoints.Select(x => x.Value));
+                this.m_freeMounts = new HashSet<MyPartMount>(this.m_part.MountPoints);
                 this.BoundingBox = MyUtilities.TransformBoundingBox(part.m_boundingBox, transform);
             }
 
