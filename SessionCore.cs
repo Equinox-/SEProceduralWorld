@@ -14,6 +14,7 @@ using VRage.Game;
 using VRage.Game.Components;
 using VRage.Game.ModAPI;
 using VRage.ModAPI;
+using VRage.ObjectBuilders;
 using VRage.Utils;
 using VRageMath;
 
@@ -122,10 +123,12 @@ namespace ProcBuild
                     var a = PartManager.First();
                     var builder = new MyGridBuilder();
                     builder.Add(a, new MatrixI(Base6Directions.Direction.Forward, Base6Directions.Direction.Up));
+                    var iwatch = new Stopwatch();
                     for (var i = 0; i < count; i++)
                     {
                         var mountPoints = builder.Rooms.SelectMany(x => x.m_freeMounts.Select(y => MyTuple.Create(x, y))).ToList();
                         var available = new HashSet<MyTuple<MyGridBuilder.RoomInstance, MyPartMount, MyGridBuilder.RoomInstance, MyPartMount>>();
+                        iwatch.Restart();
                         foreach (var type in PartManager)
                             foreach (var point in mountPoints)
                                 foreach (var other in type.MountPointsOfType(point.Item2.m_mountType))
@@ -135,15 +138,16 @@ namespace ProcBuild
                                     foreach (var mat in mats)
                                         available.Add(MyTuple.Create(point.Item1, point.Item2, new MyGridBuilder.RoomInstance(type, MyUtilities.Multiply(mat, point.Item1.Transform)), other));
                                 }
-                        Logger.Log("Choose from {0} options", available.Count);
+                        Logger.Log("Choose from {0} options; generated in {1}", available.Count, iwatch.Elapsed);
                         for (var tri = 0; tri < 10 && available.Any(); tri++)
                         {
                             var result = available.ElementAt(SessionCore.RANDOM.Next(0, available.Count - 1));
+                            iwatch.Restart();
                             if (builder.Intersects(result.Item3)) continue;
                             builder.Add(result.Item3);
                             result.Item1.m_freeMounts.Remove(result.Item2);
                             result.Item3.m_freeMounts.Remove(result.Item4);
-                            Logger.Log("Added {0} (number {1}) at {2}", result.Item3.m_part.m_prefab.Id.SubtypeName, builder.Rooms.Count(), result.Item3.Transform.Translation);
+                            Logger.Log("Added {0} (number {1}) at {2}: Intersection in {3}", result.Item3.m_part.m_prefab.Id.SubtypeName, builder.Rooms.Count(), result.Item3.Transform.Translation, iwatch.Elapsed);
                             break;
                         }
                     }
@@ -152,6 +156,7 @@ namespace ProcBuild
                     var grid = builder.CubeGrid;
                     var build = watch.Elapsed;
                     grid.PositionAndOrientation = new MyPositionAndOrientation(MyAPIGateway.Session.Player.GetPosition(), Vector3D.Up, Vector3D.Right);
+                    grid.PersistentFlags = MyPersistentEntityFlags2.InScene | MyPersistentEntityFlags2.CastShadows | MyPersistentEntityFlags2.Enabled;
                     watch.Restart();
                     var entity = MyAPIGateway.Entities.CreateFromObjectBuilderAndAdd(grid) as IMyCubeGrid;
                     if (entity != null)

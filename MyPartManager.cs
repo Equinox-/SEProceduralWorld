@@ -31,10 +31,8 @@ namespace ProcBuild
             MyPart part;
             if (m_parts.TryGetValue(prefabID, out part))
                 return part;
-            MyPrefabDefinition def = MyDefinitionManager.Static.GetPrefabDefinition(prefabID.SubtypeId);
-            if (def != null)
-                return Load(def);
-            return null;
+            var def = MyDefinitionManager.Static.GetPrefabDefinition(prefabID.SubtypeId);
+            return def != null ? Load(def) : null;
         }
 
         public MyPart Load(MyPrefabDefinition def)

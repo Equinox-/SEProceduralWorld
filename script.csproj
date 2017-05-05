@@ -73,6 +73,7 @@
   <ItemGroup>
     <Compile Include="Construction\MyObjectBuilder_ProceduralConstruction.cs" />
     <Compile Include="Construction\MyProceduralConstruction.cs" />
+    <Compile Include="Generation\MyGenerator.cs" />
     <Compile Include="Logging.cs" />
     <Compile Include="MyCache.cs" />
     <Compile Include="MyGridBuilder.cs" />
@@ -82,6 +83,7 @@
     <Compile Include="MyDesignTool.cs" />
     <Compile Include="MyUtilities.cs" />
     <Compile Include="SessionCore.cs" />
+    <Compile Include="Utils\MyWeightedChoice.cs" />
   </ItemGroup>
   <ItemGroup>
     <Analyzer Include="E:\Users\westin\Programming\SpaceEngineers\SEWhitelistDiagnostic\SEWhitelistChecker\SEWhitelistChecker.Vsix\bin\Debug\SEWhitelistChecker.dll" />

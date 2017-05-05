@@ -23,9 +23,7 @@ namespace ProcBuild.Construction
             m_rooms.Clear();
             m_maxID = 0;
             foreach (var room in ob.Room)
-            {
                 new MyProceduralRoom().Init(room, this);
-            }
         }
 
         internal void RegisterRoom(MyProceduralRoom room)
@@ -36,11 +34,34 @@ namespace ProcBuild.Construction
             m_rooms[room.RoomID] = room;
         }
 
+        public MyProceduralRoom GenerateRoom(MatrixI transform, MyPart prefab)
+        {
+            var tmp = new MyProceduralRoom();
+            tmp.Init(this, transform, prefab);
+            return tmp;
+        }
+
+        public void RemoveRoom(MyProceduralRoom room)
+        {
+            m_rooms.Remove(room.RoomID);
+            room.Orphan();
+        }
+
+        public void AddCachedRoom(MyProceduralRoom room)
+        {
+            room.TakeOwnership(this);
+        }
+
         private long m_maxID;
         internal long AcquireID()
         {
             m_maxID++;
             return m_maxID;
+        }
+
+        public MyProceduralRoom GetRoomAt(Vector3I pos)
+        {
+            return m_rooms.Values.FirstOrDefault(room => room.CubeExists(pos));
         }
 
         public bool CubeExists(Vector3I pos)
@@ -52,6 +73,13 @@ namespace ProcBuild.Construction
         {
             return m_rooms.Values.Select(room => room.GetCubeAt(pos)).FirstOrDefault(ob => ob != null);
         }
+
+        public bool Intersects(MyProceduralRoom room)
+        {
+            return m_rooms.Values.Where(test => test.BoundingBox.Intersects(room.BoundingBox)).Any(test => room.OccupiedCubes.Any(test.CubeExists));
+        }
+
+        public IEnumerable<MyProceduralRoom> Rooms => m_rooms.Values;
     }
 
     public class MyProceduralRoom
@@ -60,7 +88,7 @@ namespace ProcBuild.Construction
         public long RoomID { get; private set; }
         public MyPart Prefab { get; private set; }
         private MatrixI m_transform, m_invTransform;
-        public MyProceduralMountPoint[] MountPoints { get; private set; }
+        private Dictionary<MyPartMount, MyProceduralMountPoint> m_mountPoints;
 
         public MyProceduralRoom()
         {
@@ -68,19 +96,51 @@ namespace ProcBuild.Construction
             RoomID = -1;
         }
 
+        internal void Orphan()
+        {
+            RoomID = -1;
+            Owner = null;
+        }
+
+        internal void TakeOwnership(MyProceduralConstruction parent)
+        {
+            Orphan();
+            if (parent == null) return;
+            Owner = parent;
+            RoomID = parent.AcquireID();
+            parent.RegisterRoom(this);
+        }
+
+        internal void Init(MyProceduralConstruction parent, MatrixI transform, MyPart prefab)
+        {
+            Owner = parent;
+            RoomID = parent.AcquireID();
+            Prefab = prefab;
+            Transform = transform;
+            m_mountPoints = new Dictionary<MyPartMount, MyProceduralMountPoint>();
+            foreach (var mount in prefab.MountPoints)
+            {
+                var point = new MyProceduralMountPoint();
+                point.Init(mount, this);
+                m_mountPoints[mount] = point;
+            }
+            parent?.RegisterRoom(this);
+        }
+
         public void Init(MyObjectBuilder_ProceduralRoom ob, MyProceduralConstruction parent)
         {
             Owner = parent;
-            RoomID = ob.RoomID;
+            RoomID = parent != null ? ob.RoomID : -1;
             Prefab = SessionCore.Instance.PartManager.LoadNullable(ob.PrefabID);
             Transform = ob.Transform;
-            MountPoints = new MyProceduralMountPoint[ob.MountPoints.Length];
-            for (var i = 0; i < MountPoints.Length; i++)
+            m_mountPoints = new Dictionary<MyPartMount, MyProceduralMountPoint>(ob.MountPoints.Length);
+            foreach (var mount in ob.MountPoints)
             {
-                MountPoints[i] = new MyProceduralMountPoint();
-                MountPoints[i].Init(ob.MountPoints[i], this);
+                var point = new MyProceduralMountPoint();
+                point.Init(mount, this);
+                m_mountPoints[point.MountPoint] = point;
             }
-            parent.RegisterRoom(this);
+            parent?.RegisterRoom(this);
         }
 
         public MatrixI Transform
@@ -94,18 +154,37 @@ namespace ProcBuild.Construction
             }
         }
 
+        public MyProceduralMountPoint GetMountPoint(MyPartMount point)
+        {
+            MyProceduralMountPoint mount;
+            return m_mountPoints.TryGetValue(point, out mount) ? mount : null;
+        }
+
         public BoundingBox BoundingBox { get; private set; }
 
+        public Vector3I GridToPrefab(Vector3I gridPos)
+        {
+            return Vector3I.Transform(gridPos, ref m_invTransform);
+        }
+
+        public Vector3I PrefabToGrid(Vector3I prefabPos)
+        {
+            return Vector3I.Transform(prefabPos, ref m_transform);
+        }
 
         public bool CubeExists(Vector3I pos)
         {
-            return BoundingBox.Contains((Vector3)pos) == ContainmentType.Contains && Prefab.CubeExists(Vector3I.Transform(pos, ref m_invTransform));
+            return BoundingBox.Contains((Vector3)pos) == ContainmentType.Contains && Prefab.CubeExists(GridToPrefab(pos));
         }
 
         public MyObjectBuilder_CubeBlock GetCubeAt(Vector3I pos)
         {
-            return BoundingBox.Contains((Vector3)pos) == ContainmentType.Contains ? Prefab.GetCubeAt(Vector3I.Transform(pos, ref m_invTransform)) : null;
+            return BoundingBox.Contains((Vector3)pos) == ContainmentType.Contains ? Prefab.GetCubeAt(GridToPrefab(pos)) : null;
         }
+
+        public IEnumerable<Vector3I> OccupiedCubes => Prefab.Occupied.Select(PrefabToGrid);
+
+        public IEnumerable<MyProceduralMountPoint> MountPoints => m_mountPoints.Values;
     }
 
     public class MyProceduralMountPoint
@@ -119,10 +198,35 @@ namespace ProcBuild.Construction
             MountPoint = null;
         }
 
+        internal void Init(MyPartMount mount, MyProceduralRoom parent)
+        {
+            Owner = parent;
+            MountPoint = mount;
+        }
+
         public void Init(MyObjectBuilder_ProceduralMountPoint ob, MyProceduralRoom parent)
         {
             Owner = parent;
             MountPoint = parent.Prefab.MountPoint(ob.TypeID, ob.InstanceID);
+        }
+
+        public MyProceduralMountPoint AttachedTo
+        {
+            get
+            {
+                // ReSharper disable once LoopCanBeConvertedToQuery
+                foreach (var block in MountPoint.m_blocks.Values.SelectMany(x => x))
+                {
+                    var gridPos = Owner.PrefabToGrid(block.MountLocation);
+                    var room = Owner.Owner.GetRoomAt(gridPos);
+                    if (room == null) continue;
+                    var localPos = room.GridToPrefab(gridPos);
+                    var mountPos = room.Prefab.MountPointAt(localPos);
+                    if (mountPos != null)
+                        return room.GetMountPoint(mountPos.Owner);
+                }
+                return null;
+            }
         }
     }
 }

@@ -14,7 +14,7 @@ namespace ProcBuild
 {
     public class BlockTransformations
     {
-        public static void ComputeBlockMax(ref MyObjectBuilder_CubeBlock block, out Vector3I max)
+        public static void ComputeBlockMax(MyObjectBuilder_CubeBlock block, out Vector3I max)
         {
             var definition = MyDefinitionManager.Static.GetCubeBlockDefinition(block);
             if (definition == null)
@@ -48,7 +48,7 @@ namespace ProcBuild
 
             var cMin = (Vector3I)block.Min;
             Vector3I cMax;
-            ComputeBlockMax(ref block, out cMax);
+            ComputeBlockMax(block, out cMax);
 
             Vector3I.Transform(ref cMin, ref transform, out cMin);
             Vector3I.Transform(ref cMax, ref transform, out cMax);

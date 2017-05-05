@@ -17,11 +17,13 @@ namespace ProcBuild
     public class MyPartMountPointBlock
     {
         public readonly MyObjectBuilder_CubeBlock m_block;
+        public MyPartMount Owner { private set; get; }
         public readonly string m_piece;
         private readonly Base6Directions.Direction m_mountDirection;
 
-        public MyPartMountPointBlock(string piece, MyObjectBuilder_CubeBlock block, string[] args)
+        public MyPartMountPointBlock(MyPartMount owner, string piece, MyObjectBuilder_CubeBlock block, string[] args)
         {
+            Owner = owner;
             m_piece = piece;
             m_block = block;
             m_mountDirection = Base6Directions.GetOppositeDirection(Base6Directions.GetCross(m_block.BlockOrientation.Up, m_block.BlockOrientation.Forward));
@@ -41,7 +43,9 @@ namespace ProcBuild
 
         public Vector3I MountDirection => Base6Directions.GetIntVector(MountDirection6);
 
-        public Vector3I MountLocation => m_block.Min + MountDirection;
+        public Vector3I AnchorLocation => m_block.Min;
+
+        public Vector3I MountLocation => AnchorLocation + MountDirection;
 
         public void GetTransforms(MyPartMountPointBlock other, HashSet<MatrixI> cache)
         {
@@ -58,7 +62,7 @@ namespace ProcBuild
                 var offTo = Base6Directions.EnumDirections[(dirSelfI + 0) % 6];
                 tmp.SetDirection(off, offTo);
                 tmp.SetDirection(Base6Directions.GetCross(dirOther, off), Base6Directions.GetCross(dirSelf, offTo));
-                tmp.Translation = m_block.Min - Vector3I.TransformNormal(other.MountLocation, ref tmp);
+                tmp.Translation = AnchorLocation - Vector3I.TransformNormal(other.MountLocation, ref tmp);
                 cache.Add(tmp);
             }
         }
@@ -87,80 +91,46 @@ namespace ProcBuild
             points.Add(block);
         }
 
-        private static int PermutationsOf(int n)
-        {
-            var perms = 1;
-            for (var i = 2; i <= n; i++)
-                perms *= i;
-            return perms;
-        }
-
-        // https://antoinecomeau.blogspot.ca/2014/07/mapping-between-permutations-and.html
-        public static void Permute<T>(ref int[] elems, ref IReadOnlyList<T> source, ref List<T> output, int m)
-        {
-            if (elems.Length == 1)
-            {
-                output[0] = source[0];
-                return;
-            }
-
-            var n = elems.Length;
-            for (var i = 0; i < n; i++)
-                elems[i] = i;
-            for (var i = 0; i < n; i++)
-            {
-                var ind = m % (n - i);
-                m = m / (n - i);
-                output[i] = source[elems[ind]];
-                elems[ind] = elems[n - i - 1];
-            }
-        }
-
         private static IEnumerable<MatrixI> GetMultiMatches(IReadOnlyList<MyPartMountPointBlock> mine, IReadOnlyList<MyPartMountPointBlock> other)
         {
             var cache = new HashSet<MatrixI>();
             var match = Math.Min(mine.Count, other.Count);
             if (match == mine.Count)
             {
-                var permute = new List<MyPartMountPointBlock>(mine);
-                var temp = new int[mine.Count];
-                var perms = PermutationsOf(mine.Count);
-                for (var perm = 0; perm < perms; perm++)
+                foreach (var ot in other)
+                    mine[0].GetTransforms(ot, cache);
+                cache.RemoveWhere(x =>
                 {
-                    Permute(ref temp, ref mine, ref permute, perm);
-                    for (var a = 0; a <= other.Count - match; a++)
+                    MatrixI inv;
+                    MatrixI.Invert(ref x, out inv);
+                    for (var i = 1; i < mine.Count; i++)
                     {
-                        cache.Clear();
-                        permute[0].GetTransforms(other[a], cache);
-                        for (var b = 1; b < match; b++)
-                            cache.RemoveWhere(x => Vector3I.Transform(other[a + b].MountLocation, ref x) != (Vector3I)permute[b].m_block.Min);
-                        foreach (var m in cache)
-                            yield return m;
+                        var invLoc = Vector3I.Transform(mine[i].MountLocation, ref inv);
+                        if (!other.Select(y => y.AnchorLocation).Contains(invLoc)) return true;
                     }
-                }
+                    return false;
+                });
+                return cache;
             }
             else
             {
-                var permute = new List<MyPartMountPointBlock>(other);
-                var temp = new int[other.Count];
-                var perms = PermutationsOf(other.Count);
-                for (var perm = 0; perm < perms; perm++)
+                foreach (var mi in mine)
+                    mi.GetTransforms(other[0], cache);
+                cache.RemoveWhere(x =>
                 {
-                    Permute(ref temp, ref mine, ref permute, perm);
-                    for (var a = 0; a <= mine.Count - match; a++)
+                    for (var i = 1; i < other.Count; i++)
                     {
-                        cache.Clear();
-                        mine[a].GetTransforms(permute[0], cache);
-                        for (var b = 1; b < match; b++)
-                            cache.RemoveWhere(x => Vector3I.Transform(permute[b].MountLocation, ref x) != (Vector3I)mine[a + b].m_block.Min);
-                        foreach (var m in cache)
-                            yield return m;
+                        var loc = Vector3I.Transform(other[i].MountLocation, ref x);
+                        if (!mine.Select(y => y.AnchorLocation).Contains(loc)) return true;
                     }
-                }
+                    return false;
+                });
+                return cache;
             }
         }
 
-        private static readonly MyCache<MyTuple<MyPartMount, MyPartMount>, HashSet<MatrixI>> m_mountCache = new MyCache<MyTuple<MyPartMount, MyPartMount>, HashSet<MatrixI>>(128);
+        // ~256 bytes per entry.  Target a 1MB cache
+        private static readonly MyCache<MyTuple<MyPartMount, MyPartMount>, HashSet<MatrixI>> m_mountCache = new MyCache<MyTuple<MyPartMount, MyPartMount>, HashSet<MatrixI>>(4096);
 
         private static HashSet<MatrixI> GetTransformInternal(MyTuple<MyPartMount, MyPartMount> meOther)
         {
@@ -206,6 +176,7 @@ namespace ProcBuild
 
         private readonly Dictionary<string, Dictionary<string, MyPartMount>> m_mountPoints;
         private readonly Dictionary<Vector3I, MyObjectBuilder_CubeBlock> m_blocks;
+        private readonly Dictionary<Vector3I, MyPartMountPointBlock> m_mountPointBlocks;
         private readonly Dictionary<MyComponentDefinition, int> m_componentCost;
 
         public MyPart(MyPrefabDefinition prefab)
@@ -218,12 +189,18 @@ namespace ProcBuild
             foreach (var block in m_grid.CubeBlocks)
             {
                 aabb.Include(block.Min);
+                Vector3I blockMin = block.Min;
+                Vector3I blockMax;
+                BlockTransformations.ComputeBlockMax(block, out blockMax);
+                for (var rangeItr = new Vector3I_RangeIterator(ref blockMin, ref blockMax); rangeItr.IsValid(); rangeItr.MoveNext())
+                {
+                    aabb.Include(rangeItr.Current);
+                    m_blocks[rangeItr.Current] = block;
+                }
+
                 var def = MyDefinitionManager.Static.GetCubeBlockDefinition(block);
                 m_blocks[block.Min] = block;
                 if (def == null) continue;
-                var rot = MatrixI.CreateRotation(Base6Directions.Direction.Forward, Base6Directions.Direction.Up, block.BlockOrientation.Forward, block.BlockOrientation.Up);
-                aabb.Include(block.Min + Vector3I.Abs(Vector3I.Transform(def.Size - Vector3I.One, ref rot)));
-
                 foreach (var c in def.Components)
                 {
                     var cval = 0;
@@ -257,6 +234,12 @@ namespace ProcBuild
         {
             Dictionary<string, MyPartMount> typed;
             return m_mountPoints.TryGetValue(type, out typed) ? typed.Values : Enumerable.Empty<MyPartMount>();
+        }
+
+        public MyPartMountPointBlock MountPointAt(Vector3I pos)
+        {
+            MyPartMountPointBlock mount;
+            return m_mountPointBlocks.TryGetValue(pos, out mount) ? mount : null;
         }
 
         public MyPartMount MountPoint(string typeID, string instanceID)
@@ -301,10 +284,15 @@ namespace ProcBuild
                     var args = new string[parts.Length - 3];
                     for (var i = 3; i < parts.Length; i++)
                         args[i - 3] = parts[i];
-                    mount.Add(new MyPartMountPointBlock(mountPiece, block, args));
+                    mount.Add(new MyPartMountPointBlock(mount, mountPiece, block, args));
                     break;
                 }
             }
+
+            m_mountPointBlocks.Clear();
+            foreach (var mount in MountPoints)
+                foreach (var block in mount.m_blocks.Values.SelectMany(x => x))
+                    m_mountPointBlocks[block.AnchorLocation] = block;
         }
     }
 }
