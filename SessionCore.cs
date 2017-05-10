@@ -5,7 +5,11 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using ProcBuild.Construction;
+using ProcBuild.Creation;
+using ProcBuild.Generation;
 using Sandbox.Definitions;
+using Sandbox.Game;
 using Sandbox.Game.Entities;
 using Sandbox.Game.World;
 using Sandbox.ModAPI;
@@ -33,6 +37,12 @@ namespace ProcBuild
                 MyLog.Default?.Log(MyLogSeverity.Info, format, args);
         }
 
+        public static void LogBoth(string fmt, params object[] args)
+        {
+            SessionCore.Log(fmt, args);
+            MyAPIGateway.Utilities.ShowMessage("Exporter", string.Format(fmt, args));
+        }
+
         public static readonly Random RANDOM = new Random();
 
         public override void LoadData()
@@ -43,6 +53,10 @@ namespace ProcBuild
         private bool m_attached = false;
         public MyPartManager PartManager { get; private set; }
         public Logging Logger { get; private set; }
+        public Settings Settings { get; private set; }
+
+        private List<MyTuple<MyProceduralConstruction, IMyCubeGrid>> procgen = new List<MyTuple<MyProceduralConstruction, IMyCubeGrid>>();
+        private List<MyTuple<MyProceduralConstruction, IMyCubeGrid>> debugParts = new List<MyTuple<MyProceduralConstruction, IMyCubeGrid>>();
 
 
         public override void UpdateBeforeSimulation()
@@ -53,6 +67,80 @@ namespace ProcBuild
             if (MyAPIGateway.Session.Player == null) return;
             if (!m_attached)
                 Attach();
+            Logger.OnUpdate();
+
+            var blocks = Color.Red;
+            var reserved = new[] { Color.Blue, Color.Aqua, Color.Violet, Color.Cyan };
+            var allReserved = Color.Green;
+            var mountPointColor = Color.HotPink;
+
+            // ReSharper disable once InvertIf
+            if (Settings.DebugModuleAABB | Settings.DebugModuleReservedAABB)
+                foreach (var f in procgen)
+                {
+                    var transform = f.Item2.WorldMatrix;
+                    var gridSize = f.Item2.GridSize;
+                    foreach (var room in f.Item1.Rooms)
+                    {
+                        if (Settings.DebugModuleAABB)
+                        {
+                            var localAABB = new BoundingBoxD(room.BoundingBox.Min * gridSize, room.BoundingBox.Max * gridSize);
+                            MySimpleObjectDraw.DrawTransparentBox(ref transform, ref localAABB, ref blocks, MySimpleObjectRasterizer.Wireframe, 1, .02f);
+                            if (room.Part.ReservedSpaces.Any())
+                            {
+                                var temp = MyUtilities.TransformBoundingBox(room.Part.ReservedSpace, room.Transform);
+                                var tmpAABB = new BoundingBoxD(temp.Min * gridSize, temp.Max * gridSize);
+                                MySimpleObjectDraw.DrawTransparentBox(ref transform, ref tmpAABB, ref allReserved, MySimpleObjectRasterizer.Wireframe, 1, .02f);
+                            }
+                        }
+                        if (Settings.DebugModuleReservedAABB)
+                            foreach (var rs in room.Part.ReservedSpaces)
+                            {
+                                var temp = MyUtilities.TransformBoundingBox(rs.Box, room.Transform);
+                                var tmpAABB = new BoundingBoxD(temp.Min * gridSize, temp.Max * gridSize);
+                                MySimpleObjectDraw.DrawTransparentBox(ref transform, ref tmpAABB, ref reserved[(rs.IsShared ? 1 : 0) + (rs.IsOptional ? 2 : 0)], MySimpleObjectRasterizer.Wireframe, 1, .005f);
+                            }
+                    }
+                }
+
+            foreach (var f in debugParts)
+            {
+                var transform = f.Item2.WorldMatrix;
+                var gridSize = f.Item2.GridSize;
+                foreach (var room in f.Item1.Rooms)
+                {
+                    var localAABB = new BoundingBoxD(room.BoundingBox.Min * gridSize, (room.BoundingBox.Max+1) * gridSize);
+                    MySimpleObjectDraw.DrawTransparentBox(ref transform, ref localAABB, ref blocks, MySimpleObjectRasterizer.Wireframe, 1, .02f);
+                    if (room.Part.ReservedSpaces.Any())
+                    {
+                        var temp = MyUtilities.TransformBoundingBox(room.Part.ReservedSpace, room.Transform);
+                        var tmpAABB = new BoundingBoxD(temp.Min * gridSize, (temp.Max+1) * gridSize);
+                        MySimpleObjectDraw.DrawTransparentBox(ref transform, ref tmpAABB, ref allReserved, MySimpleObjectRasterizer.Wireframe, 1, .02f);
+                    }
+                    foreach (var rs in room.Part.ReservedSpaces)
+                    {
+                        var temp = MyUtilities.TransformBoundingBox(rs.Box, room.Transform);
+                        var tmpAABB = new BoundingBoxD(temp.Min * gridSize, (temp.Max+1) * gridSize);
+                        tmpAABB = tmpAABB.Inflate(-0.02);
+                        MySimpleObjectDraw.DrawTransparentBox(ref transform, ref tmpAABB, ref reserved[(rs.IsShared ? 1 : 0) + (rs.IsOptional ? 2 : 0)], MySimpleObjectRasterizer.Wireframe, 1, .005f);
+                    }
+                    foreach (var mount in room.MountPoints)
+                    {
+                        foreach (var block in mount.MountPoint.Blocks)
+                        {
+                            var anchorLoc = (Vector3)block.AnchorLocation;
+                            var opposeLoc = (Vector3)(block.AnchorLocation + (block.MountDirection * 2));
+                            opposeLoc += 0.5f * Vector3.Abs(Vector3I.One - Vector3I.Abs(block.MountDirection)); // hacky way to get perp. components
+                            anchorLoc -= 0.5f * Vector3.Abs(Vector3I.One - Vector3I.Abs(block.MountDirection));
+
+                            var anchor = gridSize * Vector3.Transform(anchorLoc, room.Transform.GetFloatMatrix());
+                            var oppose = gridSize * Vector3.Transform(opposeLoc, room.Transform.GetFloatMatrix());
+                            var tmpAABB = new BoundingBoxD(Vector3.Min(anchor, oppose), Vector3.Max(anchor, oppose));
+                            MySimpleObjectDraw.DrawTransparentBox(ref transform, ref tmpAABB, ref mountPointColor, MySimpleObjectRasterizer.Solid, 1, .02f);
+                        }
+                    }
+                }
+            }
         }
 
         protected override void UnloadData()
@@ -66,14 +154,22 @@ namespace ProcBuild
         {
             m_attached = true;
             Instance = this;
-            Logger = new Logging("ProceduralBuilding.log");
-            PartManager = new MyPartManager();
-            PartManager.LoadAll();
-            foreach (var item in PartManager)
-                MyAPIGateway.Utilities.ShowMessage("Parts", item.m_prefab.Id.SubtypeName);
+            try
+            {
+                Settings = new Settings();
+                Logger = new Logging("ProceduralBuilding.log");
+                PartManager = new MyPartManager();
+                PartManager.LoadAll();
+                foreach (var item in PartManager)
+                    MyAPIGateway.Utilities.ShowMessage("Parts", item.Prefab.Id.SubtypeName);
 
-            MyAPIGateway.Utilities.ShowNotification("Attached procedural building");
-            MyAPIGateway.Utilities.MessageEntered += CommandDispatcher;
+                MyAPIGateway.Utilities.ShowNotification("Attached procedural building");
+                MyAPIGateway.Utilities.MessageEntered += CommandDispatcher;
+            }
+            catch (Exception e)
+            {
+                Log("Fatal error loading Procedural Buildings: \n{0}", e);
+            }
         }
 
         private void Detach()
@@ -97,7 +193,8 @@ namespace ProcBuild
         private void CommandDispatcher(string messageText, ref bool sendToOthers)
         {
             if (!MyAPIGateway.Session.IsServer || !messageText.StartsWith("/")) return;
-            if (messageText.StartsWith("/export"))
+            var args = messageText.Split(' ');
+            if (args[0].Equals("/export"))
             {
                 MyAPIGateway.Entities.GetEntities(null, x =>
                 {
@@ -108,67 +205,142 @@ namespace ProcBuild
                 });
                 return;
             }
-            if (messageText.StartsWith("/list"))
-            {
-                try
-                {
-                    var count = 2;
-                    if (messageText.Length > 6)
-                        int.TryParse(messageText.Substring(6).Trim(), out count);
-                    MyAPIGateway.Utilities.ShowMessage("ProcBuild", "List Mount Points");
-                    Stopwatch watch = new Stopwatch();
-                    watch.Reset();
-                    watch.Start();
+            if (args[0].Equals("/part"))
+                ProcessDebugPart(args);
+            if (args[0].Equals("/list"))
+                ProcessSpawn(args);
+        }
 
-                    var a = PartManager.First();
-                    var builder = new MyGridBuilder();
-                    builder.Add(a, new MatrixI(Base6Directions.Direction.Forward, Base6Directions.Direction.Up));
-                    var iwatch = new Stopwatch();
-                    for (var i = 0; i < count; i++)
+        private void ProcessDebugPart(IReadOnlyList<string> args)
+        {
+            if (args.Count < 2)
+            {
+                MyAPIGateway.Utilities.ShowMessage("PDebug", "Usage: " + args[0] + " [part name]");
+                return;
+            }
+            var part = PartManager.FirstOrDefault(test => test.Prefab.Id.SubtypeName.ToLower().Contains(args[1].ToLower()));
+            if (part == null)
+            {
+                MyAPIGateway.Utilities.ShowMessage("PDebug", "Unable to find part with name \"" + args[1] + "\"");
+                return;
+            }
+            var c = new MyProceduralConstruction();
+            c.GenerateRoom(new MatrixI(Base6Directions.Direction.Forward, Base6Directions.Direction.Up), part);
+            IMyCubeGrid dest = null;
+            var iwatch = new Stopwatch();
+            foreach (var room in c.Rooms)
+            {
+                iwatch.Restart();
+                if (dest == null)
+                {
+                    var temp = MyAPIGateway.Session.Player.Character.WorldMatrix;
+                    var basePos = room.Part.PrimaryGrid.PositionAndOrientation?.AsMatrixD();
+                    if (basePos.HasValue)
                     {
-                        var mountPoints = builder.Rooms.SelectMany(x => x.m_freeMounts.Select(y => MyTuple.Create(x, y))).ToList();
-                        var available = new HashSet<MyTuple<MyGridBuilder.RoomInstance, MyPartMount, MyGridBuilder.RoomInstance, MyPartMount>>();
-                        iwatch.Restart();
-                        foreach (var type in PartManager)
-                            foreach (var point in mountPoints)
-                                foreach (var other in type.MountPointsOfType(point.Item2.m_mountType))
-                                {
-                                    var mats = point.Item2.GetTransform(other);
-                                    if (mats == null) continue;
-                                    foreach (var mat in mats)
-                                        available.Add(MyTuple.Create(point.Item1, point.Item2, new MyGridBuilder.RoomInstance(type, MyUtilities.Multiply(mat, point.Item1.Transform)), other));
-                                }
-                        Logger.Log("Choose from {0} options; generated in {1}", available.Count, iwatch.Elapsed);
-                        for (var tri = 0; tri < 10 && available.Any(); tri++)
+                        var copy = basePos.Value;
+                        copy.Translation -= room.BoundingBox.Center * 2.5f;
+                        temp = MatrixD.Multiply(copy, temp);
+                    }
+                    dest = MyGridCreator.SpawnRoomAt(room, temp);
+                }
+                else
+                    MyGridCreator.AppendRoom(dest, room);
+                Log("Added room {3} of {0} blocks with {1} aux grids in {2}", room.Part.PrimaryGrid.CubeBlocks.Count, room.Part.Prefab.CubeGrids.Length - 1, iwatch.Elapsed, room.Part.Name);
+            }
+            debugParts.Add(MyTuple.Create(c, dest));
+        }
+
+        private void ProcessSpawn(IReadOnlyList<string> args)
+        {
+            try
+            {
+                var count = 2;
+                if (args.Count >= 2)
+                    int.TryParse(args[1].Trim(), out count);
+
+                var watch = new Stopwatch();
+                watch.Reset();
+                watch.Start();
+
+                var construction = new MyProceduralConstruction();
+                {
+                    // Seed the generator
+                    var part = PartManager.First();
+                    if (args.Count >= 3)
+                        foreach (var test in PartManager)
+                            if (test.Prefab.Id.SubtypeName.ToLower().Contains(args[2].ToLower()))
+                            {
+                                part = test;
+                                break;
+                            }
+                    construction.GenerateRoom(new MatrixI(Base6Directions.Direction.Forward, Base6Directions.Direction.Up), part);
+                }
+
+                for (var i = 0; i < count; i++)
+                    if (!MyGenerator.StepConstruction(construction, (i > count / 2) ? 0 : 1))
+                        break;
+                // Give it plenty of tries to close itself
+                {
+                    var remainingMounts = construction.Rooms.SelectMany(x => x.MountPoints).Count(y => y.AttachedTo == null);
+                    var triesToClose = remainingMounts * 2 + 2;
+                    Log("There are {0} remaining mounts.  Giving it {1} tries to close itself.", remainingMounts, triesToClose);
+                    var outOfOptions = false;
+                    for (var i = 0; i < triesToClose; i++)
+                        if (!MyGenerator.StepConstruction(construction, -10))
                         {
-                            var result = available.ElementAt(SessionCore.RANDOM.Next(0, available.Count - 1));
-                            iwatch.Restart();
-                            if (builder.Intersects(result.Item3)) continue;
-                            builder.Add(result.Item3);
-                            result.Item1.m_freeMounts.Remove(result.Item2);
-                            result.Item3.m_freeMounts.Remove(result.Item4);
-                            Logger.Log("Added {0} (number {1}) at {2}: Intersection in {3}", result.Item3.m_part.m_prefab.Id.SubtypeName, builder.Rooms.Count(), result.Item3.Transform.Translation, iwatch.Elapsed);
+                            outOfOptions = true;
                             break;
                         }
+                    remainingMounts = construction.Rooms.SelectMany(x => x.MountPoints).Count(y => y.AttachedTo == null);
+                    if (remainingMounts > 0)
+                    {
+                        Log("Now there are {0} remaining mounts.  Trying without hints. Reason: {1}", remainingMounts, outOfOptions ? "Out of options" : "Out of tries");
+                        triesToClose = remainingMounts * 2 + 2;
+                        for (var i = 0; i < triesToClose; i++)
+                            if (!MyGenerator.StepConstruction(construction, -10, false))
+                            {
+                                outOfOptions = true;
+                                break;
+                            }
                     }
-                    var generate = watch.Elapsed;
-                    watch.Restart();
-                    var grid = builder.CubeGrid;
-                    var build = watch.Elapsed;
-                    grid.PositionAndOrientation = new MyPositionAndOrientation(MyAPIGateway.Session.Player.GetPosition(), Vector3D.Up, Vector3D.Right);
-                    grid.PersistentFlags = MyPersistentEntityFlags2.InScene | MyPersistentEntityFlags2.CastShadows | MyPersistentEntityFlags2.Enabled;
-                    watch.Restart();
-                    var entity = MyAPIGateway.Entities.CreateFromObjectBuilderAndAdd(grid) as IMyCubeGrid;
-                    if (entity != null)
-                        foreach (var b in builder.CubeBlocks)
-                            entity.AddBlock(b, false);
-                    var add = watch.Elapsed;
-                    MyAPIGateway.Utilities.ShowMessage("ProcBuild", "Generated " + builder.Rooms.Count() + " rooms in " + generate + ", built in " + build + ", added in " + add);
+                    remainingMounts = construction.Rooms.SelectMany(x => x.MountPoints).Count(y => y.AttachedTo == null);
+                    if (remainingMounts > 0)
+                        Log("Now there are {0} remaining mounts.  Reason: {1}", remainingMounts, outOfOptions ? "Out of options" : "Out of tries");
+                    else
+                        Log("Sucessfully closed all mount points");
                 }
-                catch (Exception e)
+
+                var generate = watch.Elapsed;
+                IMyCubeGrid dest = null;
+                var iwatch = new Stopwatch();
+                watch.Restart();
+                foreach (var room in construction.Rooms)
                 {
-                    Logger.Log(e.ToString());
+                    iwatch.Restart();
+                    if (dest == null)
+                    {
+                        var temp = MyAPIGateway.Session.Player.Character.WorldMatrix;
+                        var basePos = room.Part.PrimaryGrid.PositionAndOrientation?.AsMatrixD();
+                        if (basePos.HasValue)
+                        {
+                            var copy = basePos.Value;
+                            copy.Translation -= room.BoundingBox.Center * 2.5f;
+                            temp = MatrixD.Multiply(copy, temp);
+                        }
+                        dest = MyGridCreator.SpawnRoomAt(room, temp);
+                    }
+                    else
+                        MyGridCreator.AppendRoom(dest, room);
+                    Log("Added room {3} of {0} blocks with {1} aux grids in {2}", room.Part.PrimaryGrid.CubeBlocks.Count, room.Part.Prefab.CubeGrids.Length - 1, iwatch.Elapsed, room.Part.Name);
                 }
+                var msg = $"Added {construction.Rooms.Count()} rooms; generated in {generate}, added in {watch.Elapsed}";
+                Log(msg);
+                MyAPIGateway.Utilities.ShowMessage("Gen", msg);
+                procgen.Add(MyTuple.Create(construction, dest));
+            }
+            catch (Exception e)
+            {
+                Logger.Log(e.ToString());
             }
         }
     }

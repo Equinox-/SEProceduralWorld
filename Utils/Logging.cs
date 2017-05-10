@@ -13,6 +13,12 @@ namespace ProcBuild
         private readonly StringBuilder m_cache;
         private readonly string m_file;
         private TextWriter m_writer;
+        private DateTime m_lastWriteTime;
+        private int m_readyTicks;
+
+        private const int WRITE_INTERVAL_TICKS = 30;
+        private static readonly TimeSpan WRITE_INTERVAL_TIME = new TimeSpan(
+            0, 0, 1);
 
         internal Logging(string file)
         {
@@ -21,27 +27,39 @@ namespace ProcBuild
             m_lock = new FastResourceLock();
             m_writeLock = new FastResourceLock();
             m_cache = new StringBuilder();
+            m_readyTicks = 0;
+            m_lastWriteTime = DateTime.Now;
         }
 
-        public void Log(string fmt, params object[] args)
+        public void OnUpdate()
         {
+            var requiresUpdate = false;
             try
             {
                 m_lock.AcquireExclusive();
-                m_cache.AppendFormat(DateTime.Now.ToString("[HH:mm:ss] "));
-                m_cache.AppendFormat(fmt, args);
-                m_cache.Append("\r\n");
+                requiresUpdate = m_cache.Length > 0;
             }
             finally
             {
                 m_lock.ReleaseExclusive();
             }
+            if (requiresUpdate)
+                m_readyTicks++;
+            else
+                m_readyTicks = 0;
+            if (m_readyTicks <= WRITE_INTERVAL_TICKS) return;
+            Flush();
+            m_readyTicks = 0;
+        }
 
+        public void Flush()
+        {
             if (MyAPIGateway.Utilities != null)
                 MyAPIGateway.Parallel.StartBackground(() =>
                 {
                     try
                     {
+
                         if (m_writer == null)
                         {
                             try
@@ -67,6 +85,7 @@ namespace ProcBuild
                             {
                                 cache = m_cache.ToString();
                                 m_cache.Clear();
+                                m_lastWriteTime = DateTime.UtcNow;
                             }
                         }
                         finally
@@ -90,6 +109,25 @@ namespace ProcBuild
                         MyLog.Default.WriteLine("Procedural LogDump: \r\n" + e.ToString());
                     }
                 });
+        }
+
+        public void Log(string fmt, params object[] args)
+        {
+            var shouldFlush = false;
+            try
+            {
+                m_lock.AcquireExclusive();
+                m_cache.AppendFormat(DateTime.Now.ToString("[HH:mm:ss] "));
+                m_cache.AppendFormat(fmt, args);
+                m_cache.Append("\r\n");
+                shouldFlush = DateTime.UtcNow - m_lastWriteTime > WRITE_INTERVAL_TIME;
+            }
+            finally
+            {
+                m_lock.ReleaseExclusive();
+            }
+            if (shouldFlush)
+                Flush();
         }
 
         public void Close()

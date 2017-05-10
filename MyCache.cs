@@ -20,7 +20,7 @@ namespace ProcBuild
 
         public MyCache(int capacity)
         {
-            this.cache = new Dictionary<TK, LinkedListNode<CacheItem>>(capacity);
+            this.cache = new Dictionary<TK, LinkedListNode<CacheItem>>(capacity > 1024 ? (int)Math.Sqrt(capacity) : capacity);
             this.lruCache = new LinkedList<CacheItem>();
             this.capacity = capacity;
         }
@@ -38,7 +38,7 @@ namespace ProcBuild
                     lruCache.RemoveFirst();
                 }
 
-            var node = new LinkedListNode<CacheItem>(new CacheItem() {key = key, value = del(key)});
+            var node = new LinkedListNode<CacheItem>(new CacheItem() { key = key, value = del(key) });
             lruCache.AddLast(node);
             cache.Add(key, node);
             return node.Value.value;

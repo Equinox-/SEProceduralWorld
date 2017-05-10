@@ -24,10 +24,10 @@ namespace ProcBuild.Utils
             Exponential = 2
         }
 
-        public TK Choose(float normNoise, WeightedNormalization strat = WeightedNormalization.ShiftToZero)
+        public TK Choose(double normNoise, WeightedNormalization strat = WeightedNormalization.ShiftToZero)
         {
-            var sum = 0.0f;
-            var min = float.MaxValue;
+            var sum = 0.0;
+            var min = double.MaxValue;
             foreach (var weight in values.Values)
             {
                 switch (strat)
@@ -37,7 +37,7 @@ namespace ProcBuild.Utils
                         min = 0;
                         break;
                     case WeightedNormalization.Exponential:
-                        sum += (float)Math.Exp(weight);
+                        sum += Math.Exp(weight);
                         break;
                     case WeightedNormalization.ShiftToZero:
                     default:
@@ -50,35 +50,35 @@ namespace ProcBuild.Utils
                 sum -= min * values.Count;
 
             var evalNoise = normNoise * sum;
-            var seenNoise = 0.0f;
+            var seenNoise = 0.0;
 
             var best = default(TK);
-            var bestWeight = 0.0f;
+            var bestWeight = 0.0;
             foreach (var entry in values)
             {
                 var weight = entry.Value;
 
-                var weightReal = 0.0f;
+                var weightReal = 0.0;
                 switch (strat)
                 {
                     case WeightedNormalization.ClampToZero:
                         weightReal = Math.Max(0, weight);
                         break;
                     case WeightedNormalization.Exponential:
-                        weightReal = (float) Math.Exp(weight);
+                        weightReal = Math.Exp(weight);
                         break;
                     case WeightedNormalization.ShiftToZero:
                     default:
                         weightReal = weight - min;
                         break;
                 }
-                if (weightReal > bestWeight)
+                if (weightReal >= bestWeight)
                 {
                     bestWeight = weightReal;
                     best = entry.Key;
                 }
                 seenNoise += weightReal;
-                if (evalNoise < seenNoise)
+                if (evalNoise <= seenNoise)
                     return entry.Key;
             }
             return best;

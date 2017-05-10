@@ -71,19 +71,33 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Construction\MyObjectBuilder_ProceduralConstruction.cs" />
-    <Compile Include="Construction\MyProceduralConstruction.cs" />
+    <Compile Include="Creation\IMyGridRemap.cs" />
+    <Compile Include="Creation\MyGridCreator.cs" />
+    <Compile Include="Creation\MyRoomRemapper.cs" />
+    <Compile Include="Creation\MyGridRemap_Coloring.cs" />
+    <Compile Include="Creation\MyGridRemap_LocalTransform.cs" />
+    <Compile Include="Creation\MyGridRemap_Names.cs" />
+    <Compile Include="Creation\MyGridRemap_WorldTransform.cs" />
+    <Compile Include="Generation\MyNameGenerator.cs" />
+    <Compile Include="Library\MyAdjacencyRule.cs" />
+    <Compile Include="Library\MyPartDummyUtils.cs" />
+    <Compile Include="Library\MyPartMount.cs" />
+    <Compile Include="Library\MyPartMountPointBlock.cs" />
+    <Compile Include="Settings.cs" />
+    <Compile Include="Storage\MyObjectBuilder_ProceduralConstruction.cs" />
+    <Compile Include="Storage\MyProceduralConstruction.cs" />
     <Compile Include="Generation\MyGenerator.cs" />
-    <Compile Include="Logging.cs" />
+    <Compile Include="Utils\Logging.cs" />
     <Compile Include="MyCache.cs" />
-    <Compile Include="MyGridBuilder.cs" />
-    <Compile Include="MyPart.cs" />
-    <Compile Include="MyPartManager.cs" />
-    <Compile Include="BlockTransformations.cs" />
+    <Compile Include="Library\MyPart.cs" />
+    <Compile Include="Library\MyPartManager.cs" />
+    <Compile Include="Utils\BlockTransformations.cs" />
     <Compile Include="MyDesignTool.cs" />
-    <Compile Include="MyUtilities.cs" />
+    <Compile Include="Utils\MyUtilities.cs" />
     <Compile Include="SessionCore.cs" />
+    <Compile Include="Utils\MyConstantEntityRemap.cs" />
     <Compile Include="Utils\MyWeightedChoice.cs" />
+    <Compile Include="Utils\PowerUtilities.cs" />
   </ItemGroup>
   <ItemGroup>
     <Analyzer Include="E:\Users\westin\Programming\SpaceEngineers\SEWhitelistDiagnostic\SEWhitelistChecker\SEWhitelistChecker.Vsix\bin\Debug\SEWhitelistChecker.dll" />
