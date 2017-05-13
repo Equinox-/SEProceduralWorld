@@ -1,36 +1,66 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using ProcBuild.Utils;
 using VRage;
 using VRageMath;
 
-namespace ProcBuild
+namespace ProcBuild.Library
 {
     public class MyPartMount
     {
-        public readonly string m_mountType;
-        public readonly string m_mountName;
+        public string MountType { private set; get; }
+        public string MountName { private set; get; }
         public readonly SortedDictionary<string, List<MyPartMountPointBlock>> m_blocks;
-        private readonly MyPart m_part;
+        private readonly MyPartStorage m_part;
 
         public MyAdjacencyRule AdjacencyRule { private set; get; }
 
         public IEnumerable<MyPartMountPointBlock> Blocks => m_blocks.Values.SelectMany(x => x);
 
-        public MyPartMount(MyPart part, string mountType, string mountName)
+        public MyPartMount(MyPartStorage part, string mountType, string mountName)
         {
             m_part = part;
-            m_mountType = mountType;
-            m_mountName = mountName;
+            MountType = mountType;
+            MountName = mountName;
             AdjacencyRule = MyAdjacencyRule.Any;
             m_blocks = new SortedDictionary<string, List<MyPartMountPointBlock>>();
+        }
+
+        public void Init(MyObjectBuilder_PartMount v)
+        {
+            MountType = v.Type;
+            MountName = v.Name;
+            AdjacencyRule = v.AdjacencyRule;
+            m_blocks.Clear();
+            foreach (var block in v.Blocks)
+            {
+                var res = new MyPartMountPointBlock(this);
+                res.Init(block);
+                List<MyPartMountPointBlock> lst;
+                if (!m_blocks.TryGetValue(res.Piece, out lst))
+                    m_blocks[res.Piece] = lst = new List<MyPartMountPointBlock>();
+                lst.Add(res);
+            }
+        }
+
+        public MyObjectBuilder_PartMount GetObjectBuilder()
+        {
+            var res = new MyObjectBuilder_PartMount
+            {
+                Name = MountName,
+                Type = MountType,
+                AdjacencyRule = AdjacencyRule,
+                Blocks = m_blocks.Values.SelectMany(x => x).Select(x => x.GetObjectBuilder()).ToArray()
+            };
+            return res;
         }
 
         internal void Add(MyPartMountPointBlock block)
         {
             List<MyPartMountPointBlock> points;
-            if (!m_blocks.TryGetValue(block.m_piece, out points))
-                points = m_blocks[block.m_piece] = new List<MyPartMountPointBlock>(2);
+            if (!m_blocks.TryGetValue(block.Piece, out points))
+                points = m_blocks[block.Piece] = new List<MyPartMountPointBlock>(2);
             points.Add(block);
             if (block.AdjacencyRule > AdjacencyRule)
                 AdjacencyRule = block.AdjacencyRule;
@@ -141,8 +171,8 @@ namespace ProcBuild
         private MyTuple<MyPart, MatrixI> ComputeSmallestTerminalAttachment()
         {
             foreach (var part in SessionCore.Instance.PartManager.SortedBySize)
-                if (part.MountPointsOfType(m_mountType).Count() <= 2)
-                    foreach (var mount in part.MountPointsOfType(m_mountType))
+                if (part.MountPointsOfType(MountType).Count() <= 2)
+                    foreach (var mount in part.MountPointsOfType(MountType))
                     {
                         var transforms = GetTransform(mount);
                         if (transforms == null) continue;
@@ -150,19 +180,18 @@ namespace ProcBuild
                             return MyTuple.Create(part, transform);
                     }
             foreach (var part in SessionCore.Instance.PartManager.SortedBySize)
-                foreach (var mount in part.MountPointsOfType(m_mountType))
+                foreach (var mount in part.MountPointsOfType(MountType))
                 {
                     var transforms = GetTransform(mount);
                     if (transforms == null) continue;
                     foreach (var transform in transforms)
                     {
-                        SessionCore.Log("Failed to find any terminal module that is attachable to \"{1} {2}\" on {0}.  Resorting to {3}.", m_part.Name, m_mountType, m_mountName, part.Name);
+                        SessionCore.Log("Failed to find any terminal module that is attachable to \"{1} {2}\" on {0}.  Resorting to {3}.", m_part.Name, MountType, MountName, part.Name);
                         return MyTuple.Create(part, transform);
                     }
                 }
-            SessionCore.Log("Failed to find any module that is attachable to \"{1} {2}\" on {0}", m_part.Name, m_mountType, m_mountName);
+            SessionCore.Log("Failed to find any module that is attachable to \"{1} {2}\" on {0}", m_part.Name, MountType, MountName);
             return MyTuple.Create((MyPart)null, default(MatrixI));
         }
-
     }
 }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using ProcBuild.Utils;
 using Sandbox.Common.ObjectBuilders;
 using VRage.Game;
 
@@ -12,14 +13,14 @@ namespace ProcBuild.Creation
     {
         public enum RemapType
         {
-            ALL = 0,
-            BLOCKS,
-            GROUPS,
+            All = 0,
+            Blocks,
+            Groups,
             /// <summary>
             /// Used to rename button labels on toolbars.
             /// </summary>
-            LABELS,
-            GRIDS
+            Labels,
+            Grids
         }
 
         private readonly Dictionary<RemapType, string> m_prefix = new Dictionary<RemapType, string>();
@@ -51,11 +52,11 @@ namespace ProcBuild.Creation
         {
             string prefix = null;
             if (!m_prefix.TryGetValue(type, out prefix))
-                if (!m_prefix.TryGetValue(RemapType.ALL, out prefix))
+                if (!m_prefix.TryGetValue(RemapType.All, out prefix))
                     prefix = null;
             string suffix = null;
             if (!m_suffix.TryGetValue(type, out suffix))
-                if (!m_suffix.TryGetValue(RemapType.ALL, out suffix))
+                if (!m_suffix.TryGetValue(RemapType.All, out suffix))
                     suffix = null;
             if (!string.IsNullOrWhiteSpace(prefix) && !current.StartsWith(prefix))
                 current = prefix + current;
@@ -72,19 +73,19 @@ namespace ProcBuild.Creation
         public void Remap(MyObjectBuilder_CubeGrid grid)
         {
             if (grid.DisplayName != null)
-                Remap(RemapType.GRIDS, ref grid.DisplayName);
+                Remap(RemapType.Grids, ref grid.DisplayName);
 
             var toolbars = new List<MyObjectBuilder_Toolbar>();
             foreach (var block in grid.CubeBlocks)
             {
                 var tblock = block as MyObjectBuilder_TerminalBlock;
                 if (tblock?.CustomName != null)
-                    Remap(RemapType.BLOCKS, ref tblock.CustomName);
+                    Remap(RemapType.Blocks, ref tblock.CustomName);
 
                 var buttonPanel = block as MyObjectBuilder_ButtonPanel;
                 if (buttonPanel?.CustomButtonNames != null)
                     foreach (var k in buttonPanel.CustomButtonNames.Dictionary.Keys)
-                        buttonPanel.CustomButtonNames[k] = Remap(RemapType.LABELS, buttonPanel.CustomButtonNames[k]);
+                        buttonPanel.CustomButtonNames[k] = Remap(RemapType.Labels, buttonPanel.CustomButtonNames[k]);
 
                 toolbars.Clear();
                 toolbars.AddIfNotNull(buttonPanel?.Toolbar);
@@ -98,13 +99,13 @@ namespace ProcBuild.Creation
                     {
                         var termGroup = s.Data as MyObjectBuilder_ToolbarItemTerminalGroup;
                         if (termGroup?.GroupName != null)
-                            Remap(RemapType.GROUPS, ref termGroup.GroupName);
+                            Remap(RemapType.Groups, ref termGroup.GroupName);
                     }
             }
 
             if (grid.BlockGroups != null)
                 foreach (var group in grid.BlockGroups)
-                    Remap(RemapType.GROUPS, ref group.Name);
+                    Remap(RemapType.Groups, ref group.Name);
         }
 
         // Name transform is deterministic, so we can skip storing any cache.

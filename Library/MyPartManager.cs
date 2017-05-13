@@ -1,16 +1,14 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using ProcBuild.Utils;
 using Sandbox.Definitions;
 using VRage.Game;
 using VRage.ObjectBuilders;
 
-namespace ProcBuild
+namespace ProcBuild.Library
 {
     internal class MyPartManager : IEnumerable<MyPart>
     {
@@ -43,20 +41,10 @@ namespace ProcBuild
         {
             var watch = new Stopwatch();
             watch.Restart();
-            var parts = 0;
-            foreach (var def in MyDefinitionManager.Static.GetPrefabDefinitions())
-                if (def.Value.Id.SubtypeName.StartsWithICase(PREFAB_NAME_PREFIX))
-                {
-                    parts++;
-                    var tmp = def.Value.CubeGrids;
-                }
-            SessionCore.Log("Loaded all prefab data ({0}) in {1}", parts, watch.Elapsed);
-
-            watch.Restart();
             foreach (var def in MyDefinitionManager.Static.GetPrefabDefinitions())
                 if (def.Value.Id.SubtypeName.StartsWithICase(PREFAB_NAME_PREFIX))
                     Load(def.Value);
-            SessionCore.Log("Setup all prefabs ({0}) in {1}", m_parts.Count, watch.Elapsed);
+            SessionCore.Log("Loaded all prefabs ({0}) in {1}", m_parts.Count, watch.Elapsed);
         }
 
         public MyPart LoadNullable(SerializableDefinitionId prefabID)
@@ -81,9 +69,9 @@ namespace ProcBuild
                     foreach (var mount in other.MountPoints)
                         mount.InvalidateSmallestAttachment();
             }
-            catch
+            catch (Exception e)
             {
-                SessionCore.LogBoth("Failed to load prefab {0}", def.Id.SubtypeName);
+                SessionCore.LogBoth("Failed to load prefab {0}.  Cause:\n{1}", def.Id.SubtypeName, e);
             }
             return part;
         }

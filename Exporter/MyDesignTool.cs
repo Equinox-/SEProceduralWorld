@@ -1,48 +1,44 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using ProcBuild.Library;
+using ProcBuild.Utils;
+using Sandbox.Definitions;
 using Sandbox.ModAPI;
-using Sandbox.ModAPI.Interfaces.Terminal;
 using VRage;
 using VRage.Game;
 using VRage.Game.ModAPI;
 using VRage.ObjectBuilders;
 using VRageMath;
-using Sandbox.Definitions;
-using Sandbox.Common.ObjectBuilders;
 
-namespace ProcBuild
+namespace ProcBuild.Exporter
 {
     public class MyDesignTool
     {
         public const string DELEGATED_TAG = "del";
-        public const string MOUNT_DELEGATED = MyPart.MOUNT_PREFIX + " " + DELEGATED_TAG;
-        public const string RESERVED_SPACE_DELEGATED = MyPart.RESERVED_SPACE_PREFIX + " " + DELEGATED_TAG;
+        public const string MOUNT_DELEGATED = MyPartStorage.MOUNT_PREFIX + " " + DELEGATED_TAG;
+        public const string RESERVED_SPACE_DELEGATED = MyPartStorage.RESERVED_SPACE_PREFIX + " " + DELEGATED_TAG;
 
         private static bool ApplyDelegate(MyObjectBuilder_CubeGrid grid, MyObjectBuilder_CubeBlock source, string srcName, MyObjectBuilder_CubeBlock dest, Base6Directions.Direction destDir)
         {
-            if (dest.Name != null && (dest.Name.StartsWithICase(MyPart.MOUNT_PREFIX) || dest.Name.StartsWithICase(MyPart.RESERVED_SPACE_PREFIX)))
-            {
-                SessionCore.LogBoth("Multiple mount points for {0} ({1} and {2})", dest.Min, dest.Name, srcName);
-            }
-
             if (srcName.StartsWithICase(MOUNT_DELEGATED))
             {
-                dest.Name = MyPart.MOUNT_PREFIX + " " + srcName.Substring(MOUNT_DELEGATED.Length).Trim();
+                var outName = MyPartStorage.MOUNT_PREFIX + " " + srcName.Substring(MOUNT_DELEGATED.Length).Trim();
                 var lTrans = new MatrixI(dest.BlockOrientation);
                 MatrixI iTrans;
                 MatrixI.Invert(ref lTrans, out iTrans);
-                dest.Name += " D:" + iTrans.GetDirection(Base6Directions.GetOppositeDirection(destDir)).ToString();
+                outName += " D:" + iTrans.GetDirection(Base6Directions.GetOppositeDirection(destDir)).ToString();
                 var anchorPoint = source.Min + Base6Directions.GetIntVector(destDir);
                 var del = anchorPoint - dest.Min;
                 if (del != Vector3I.Zero)
                 {
-                    dest.Name += " A:" + del.X + ":" + del.Y + ":" + del.Z;
+                    outName += " A:" + del.X + ":" + del.Y + ":" + del.Z;
                 }
+                if (string.IsNullOrWhiteSpace(dest.Name))
+                    dest.Name = outName;
+                else
+                    dest.Name = dest.Name + MyPartStorage.MULTI_USE_SENTINEL + outName;
                 return true;
             }
             else if (srcName.StartsWithICase(RESERVED_SPACE_DELEGATED))
@@ -55,11 +51,15 @@ namespace ProcBuild
                 box.Box.Min += del;
                 var boxLocalFloat = MyUtilities.TransformBoundingBox(box.Box, Matrix.Invert(new MatrixI(dest.BlockOrientation).GetFloatMatrix()));
                 var boxLocal = new BoundingBoxI(Vector3I.Floor(boxLocalFloat.Min), Vector3I.Ceiling(boxLocalFloat.Max));
-                dest.Name = $"{MyPart.RESERVED_SPACE_PREFIX} NE:{boxLocal.Min.X}:{boxLocal.Min.Y}:{boxLocal.Min.Z} PE:{boxLocal.Max.X}:{boxLocal.Max.Y}:{boxLocal.Max.Z}";
+                var outName = $"{MyPartStorage.RESERVED_SPACE_PREFIX} NE:{boxLocal.Min.X}:{boxLocal.Min.Y}:{boxLocal.Min.Z} PE:{boxLocal.Max.X}:{boxLocal.Max.Y}:{boxLocal.Max.Z}";
                 if (box.IsShared)
-                    dest.Name += " shared";
+                    outName += " shared";
                 if (box.IsOptional)
-                    dest.Name += " optional";
+                    outName += " optional";
+                if (string.IsNullOrWhiteSpace(dest.Name))
+                    dest.Name = outName;
+                else
+                    dest.Name = dest.Name + MyPartStorage.MULTI_USE_SENTINEL + outName;
                 return true;
             }
             return false;
@@ -110,7 +110,7 @@ namespace ProcBuild
                         foreach (var mount in def.MountPoints)
                             mountDirs.Add(Base6Directions.GetDirection(Vector3I.TransformNormal(mount.Normal, ref transform)));
                     }
-                    
+
                     var args = useName.Split(' ');
                     var keepArgs = new List<string>(args.Length);
                     foreach (var arg in args)
@@ -118,7 +118,7 @@ namespace ProcBuild
                         {
                             Base6Directions.Direction dir;
                             if (Enum.TryParse(arg.Substring(2), out dir))
-                                dirs = new Base6Directions.Direction[] {transform.GetDirection(Base6Directions.GetOppositeDirection(dir))};
+                                dirs = new Base6Directions.Direction[] { transform.GetDirection(Base6Directions.GetOppositeDirection(dir)) };
                             else
                                 SessionCore.LogBoth("Failed to parse direction argument \"{0}\"", arg);
                         }
@@ -196,12 +196,12 @@ namespace ProcBuild
                         var worldAABB = rel.WorldAABB;
                         worldAABB = MyUtilities.TransformBoundingBox(worldAABB, MatrixD.Invert(blockWorld));
                         var gridAABB = new BoundingBoxI(Vector3I.Floor(worldAABB.Min / grid.GridSize), Vector3I.Ceiling(worldAABB.Max / grid.GridSize));
-                        var code = $"{MyPart.RESERVED_SPACE_PREFIX} NE:{gridAABB.Min.X}:{gridAABB.Min.Y}:{gridAABB.Min.Z} PE:{gridAABB.Max.X}:{gridAABB.Max.Y}:{gridAABB.Max.Z}";
+                        var code = $"{MyPartStorage.RESERVED_SPACE_PREFIX} NE:{gridAABB.Min.X}:{gridAABB.Min.Y}:{gridAABB.Min.Z} PE:{gridAABB.Max.X}:{gridAABB.Max.Y}:{gridAABB.Max.Z}";
                         SessionCore.Log("Added reserved space for subgrid {0}: Spec is \"{1}\"", rel.CustomName, code);
                         if (blockDest.Name == null || blockDest.Name.Trim().Length == 0)
                             blockDest.Name = code;
                         else
-                            blockDest.Name += MyPart.MULTI_USE_SENTINEL + code;
+                            blockDest.Name += MyPartStorage.MULTI_USE_SENTINEL + code;
                     }
                     else
                     {
@@ -212,13 +212,18 @@ namespace ProcBuild
                 var allGrids = new List<MyObjectBuilder_CubeGrid>(relatedGrids.Count + 1) { ob };
                 allGrids.AddRange(relatedGrids.Select(relGrid => relGrid.GetObjectBuilder(false)).OfType<MyObjectBuilder_CubeGrid>());
 
+                // Compose description: TODO I'd love if this actually worked :/
+                // var storage = new MyPartStorage();
+                // storage.InitFromGrids(ob, allGrids);
+                // var data = Convert.ToBase64String(MyAPIGateway.Utilities.SerializeToBinary(storage.GetObjectBuilder()));
+
                 var defOut = new MyObjectBuilder_PrefabDefinition()
                 {
                     Id = new SerializableDefinitionId(typeof(MyObjectBuilder_PrefabDefinition), grid.CustomName),
                     CubeGrids = allGrids.ToArray()
                 };
 
-                var fileName = grid.CustomName + ".sbc";
+                var fileName = "export_" + grid.CustomName + ".sbc";
                 SessionCore.LogBoth("Saving {1} grids as {0}", fileName, defOut.CubeGrids.Length);
 
                 var mishMash = new MyObjectBuilder_Definitions()

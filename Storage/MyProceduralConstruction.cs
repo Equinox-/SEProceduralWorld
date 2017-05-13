@@ -1,24 +1,88 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using VRage;
+using ProcBuild.Library;
+using ProcBuild.Utils;
+using Sandbox.Game.EntityComponents;
 using VRage.Game;
+using VRage.Game.ObjectBuilders.Definitions;
+using VRage.ObjectBuilders;
 using VRageMath;
 
-namespace ProcBuild.Construction
+namespace ProcBuild.Storage
 {
     public class MyProceduralConstruction
     {
-        private Dictionary<long, MyProceduralRoom> m_rooms;
-        private List<MyProceduralRoom> m_roomsSafeOrder;
+        private readonly Dictionary<long, MyProceduralRoom> m_rooms;
+        private readonly List<MyProceduralRoom> m_roomsSafeOrder;
 
-        public MyProceduralConstruction()
+        public readonly MyProceduralConstructionSeed Seed;
+        public readonly MyBlockSetInfo BlockSetInfo;
+
+        public MyProceduralConstruction(MyProceduralEnvironment environment, long seed)
         {
             m_maxID = 0;
             m_rooms = new Dictionary<long, MyProceduralRoom>();
             m_roomsSafeOrder = new List<MyProceduralRoom>();
+            Seed = new MyProceduralConstructionSeed(environment, seed);
+            BlockSetInfo = new MyBlockSetInfo();
+        }
+
+        public double ComputeWeightAgainstTradeRequirements(MyUtilities.LoggingCallback logger = null)
+        {
+            var error = 0.0;
+            var powerReq = new MyProceduralConstructionSeed.MyTradeRequirements(0, 0);
+
+            foreach (var kv in Seed.TradeRequirements)
+            {
+                var id = kv.Key;
+                var req = kv.Value;
+                if (id == MyResourceDistributorComponent.ElectricityId)
+                {
+                    powerReq = req;
+                    continue;
+                }
+                if (id.TypeId == typeof(MyObjectBuilder_GasProperties))
+                {
+                    var storageCurrent = BlockSetInfo.TotalGasStorage(id);
+                    var ce = ErrorFunction(req.Storage, storageCurrent, 10, 1e-5);
+                    logger?.Invoke("Gas {0} storage current {1:e} vs {2:e}. Err {3:e}", id.SubtypeName, storageCurrent, req.Storage, ce);
+                    error += ce;
+                }
+                var throughputCurrent = BlockSetInfo.TotalProduction(id);
+                var te = ErrorFunction(req.Throughput, throughputCurrent, 1, 1e-6);
+                logger?.Invoke("{0} throughput current {1:e} vs {2:e}.  Store {3:e}. Err {4:e}", id, throughputCurrent, req.Throughput, req.Storage, te);
+                error += te;
+            }
+            error /= Seed.TradeRequirements.Count();
+
+            // inventory:
+            var errInventory = ErrorFunction(Seed.StorageVolume, BlockSetInfo.TotalInventoryCapacity, 1e3, 1e-3);
+            logger?.Invoke("Inventory capacity current {0:e} vs {1:e}.  Err {2:e}", BlockSetInfo.TotalInventoryCapacity, Seed.StorageVolume, errInventory);
+            error += errInventory;
+
+            // power:
+            // throughput is extra power available.  Total power consumption is (consumption - production).
+            var errPowerThroughput = ErrorFunction(powerReq.Throughput, -BlockSetInfo.TotalPowerNetConsumption, 1e9, 1);
+            var errPowerStorage = ErrorFunction(powerReq.Storage, BlockSetInfo.TotalPowerStorage, 1e7, 1);
+            logger?.Invoke("Power throughput current {0:e} vs {1:e}. Err {2:e}", -BlockSetInfo.TotalPowerNetConsumption, powerReq.Throughput, errPowerThroughput);
+            logger?.Invoke("Power capacity current {0:e} vs {1:e}. Err {2:e}", BlockSetInfo.TotalPowerStorage, powerReq.Storage, errPowerStorage);
+            error += errPowerThroughput;
+            error += errPowerStorage;
+            return error;
+        }
+
+        private static double ErrorFunction(double target, double current, double multDeficit, double multSurplus)
+        {
+            var error = target - current;
+            if (error > 0)
+                return multDeficit * error * error;
+            error += target;
+            if (error > 0)
+                return 0;
+            else
+                return multSurplus * error * error;
         }
 
         public void Init(MyObjectBuilder_ProceduralConstruction ob)
@@ -37,13 +101,7 @@ namespace ProcBuild.Construction
             m_maxID = Math.Max(m_maxID, room.RoomID);
             m_rooms[room.RoomID] = room;
             m_roomsSafeOrder.Add(room);
-        }
-
-        public MyProceduralRoom GenerateRoom(MatrixI transform, MyPart prefab)
-        {
-            var tmp = new MyProceduralRoom();
-            tmp.Init(this, transform, prefab);
-            return tmp;
+            BlockSetInfo.AddToSelf(room.Part.BlockSetInfo);
         }
 
         public void RemoveRoom(MyProceduralRoom room)
@@ -57,6 +115,14 @@ namespace ProcBuild.Construction
                 SessionCore.Log("Possibly unsafe removal of room not at end of safe list");
             }
             room.Orphan();
+            BlockSetInfo.SubtractFromSelf(room.Part.BlockSetInfo);
+        }
+
+        public MyProceduralRoom GenerateRoom(MatrixI transform, MyPart prefab)
+        {
+            var tmp = new MyProceduralRoom();
+            tmp.Init(this, transform, prefab);
+            return tmp;
         }
 
         public void AddCachedRoom(MyProceduralRoom room)
@@ -194,12 +260,12 @@ namespace ProcBuild.Construction
 
         public bool Intersects(MyPart other, MatrixI otherTransform, MatrixI otherITransform, bool testOptional)
         {
-            return MyPart.Intersects(ref m_part, ref m_transform, ref m_invTransform, ref other, ref otherTransform, ref otherITransform, testOptional);
+            return MyPartStorage.Intersects(ref m_part, ref m_transform, ref m_invTransform, ref other, ref otherTransform, ref otherITransform, testOptional);
         }
 
         public bool Intersects(MyProceduralRoom other, bool testOptional)
         {
-            return MyPart.Intersects(ref m_part, ref m_transform, ref m_invTransform, ref other.m_part, ref other.m_transform, ref other.m_invTransform, testOptional);
+            return MyPartStorage.Intersects(ref m_part, ref m_transform, ref m_invTransform, ref other.m_part, ref other.m_transform, ref other.m_invTransform, testOptional);
         }
 
         public bool IsReserved(Vector3 pos, bool testShared = true, bool testOptional = true)

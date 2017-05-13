@@ -1,17 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-using ProcBuild.Construction;
+﻿using System.Collections.Generic;
 using Sandbox.Definitions;
-using Sandbox.ModAPI;
 using VRage.Game;
 using VRageMath;
 
-namespace ProcBuild
+namespace ProcBuild.Utils
 {
     public class BlockTransformations
     {

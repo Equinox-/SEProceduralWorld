@@ -1,11 +1,11 @@
-﻿using Sandbox.ModAPI;
-using System;
+﻿using System;
 using System.IO;
 using System.Text;
+using Sandbox.ModAPI;
 using VRage;
 using VRage.Utils;
 
-namespace ProcBuild
+namespace ProcBuild.Utils
 {
     internal class Logging
     {

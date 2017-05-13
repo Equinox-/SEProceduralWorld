@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using ProcBuild.Utils;
+using Sandbox.Common.ObjectBuilders;
 using VRage.Game;
 using VRageMath;
 
@@ -28,6 +30,11 @@ namespace ProcBuild.Creation
                 Vector3I.Transform(ref cMin, ref transformCopy, out cMin);
                 Vector3I.Transform(ref cMax, ref transformCopy, out cMax);
                 minToMin[orig] = x.Min = Vector3I.Min(cMin, cMax);
+                
+                var proj = x as MyObjectBuilder_ProjectorBase;
+                // Don't have to update the rotation; it is bound to the world matrix of the projector.
+                if (proj != null)
+                    Vector3I.TransformNormal(ref proj.ProjectionOffset, ref transformCopy, out proj.ProjectionOffset);
             }
 
             if (grid.BlockGroups != null)

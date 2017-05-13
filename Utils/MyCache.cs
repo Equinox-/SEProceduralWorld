@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using ProcBuild.Library;
 
-namespace ProcBuild
+namespace ProcBuild.Utils
 {
     public class MyCache<TK, TV>
     {
@@ -39,6 +37,20 @@ namespace ProcBuild
                 }
 
             var node = new LinkedListNode<CacheItem>(new CacheItem() { key = key, value = del(key) });
+            lruCache.AddLast(node);
+            cache.Add(key, node);
+            return node.Value.value;
+        }
+
+        public void Clear()
+        {
+            this.cache.Clear();
+            this.lruCache.Clear();
+        }
+
+        public TV Store(TK key, TV value)
+        {
+            var node = new LinkedListNode<CacheItem>(new CacheItem() { key = key, value = value });
             lruCache.AddLast(node);
             cache.Add(key, node);
             return node.Value.value;

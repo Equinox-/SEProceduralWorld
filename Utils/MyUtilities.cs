@@ -1,24 +1,76 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Sandbox.ModAPI;
-using VRage.Game;
-using VRageMath;
-using Sandbox.Definitions;
 using VRage;
 using VRage.ModAPI;
 using VRage.Utils;
+using VRageMath;
 
-namespace ProcBuild
+namespace ProcBuild.Utils
 {
     public static class MyUtilities
     {
+        // We average integral sin(pi*x) from 0 to 1.
+        public const float SunMovementMultiplier = (float)(2 / Math.PI);
+
+        public static double NextNormal(this Random random, double mu = 0, double sigma = 1)
+        {
+            // Box-Muller Transform
+            double u1 = 0, u2 = 0;
+            while (u1 <= double.Epsilon)
+            {
+                u1 = random.NextDouble();
+                u2 = random.NextDouble();
+            }
+
+            // Deterministic, but still uniformly represent the two axes
+            if (u1 < 0.5D)
+                return mu + sigma * Math.Sqrt(-2 * Math.Log(u1)) * Math.Cos(2 * Math.PI * u2);
+            else
+                return mu + sigma * Math.Sqrt(-2 * Math.Log(u1)) * Math.Sin(2 * Math.PI * u2);
+        }
+
+        public static double NextExponential(this Random random, double lambda = 1)
+        {
+            return lambda * Math.Pow(-Math.Log(random.NextDouble()), lambda);
+        }
+
+        public static void AddOrApply<TK, TV>(this Dictionary<TK, TV> dict, TK key, TV val, Func<TV, TV, TV> biFunc)
+        {
+            TV valCurrent;
+            if (!dict.TryGetValue(key, out valCurrent))
+            {
+                dict[key] = val;
+                return;
+            }
+            dict[key] = biFunc.Invoke(valCurrent, val);
+        }
+
+        public static void AddValue<TK>(this Dictionary<TK, MyFixedPoint> dict, TK key, MyFixedPoint val)
+        {
+            dict[key] = dict.GetValueOrDefault(key, 0) + val;
+        }
+        public static void AddValue<TK>(this Dictionary<TK, int> dict, TK key, int val)
+        {
+            dict[key] = dict.GetValueOrDefault(key, 0) + val;
+        }
+        public static void AddValue<TK>(this Dictionary<TK, float> dict, TK key, float val)
+        {
+            dict[key] = dict.GetValueOrDefault(key, 0) + val;
+        }
+        public static void AddValue<TK>(this Dictionary<TK, double> dict, TK key, double val)
+        {
+            dict[key] = dict.GetValueOrDefault(key, 0) + val;
+        }
+
         public static void AddIfNotNull<T>(this List<T> list, T value) where T : class
         {
             if (value != null)
                 list.Add(value);
+        }
+
+        public static bool Equals(this MatrixI mat, MatrixI other)
+        {
+            return mat.Translation == other.Translation && mat.Backward == other.Backward && mat.Right == other.Right && mat.Up == other.Up;
         }
 
         public static Vector3D Slerp(this Vector3D start, Vector3D end, float percent)
@@ -40,6 +92,11 @@ namespace ProcBuild
         }
 
         public delegate void LoggingCallback(string format, params object[] args);
+
+        public static LoggingCallback LogToList(List<string> dest)
+        {
+            return (x, y) => dest.Add(string.Format(x, y));
+        }
 
         public static bool StartsWithICase(this string s, string arg)
         {

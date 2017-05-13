@@ -1,15 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.ComponentModel;
 using ProtoBuf;
-using VRage;
 using VRage.ObjectBuilders;
 using VRageMath;
 
-namespace ProcBuild.Construction
+namespace ProcBuild.Storage
 {
     public class MyObjectBuilder_ProceduralConstruction
     {

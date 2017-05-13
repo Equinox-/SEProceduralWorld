@@ -5,9 +5,13 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using ProcBuild.Construction;
+using ParallelTasks;
 using ProcBuild.Creation;
+using ProcBuild.Exporter;
 using ProcBuild.Generation;
+using ProcBuild.Library;
+using ProcBuild.Storage;
+using ProcBuild.Utils;
 using Sandbox.Definitions;
 using Sandbox.Game;
 using Sandbox.Game.Entities;
@@ -109,18 +113,18 @@ namespace ProcBuild
                 var gridSize = f.Item2.GridSize;
                 foreach (var room in f.Item1.Rooms)
                 {
-                    var localAABB = new BoundingBoxD(room.BoundingBox.Min * gridSize, (room.BoundingBox.Max+1) * gridSize);
+                    var localAABB = new BoundingBoxD(room.BoundingBox.Min * gridSize, (room.BoundingBox.Max + 1) * gridSize);
                     MySimpleObjectDraw.DrawTransparentBox(ref transform, ref localAABB, ref blocks, MySimpleObjectRasterizer.Wireframe, 1, .02f);
                     if (room.Part.ReservedSpaces.Any())
                     {
                         var temp = MyUtilities.TransformBoundingBox(room.Part.ReservedSpace, room.Transform);
-                        var tmpAABB = new BoundingBoxD(temp.Min * gridSize, (temp.Max+1) * gridSize);
+                        var tmpAABB = new BoundingBoxD(temp.Min * gridSize, (temp.Max + 1) * gridSize);
                         MySimpleObjectDraw.DrawTransparentBox(ref transform, ref tmpAABB, ref allReserved, MySimpleObjectRasterizer.Wireframe, 1, .02f);
                     }
                     foreach (var rs in room.Part.ReservedSpaces)
                     {
                         var temp = MyUtilities.TransformBoundingBox(rs.Box, room.Transform);
-                        var tmpAABB = new BoundingBoxD(temp.Min * gridSize, (temp.Max+1) * gridSize);
+                        var tmpAABB = new BoundingBoxD(temp.Min * gridSize, (temp.Max + 1) * gridSize);
                         tmpAABB = tmpAABB.Inflate(-0.02);
                         MySimpleObjectDraw.DrawTransparentBox(ref transform, ref tmpAABB, ref reserved[(rs.IsShared ? 1 : 0) + (rs.IsOptional ? 2 : 0)], MySimpleObjectRasterizer.Wireframe, 1, .005f);
                     }
@@ -209,6 +213,44 @@ namespace ProcBuild
                 ProcessDebugPart(args);
             if (args[0].Equals("/list"))
                 ProcessSpawn(args);
+            if (args[0].Equals("/info"))
+                ProcessInfo(args);
+        }
+
+        private void ProcessInfo(IReadOnlyList<string> args)
+        {
+            if (args.Count < 2)
+            {
+                MyAPIGateway.Utilities.ShowMessage("PDebug", "Usage: " + args[0] + " [part name]");
+                return;
+            }
+            var part = PartManager.FirstOrDefault(test => test.Prefab.Id.SubtypeName.ToLower().Contains(args[1].ToLower()));
+            if (part == null)
+            {
+                MyAPIGateway.Utilities.ShowMessage("PDebug", "Unable to find part with name \"" + args[1] + "\"");
+                return;
+            }
+            var info = part.BlockSetInfo;
+            SessionCore.Log("Part info for {0}\nBlock type counts:", part.Name);
+            foreach (var kv in info.BlockCountByType)
+                SessionCore.Log("{0}: {1}", kv.Key, kv.Value);
+            SessionCore.Log("Total power consumption/storage: {0:e}:{1:e}  Groups:", info.TotalPowerNetConsumption, info.TotalPowerStorage);
+            foreach (var kv in info.PowerConsumptionByGroup)
+                SessionCore.Log("{0}: {1}", kv.Key, kv.Value);
+            SessionCore.Log("Total inventory capacity: {0:e}", info.TotalInventoryCapacity);
+            SessionCore.Log("Total component cost:");
+            foreach (var kv in info.ComponentCost)
+                SessionCore.Log("{0}: {1}", kv.Key.Id.SubtypeName, kv.Value);
+            SessionCore.Log("Production quotas:");
+            foreach (var pi in MyDefinitionManager.Static.GetPhysicalItemDefinitions())
+                SessionCore.Log("{0}: {1}", pi.Id, info.TotalProduction(pi.Id));
+            foreach (var pi in MyDefinitionManager.Static.GetDefinitionsOfType<MyComponentDefinition>())
+                SessionCore.Log("{0}: {1}", pi.Id, info.TotalProduction(pi.Id));
+            foreach (var gas in MyDefinitionManager.Static.GetDefinitionsOfType<MyGasProperties>())
+                SessionCore.Log("{0}: {1}", gas.Id, info.TotalProduction(gas.Id));
+            SessionCore.Log("Gas storage");
+            foreach (var gas in MyDefinitionManager.Static.GetDefinitionsOfType<MyGasProperties>())
+                SessionCore.Log("{0}: {1}", gas.Id, info.TotalGasStorage(gas.Id));
         }
 
         private void ProcessDebugPart(IReadOnlyList<string> args)
@@ -224,9 +266,9 @@ namespace ProcBuild
                 MyAPIGateway.Utilities.ShowMessage("PDebug", "Unable to find part with name \"" + args[1] + "\"");
                 return;
             }
-            var c = new MyProceduralConstruction();
+            var c = new MyProceduralConstruction(new MyProceduralEnvironment(Vector3D.Zero), 0);
             c.GenerateRoom(new MatrixI(Base6Directions.Direction.Forward, Base6Directions.Direction.Up), part);
-            IMyCubeGrid dest = null;
+            MyConstructionCopy dest = null;
             var iwatch = new Stopwatch();
             foreach (var room in c.Rooms)
             {
@@ -245,9 +287,20 @@ namespace ProcBuild
                 }
                 else
                     MyGridCreator.AppendRoom(dest, room);
-                Log("Added room {3} of {0} blocks with {1} aux grids in {2}", room.Part.PrimaryGrid.CubeBlocks.Count, room.Part.Prefab.CubeGrids.Length - 1, iwatch.Elapsed, room.Part.Name);
+                Log("Created OB for room {3} of {0} blocks with {1} aux grids in {2}", room.Part.PrimaryGrid.CubeBlocks.Count, room.Part.Prefab.CubeGrids.Length - 1, iwatch.Elapsed, room.Part.Name);
             }
-            debugParts.Add(MyTuple.Create(c, dest));
+            // Spawn the CC
+            if (dest != null)
+            {
+                iwatch.Restart();
+                var primaryGrid = MyAPIGateway.Entities.CreateFromObjectBuilderAndAdd(dest.m_primaryGrid) as IMyCubeGrid;
+                Log("Spawned entity for {0} room grid in {1}", c.Rooms.Count(), iwatch.Elapsed);
+                iwatch.Restart();
+                foreach (var aux in dest.m_auxGrids)
+                    MyAPIGateway.Entities.CreateFromObjectBuilderAndAdd(aux);
+                Log("Spawned {0} aux grids in {1}", dest.m_auxGrids.Count, iwatch.Elapsed);
+                debugParts.Add(MyTuple.Create(c, primaryGrid));
+            }
         }
 
         private void ProcessSpawn(IReadOnlyList<string> args)
@@ -262,7 +315,7 @@ namespace ProcBuild
                 watch.Reset();
                 watch.Start();
 
-                var construction = new MyProceduralConstruction();
+                var construction = new MyProceduralConstruction(new MyProceduralEnvironment(MyAPIGateway.Session.Player.GetPosition()), new Random().Next());
                 {
                     // Seed the generator
                     var part = PartManager.First();
@@ -277,10 +330,10 @@ namespace ProcBuild
                 }
 
                 for (var i = 0; i < count; i++)
-                    if (!MyGenerator.StepConstruction(construction, (i > count / 2) ? 0 : 1))
+                    if (!MyGenerator.StepConstruction(construction, (i > count / 2) ? 0 : float.NaN))
                         break;
                 // Give it plenty of tries to close itself
-                {
+               if(false) {
                     var remainingMounts = construction.Rooms.SelectMany(x => x.MountPoints).Count(y => y.AttachedTo == null);
                     var triesToClose = remainingMounts * 2 + 2;
                     Log("There are {0} remaining mounts.  Giving it {1} tries to close itself.", remainingMounts, triesToClose);
@@ -311,7 +364,7 @@ namespace ProcBuild
                 }
 
                 var generate = watch.Elapsed;
-                IMyCubeGrid dest = null;
+                MyConstructionCopy dest = null;
                 var iwatch = new Stopwatch();
                 watch.Restart();
                 foreach (var room in construction.Rooms)
@@ -336,7 +389,17 @@ namespace ProcBuild
                 var msg = $"Added {construction.Rooms.Count()} rooms; generated in {generate}, added in {watch.Elapsed}";
                 Log(msg);
                 MyAPIGateway.Utilities.ShowMessage("Gen", msg);
-                procgen.Add(MyTuple.Create(construction, dest));
+                // Spawn the CC
+                if (dest != null)
+                {
+                    iwatch.Restart();
+                    var primaryGrid = MyAPIGateway.Entities.CreateFromObjectBuilderAndAdd(dest.m_primaryGrid) as IMyCubeGrid;
+                    Log("Spawned entity for {0} room grid in {1}", construction.Rooms.Count(), iwatch.Elapsed);
+                    iwatch.Restart();
+                    foreach (var aux in dest.m_auxGrids)
+                        MyAPIGateway.Entities.CreateFromObjectBuilderAndAdd(aux);
+                    Log("Spawned {0} aux grids in {1}", dest.m_auxGrids.Count, iwatch.Elapsed);
+                }
             }
             catch (Exception e)
             {

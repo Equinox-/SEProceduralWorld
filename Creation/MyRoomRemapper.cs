@@ -4,8 +4,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using ProcBuild.Construction;
 using ProcBuild.Generation;
+using ProcBuild.Storage;
 using ProcBuild.Utils;
 using Sandbox.Definitions;
 using Sandbox.ModAPI;
@@ -51,9 +51,9 @@ namespace ProcBuild.Creation
             m_auxiliary.Add(new MyGridRemap_WorldTransform());
         }
 
-        public void Remap(MyProceduralRoom room, ref MyObjectBuilder_CubeGrid primaryGrid, List<MyObjectBuilder_CubeGrid> auxGrids)
+        public void Remap(MyProceduralRoom room, MyConstructionCopy dest)
         {
-            if (primaryGrid.GridSizeEnum != room.Part.PrimaryCubeSize)
+            if (dest.m_primaryGrid.GridSizeEnum != room.Part.PrimaryCubeSize)
                 throw new ArgumentException("Primary grid cube size and room's primary cube size differ");
 
             // Setup remap parameters
@@ -64,7 +64,7 @@ namespace ProcBuild.Creation
 
             {
                 var naming = m_all.Remap<MyGridRemap_Names>();
-                naming.PrefixFor(MyGridRemap_Names.RemapType.ALL, room.GetName() + " ");
+                naming.PrefixFor(MyGridRemap_Names.RemapType.All, room.GetName() + " ");
             }
 
             {
@@ -76,13 +76,13 @@ namespace ProcBuild.Creation
                 var worldTransform = m_auxiliary.Remap<MyGridRemap_WorldTransform>();
 
                 var roomTransformScaled = room.Transform.GetFloatMatrix();
-                roomTransformScaled.Translation *= MyDefinitionManager.Static.GetCubeSize(primaryGrid.GridSizeEnum);
+                roomTransformScaled.Translation *= MyDefinitionManager.Static.GetCubeSize(dest.m_primaryGrid.GridSizeEnum);
 
                 var prefabToWorld = MatrixD.Multiply(MatrixD.Invert(room.Part.PrimaryGrid.PositionAndOrientation?.AsMatrixD() ?? MatrixD.Identity), roomTransformScaled);
-                prefabToWorld = MatrixD.Multiply(prefabToWorld, primaryGrid.PositionAndOrientation?.GetMatrix() ?? MatrixD.Identity);
+                prefabToWorld = MatrixD.Multiply(prefabToWorld, dest.m_primaryGrid.PositionAndOrientation?.GetMatrix() ?? MatrixD.Identity);
 
                 worldTransform.WorldTransform = prefabToWorld;
-                worldTransform.WorldLinearVelocity = primaryGrid.LinearVelocity;
+                worldTransform.WorldLinearVelocity = dest.m_primaryGrid.LinearVelocity;
             }
 
             // Grab OB copies
@@ -93,15 +93,15 @@ namespace ProcBuild.Creation
             // Remap entity IDs
             MyAPIGateway.Entities.RemapObjectBuilderCollection(allGrids);
             // If we have a primary ID copy it now.
-            if (primaryGrid.EntityId != 0)
+            if (dest.m_primaryGrid.EntityId != 0)
             {
-                var constRemapID = new MyConstantEntityRemap(new Dictionary<long, long> { [roomGrid.EntityId] = primaryGrid.EntityId });
+                var constRemapID = new MyConstantEntityRemap(new Dictionary<long, long> { [roomGrid.EntityId] = dest.m_primaryGrid.EntityId });
                 // Anything referring to the root grid's entity ID needs to be changed to the old grid.
                 foreach (var c in allGrids)
                     c.Remap(constRemapID);
             }
             else // otherwise, skip
-                primaryGrid.EntityId = roomGrid.EntityId;
+                dest.m_primaryGrid.EntityId = roomGrid.EntityId;
 
             // Apply remap operators
             m_all.RemapAndReset(allGrids);
@@ -109,18 +109,21 @@ namespace ProcBuild.Creation
             m_auxiliary.RemapAndReset(otherGrids);
 
             // Merge data into primary grid from room grid
-            primaryGrid.CubeBlocks.Capacity += roomGrid.CubeBlocks.Count;
-            primaryGrid.CubeBlocks.AddRange(roomGrid.CubeBlocks);
+            dest.m_primaryGrid.CubeBlocks.Capacity += roomGrid.CubeBlocks.Count;
+            dest.m_primaryGrid.CubeBlocks.AddRange(roomGrid.CubeBlocks);
 
-            primaryGrid.BlockGroups.Capacity += roomGrid.BlockGroups.Count;
-            primaryGrid.BlockGroups.AddRange(roomGrid.BlockGroups);
+            dest.m_primaryGrid.BlockGroups.Capacity += roomGrid.BlockGroups.Count;
+            dest.m_primaryGrid.BlockGroups.AddRange(roomGrid.BlockGroups);
 
             // Seems suboptimal?  Can we transform this and only invalidate ones on a room border?
-            primaryGrid.ConveyorLines.Clear();
+            dest.m_primaryGrid.ConveyorLines.Clear();
 
             // Not even going to try.
-            primaryGrid.OxygenAmount = null;
-            primaryGrid.Skeleton = null;
+            dest.m_primaryGrid.OxygenAmount = null;
+            dest.m_primaryGrid.Skeleton = null;
+
+            // Add aux grids
+            dest.m_auxGrids.AddRange(otherGrids);
         }
     }
 }

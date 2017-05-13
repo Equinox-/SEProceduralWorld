@@ -1,4 +1,4 @@
-namespace ProcBuild
+namespace ProcBuild.Library
 {
     public enum MyAdjacencyRule
     {

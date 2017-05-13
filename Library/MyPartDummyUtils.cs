@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using ProcBuild.Utils;
 using Sandbox.Common.ObjectBuilders;
 using VRage.Game;
 using VRageMath;
@@ -26,7 +27,7 @@ namespace ProcBuild.Library
             return coords.Length == 3 && float.TryParse(coords[0], out v.X) && float.TryParse(coords[1], out v.Y) && float.TryParse(coords[2], out v.Z);
         }
 
-        public static ReservedSpace ParseReservedSpace(float gridSize, MyObjectBuilder_CubeBlock src, string[] args, MyUtilities.LoggingCallback log = null)
+        public static MyReservedSpace ParseReservedSpace(float gridSize, MyObjectBuilder_CubeBlock src, string[] args, MyUtilities.LoggingCallback log = null)
         {
             if (log == null) log = SessionCore.Log;
             var optional = false;
@@ -80,7 +81,7 @@ namespace ProcBuild.Library
             var srcTra = new MatrixI(src.BlockOrientation).GetFloatMatrix();
             nExt = Vector3.TransformNormal(nExt, srcTra);
             pExt = Vector3.TransformNormal(pExt, srcTra);
-            return new ReservedSpace() { Box = new BoundingBox(nExt, pExt), IsOptional = optional, IsShared = shared };
+            return new MyReservedSpace() { Box = new BoundingBox(nExt, pExt), IsOptional = optional, IsShared = shared };
         }
 
         public static IEnumerable<string> ConfigNames(this MyObjectBuilder_CubeBlock block)
