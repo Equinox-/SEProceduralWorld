@@ -12,6 +12,11 @@ namespace ProcBuild.Utils
         // We average integral sin(pi*x) from 0 to 1.
         public const float SunMovementMultiplier = (float)(2 / Math.PI);
 
+        public static long NextLong(this Random random)
+        {
+            return ((long)random.Next()) << 32 | (long)random.Next();
+        }
+
         public static double NextNormal(this Random random, double mu = 0, double sigma = 1)
         {
             // Box-Muller Transform
@@ -219,7 +224,7 @@ namespace ProcBuild.Utils
 
 
 
-        public static Color NextColor => colors[colorID++];
+        public static Color NextColor => colors[colorID = (colorID + 1) % colors.Length];
 
         private static int colorID = 0;
         private static readonly Color[] colors = new[]

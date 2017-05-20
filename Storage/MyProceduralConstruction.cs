@@ -4,10 +4,12 @@ using System.Collections.Generic;
 using System.Linq;
 using ProcBuild.Library;
 using ProcBuild.Utils;
+using Sandbox.Definitions;
 using Sandbox.Game.EntityComponents;
 using VRage.Game;
 using VRage.Game.ObjectBuilders.Definitions;
 using VRage.ObjectBuilders;
+using VRage.Utils;
 using VRageMath;
 
 namespace ProcBuild.Storage
@@ -20,20 +22,40 @@ namespace ProcBuild.Storage
         public readonly MyProceduralConstructionSeed Seed;
         public readonly MyBlockSetInfo BlockSetInfo;
 
-        public MyProceduralConstruction(MyProceduralEnvironment environment, long seed)
+        public MyProceduralConstruction(MyProceduralConstructionSeed seed)
         {
             m_maxID = 0;
             m_rooms = new Dictionary<long, MyProceduralRoom>();
             m_roomsSafeOrder = new List<MyProceduralRoom>();
-            Seed = new MyProceduralConstructionSeed(environment, seed);
+            Seed = seed;
             BlockSetInfo = new MyBlockSetInfo();
         }
 
-        public double ComputeWeightAgainstTradeRequirements(MyUtilities.LoggingCallback logger = null)
+        public double ComputeErrorAgainstSeed(MyUtilities.LoggingCallback logger = null)
         {
             var error = 0.0;
-            var powerReq = new MyProceduralConstructionSeed.MyTradeRequirements(0, 0);
+            // Block counts
+            {
+                var countCopy = new Dictionary<MySupportedBlockTypes, int>();
+                foreach (var kv in Seed.BlockCountRequirements)
+                    countCopy[kv.Key] = 0;
+                foreach (var kv in BlockSetInfo.BlockCountByType)
+                {
+                    var def = MyDefinitionManager.Static.GetCubeBlockDefinition(kv.Key);
+                    foreach (var kt in Seed.BlockCountRequirements)
+                        if (kt.Key.IsOfType(def))
+                            countCopy.AddValue(kt.Key, kv.Value);
+                }
+                foreach (var kv in countCopy)
+                {
+                    var target = Seed.BlockCountRequirement(kv.Key);
+                    var err = ErrorFunction(target, kv.Value, 1e5, 0.1);
+                    logger?.Invoke("Block {0} count current {1:e} vs {2:e}. Err {3:e}", kv.Key, kv.Value, target, err);
+                    error += err;
+                }
+            }
 
+            var powerReq = new MyProceduralConstructionSeed.MyTradeRequirements(0, 0);
             foreach (var kv in Seed.TradeRequirements)
             {
                 var id = kv.Key;
@@ -78,11 +100,12 @@ namespace ProcBuild.Storage
             var error = target - current;
             if (error > 0)
                 return multDeficit * error * error;
-            error += target;
-            if (error > 0)
-                return 0;
-            else
-                return multSurplus * error * error;
+//            error += target;
+//            if (error > 0)
+//                return 0;
+//            else
+//                return multSurplus * error * error;
+            return 0;
         }
 
         public void Init(MyObjectBuilder_ProceduralConstruction ob)

@@ -10,11 +10,14 @@ using ProcBuild.Creation;
 using ProcBuild.Exporter;
 using ProcBuild.Generation;
 using ProcBuild.Library;
+using ProcBuild.Seeds;
 using ProcBuild.Storage;
 using ProcBuild.Utils;
+using ProcBuild.Utils.Noise;
 using Sandbox.Definitions;
 using Sandbox.Game;
 using Sandbox.Game.Entities;
+using Sandbox.Game.Screens.Helpers;
 using Sandbox.Game.World;
 using Sandbox.ModAPI;
 using VRage;
@@ -164,10 +167,8 @@ namespace ProcBuild
                 Logger = new Logging("ProceduralBuilding.log");
                 PartManager = new MyPartManager();
                 PartManager.LoadAll();
-                foreach (var item in PartManager)
-                    MyAPIGateway.Utilities.ShowMessage("Parts", item.Prefab.Id.SubtypeName);
 
-                MyAPIGateway.Utilities.ShowNotification("Attached procedural building");
+                MyAPIGateway.Utilities.ShowNotification(PartManager.Count() + " procedural modules ready");
                 MyAPIGateway.Utilities.MessageEntered += CommandDispatcher;
             }
             catch (Exception e)
@@ -215,6 +216,61 @@ namespace ProcBuild
                 ProcessSpawn(args);
             if (args[0].Equals("/info"))
                 ProcessInfo(args);
+            if (args[0].Equals("/append"))
+                ProcessAppend(args);
+            if (args[0].Equals("/stations"))
+                ProcessStationLocations(args);
+            if (args[0].Equals("/clear"))
+                ClearStations();
+        }
+
+        private void ClearStations()
+        {
+            var id = MyAPIGateway.Session.Player.IdentityId;
+            foreach (var gps in MyAPIGateway.Session.GPS.GetGpsList(id))
+                if (gps.Name.StartsWith("Station"))
+                    MyAPIGateway.Session.GPS.RemoveGps(id, gps);
+            var ent = new HashSet<IMyEntity>();
+            MyAPIGateway.Entities.GetEntities(ent, (x) => x is IMyCubeGrid);
+            foreach (var k in ent)
+                MyAPIGateway.Entities.RemoveEntity(k);
+        }
+
+        private void ProcessStationLocations(IReadOnlyList<string> args)
+        {
+            var sphere = new BoundingSphereD(MyAPIGateway.Session.Camera.Position, MyAPIGateway.Session.SessionSettings.ViewDistance);
+            var id = MyAPIGateway.Session.Player.IdentityId;
+            foreach (var gps in MyAPIGateway.Session.GPS.GetGpsList(id))
+                if (gps.Name.StartsWith("Station:"))
+                    MyAPIGateway.Session.GPS.RemoveGps(id, gps);
+            foreach (var s in MyProceduralWorld.Instance.StationNoise.TryGetSpawnIn(sphere))
+            {
+                var faction = MyProceduralWorld.Instance.SeedAt(s.Item2);
+                var gps = MyAPIGateway.Session.GPS.Create("Station - " + faction.Tag, "", s.Item2, true, true);
+                gps.DiscardAt = MyAPIGateway.Session.ElapsedPlayTime + new TimeSpan(0, 5, 0);
+                MyAPIGateway.Session.GPS.AddGps(id, gps);
+                MyAPIGateway.Parallel.Start(() =>
+                {
+                    MyProceduralConstruction construction;
+                    MyConstructionCopy grids;
+                    if (!MyGenerator.GenerateFully(s, out construction, out grids)) return;
+                    if (grids == null) return;
+                    MyAPIGateway.Utilities.InvokeOnGameThread(() =>
+                    {
+                        var iwatch = new Stopwatch();
+                        var primaryGrid = MyAPIGateway.Entities.CreateFromObjectBuilderAndAdd(grids.m_primaryGrid) as IMyCubeGrid;
+                        primaryGrid.IsStatic = true;
+                        SessionCore.Log("Spawned entity for {0} room grid in {1}", construction.Rooms.Count(), iwatch.Elapsed);
+                        iwatch.Restart();
+                        foreach (var aux in grids.m_auxGrids)
+                        {
+                            aux.IsStatic = true;
+                            MyAPIGateway.Entities.CreateFromObjectBuilderAndAdd(aux);
+                        }
+                        SessionCore.Log("Spawned {0} aux grids in {1}", grids.m_auxGrids.Count, iwatch.Elapsed);
+                    });
+                });
+            }
         }
 
         private void ProcessInfo(IReadOnlyList<string> args)
@@ -266,13 +322,14 @@ namespace ProcBuild
                 MyAPIGateway.Utilities.ShowMessage("PDebug", "Unable to find part with name \"" + args[1] + "\"");
                 return;
             }
-            var c = new MyProceduralConstruction(new MyProceduralEnvironment(Vector3D.Zero), 0);
+            var c = new MyProceduralConstruction(null); // TODO
             c.GenerateRoom(new MatrixI(Base6Directions.Direction.Forward, Base6Directions.Direction.Up), part);
             MyConstructionCopy dest = null;
             var iwatch = new Stopwatch();
             foreach (var room in c.Rooms)
             {
                 iwatch.Restart();
+                var remapper = new MyRoomRemapper();
                 if (dest == null)
                 {
                     var temp = MyAPIGateway.Session.Player.Character.WorldMatrix;
@@ -283,10 +340,10 @@ namespace ProcBuild
                         copy.Translation -= room.BoundingBox.Center * 2.5f;
                         temp = MatrixD.Multiply(copy, temp);
                     }
-                    dest = MyGridCreator.SpawnRoomAt(room, temp);
+                    dest = MyGridCreator.SpawnRoomAt(room, temp, remapper);
                 }
                 else
-                    MyGridCreator.AppendRoom(dest, room);
+                    MyGridCreator.AppendRoom(dest, room, remapper);
                 Log("Created OB for room {3} of {0} blocks with {1} aux grids in {2}", room.Part.PrimaryGrid.CubeBlocks.Count, room.Part.Prefab.CubeGrids.Length - 1, iwatch.Elapsed, room.Part.Name);
             }
             // Spawn the CC
@@ -303,6 +360,32 @@ namespace ProcBuild
             }
         }
 
+        private MyProceduralConstruction constructor;
+        private void ProcessAppend(IReadOnlyList<string> args)
+        {
+            if (args.Count < 2)
+            {
+                MyAPIGateway.Utilities.ShowMessage("PDebug", "Usage: " + args[0] + " [part name]");
+                return;
+            }
+            var part = PartManager.FirstOrDefault(test => test.Prefab.Id.SubtypeName.ToLower().Contains(args[1].ToLower()));
+            if (part == null)
+            {
+                MyAPIGateway.Utilities.ShowMessage("PDebug", "Unable to find part with name \"" + args[1] + "\"");
+                return;
+            }
+            if (constructor == null)
+            {
+                constructor = new MyProceduralConstruction(null); // TODO
+                constructor.GenerateRoom(new MatrixI(Base6Directions.Direction.Forward, Base6Directions.Direction.Up), part);
+            }
+            else
+            {
+                MyGenerator.StepConstruction(constructor, 1, true, (x) => x == part);
+            }
+            constructor.ComputeErrorAgainstSeed(SessionCore.Log);
+        }
+
         private void ProcessSpawn(IReadOnlyList<string> args)
         {
             try
@@ -315,7 +398,8 @@ namespace ProcBuild
                 watch.Reset();
                 watch.Start();
 
-                var construction = new MyProceduralConstruction(new MyProceduralEnvironment(MyAPIGateway.Session.Player.GetPosition()), new Random().Next());
+                var pos = MyAPIGateway.Session.Player.GetPosition();
+                var construction = new MyProceduralConstruction(new MyProceduralConstructionSeed(pos, MyProceduralWorld.Instance.SeedAt(pos), RANDOM.NextLong()));
                 {
                     // Seed the generator
                     var part = PartManager.First();
@@ -333,7 +417,8 @@ namespace ProcBuild
                     if (!MyGenerator.StepConstruction(construction, (i > count / 2) ? 0 : float.NaN))
                         break;
                 // Give it plenty of tries to close itself
-               if(false) {
+                if (true)
+                {
                     var remainingMounts = construction.Rooms.SelectMany(x => x.MountPoints).Count(y => y.AttachedTo == null);
                     var triesToClose = remainingMounts * 2 + 2;
                     Log("There are {0} remaining mounts.  Giving it {1} tries to close itself.", remainingMounts, triesToClose);
@@ -362,6 +447,7 @@ namespace ProcBuild
                     else
                         Log("Sucessfully closed all mount points");
                 }
+                construction.ComputeErrorAgainstSeed(SessionCore.Log);
 
                 var generate = watch.Elapsed;
                 MyConstructionCopy dest = null;
@@ -370,6 +456,7 @@ namespace ProcBuild
                 foreach (var room in construction.Rooms)
                 {
                     iwatch.Restart();
+                    var remapper = new MyRoomRemapper();
                     if (dest == null)
                     {
                         var temp = MyAPIGateway.Session.Player.Character.WorldMatrix;
@@ -380,10 +467,10 @@ namespace ProcBuild
                             copy.Translation -= room.BoundingBox.Center * 2.5f;
                             temp = MatrixD.Multiply(copy, temp);
                         }
-                        dest = MyGridCreator.SpawnRoomAt(room, temp);
+                        dest = MyGridCreator.SpawnRoomAt(room, temp, remapper);
                     }
                     else
-                        MyGridCreator.AppendRoom(dest, room);
+                        MyGridCreator.AppendRoom(dest, room, remapper);
                     Log("Added room {3} of {0} blocks with {1} aux grids in {2}", room.Part.PrimaryGrid.CubeBlocks.Count, room.Part.Prefab.CubeGrids.Length - 1, iwatch.Elapsed, room.Part.Name);
                 }
                 var msg = $"Added {construction.Rooms.Count()} rooms; generated in {generate}, added in {watch.Elapsed}";

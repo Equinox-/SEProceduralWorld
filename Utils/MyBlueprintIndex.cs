@@ -35,10 +35,13 @@ namespace ProcBuild.Utils
             // Requires (double) iterations of (Definition) to produce/consume this.
             public readonly Dictionary<MyBlueprintDefinitionBase, double> Blueprints = new Dictionary<MyBlueprintDefinitionBase, double>();
 
+            public readonly bool ConsumptionRecipe;
+
             internal MyIndexedBlueprint(MyBlueprintDefinitionBase def, MyDefinitionId result, MyFixedPoint divider, bool reverse)
             {
                 Result = result;
                 Ingredients = new Dictionary<MyDefinitionId, MyFixedPoint>();
+                ConsumptionRecipe = reverse;
                 if (!reverse)
                     foreach (var req in def.Prerequisites)
                         Ingredients[req.Id] = (MyFixedPoint)((double)req.Amount / (double)divider);

@@ -11,6 +11,9 @@ using VRage.Game.ObjectBuilders.Definitions;
 
 namespace ProcBuild.Library
 {
+    /// <summary>
+    /// Not threadsafe.  Really really.
+    /// </summary>
     public class MyBlockSetInfo
     {
         public readonly Dictionary<MyComponentDefinition, int> ComponentCost = new Dictionary<MyComponentDefinition, int>();
@@ -20,7 +23,7 @@ namespace ProcBuild.Library
         private readonly Dictionary<MyDefinitionId, double> m_gasStorageCache = new Dictionary<MyDefinitionId, double>(16);
         private readonly Dictionary<MyDefinitionId, double> m_productionCache = new Dictionary<MyDefinitionId, double>(128);
 
-        public void UpdateCache()
+        internal void UpdateCache()
         {
             TotalPowerNetConsumption = PowerConsumptionByGroup.Values.Sum();
             TotalPowerStorage = BlockCountByType
@@ -30,8 +33,55 @@ namespace ProcBuild.Library
             TotalInventoryCapacity = BlockCountByType
                 .Select(x => x.Value * MyInventoryUtility.GetInventoryVolume(x.Key))
                 .Sum();
+
             m_productionCache.Clear();
             m_gasStorageCache.Clear();
+            foreach (var kv in BlockCountByType)
+            {
+                var def = MyDefinitionManager.Static.GetCubeBlockDefinition(kv.Key);
+                var gasTankDef = def as MyGasTankDefinition;
+                if (gasTankDef != null)
+                {
+                    m_gasStorageCache.AddValue(gasTankDef.StoredGasId, gasTankDef.Capacity * kv.Value);
+                    continue;
+                }
+                var oxyDef = def as MyOxygenGeneratorDefinition;
+                if (oxyDef != null)
+                {
+                    if (oxyDef.ProducedGases == null) continue;
+                    foreach (var recipe in oxyDef.ProducedGases)
+                        m_productionCache.AddValue(recipe.Id, recipe.IceToGasRatio * oxyDef.IceConsumptionPerSecond * kv.Value);
+                    continue;
+                }
+
+                var oxyFarmDef = def as MyOxygenFarmDefinition;
+                if (oxyFarmDef != null)
+                {
+                    m_productionCache.AddValue(oxyFarmDef.ProducedGas, oxyFarmDef.MaxGasOutput * MyUtilities.SunMovementMultiplier * (oxyFarmDef.IsTwoSided ? 1 : 0.5f) * kv.Value);
+                    continue;
+                }
+
+                var prodDef = def as MyProductionBlockDefinition;
+                if (prodDef == null) continue;
+                var speedMult = 1.0;
+                var asmDef = def as MyAssemblerDefinition;
+                if (asmDef != null)
+                    speedMult = asmDef.AssemblySpeed;
+                var refineDef = def as MyRefineryDefinition;
+                if (refineDef != null)
+                    speedMult = refineDef.RefineSpeed;
+                foreach (var bpc in prodDef.BlueprintClasses)
+                    foreach (var bp in bpc)
+                    {
+                        foreach (var result in bp.Results)
+                            m_productionCache.AddValue(result.Id, speedMult * (1 / bp.BaseProductionTimeInSeconds) * (double)result.Amount * kv.Value);
+                        foreach (var preq in bp.Prerequisites)
+                        {
+                            if (preq.Id.TypeId != typeof(MyObjectBuilder_Ore)) continue;
+                            m_productionCache.AddValue(preq.Id, speedMult * (1 / bp.BaseProductionTimeInSeconds) * (double)preq.Amount * kv.Value);
+                        }
+                    }
+            }
         }
 
         public float TotalPowerNetConsumption { get; private set; }
@@ -42,97 +92,14 @@ namespace ProcBuild.Library
 
         public double TotalProduction(MyDefinitionId result)
         {
-            double val;
-            if (m_productionCache.TryGetValue(result, out val)) return val;
-            return m_productionCache[result] = ComputeTotalProduction(result);
+            return m_productionCache.GetValueOrDefault(result, 0);
         }
 
         public double TotalGasStorage(MyDefinitionId id)
         {
-            if (id.Equals(MyResourceDistributorComponent.ElectricityId)) return TotalPowerStorage;
-            double val;
-            if (m_gasStorageCache.TryGetValue(id, out val)) return val;
-            return m_gasStorageCache[id] = ComputeTotalGasStorage(id);
-        }
-
-        private double ComputeTotalGasStorage(MyDefinitionId id)
-        {
-            var storage = 0.0D;
-            foreach (var kv in BlockCountByType)
-            {
-                var def = MyDefinitionManager.Static.GetCubeBlockDefinition(kv.Key) as MyGasTankDefinition;
-                if (def == null || !def.StoredGasId.Equals(id)) continue;
-                storage += def.Capacity * kv.Value;
-            }
-            return storage;
-        }
-
-        private static double ProductionOfBy(MyBlueprintIndex.MyIndexedBlueprint bp, MyProductionBlockDefinition def)
-        {
-            // ReSharper disable once LoopCanBeConvertedToQuery
-            foreach (var test in bp.Blueprints)
-            {
-                if (!def.BlueprintClasses.Any(x => x.ContainsBlueprint(test.Key))) continue;
-                var root = (1.0 / (test.Key.BaseProductionTimeInSeconds * test.Value));
-                var refinery = def as MyRefineryDefinition;
-                if (refinery != null)
-                    root *= refinery.RefineSpeed;
-                var assembler = def as MyAssemblerDefinition;
-                if (assembler != null)
-                    root *= assembler.AssemblySpeed;
-                return root;
-            }
-            return 0;
-        }
-
-        private static readonly MyCache<MyTuple<MyDefinitionId, MyProductionBlockDefinition>, double> ProductionOfByCache = new MyCache<MyTuple<MyDefinitionId, MyProductionBlockDefinition>, double>(2048);
-        private static double ProductionConsumptionOfBy(MyDefinitionId result, MyProductionBlockDefinition prodDef)
-        {
-            return ProductionOfByCache.GetOrCreate(MyTuple.Create(result, prodDef), ProductionConsumptionOfBy_Internal);
-        }
-
-        private static double ProductionConsumptionOfBy_Internal(MyTuple<MyDefinitionId, MyProductionBlockDefinition> key)
-        {
-            var result = key.Item1;
-            var prodDef = key.Item2;
-            var sources = MyBlueprintIndex.Instance.GetAllProducing(result).ToList();
-            var consumers = MyBlueprintIndex.Instance.GetAllConsuming(result).ToList();
-            return sources.Concat(consumers).Select(opt => ProductionOfBy(opt, prodDef)).FirstOrDefault(prod => prod > double.Epsilon);
-        }
-
-        private double ComputeTotalProduction(MyDefinitionId result)
-        {
-            var production = 0.0D;
-            foreach (var kv in BlockCountByType)
-            {
-                var def = MyDefinitionManager.Static.GetCubeBlockDefinition(kv.Key);
-                var oxyDef = def as MyOxygenGeneratorDefinition;
-                if (oxyDef != null)
-                {
-                    if (oxyDef.ProducedGases == null) continue;
-                    var bestProd = oxyDef.ProducedGases.
-                        Where(recipe => recipe.Id.Equals(result)).
-                        Select(recipe => recipe.IceToGasRatio * oxyDef.IceConsumptionPerSecond).DefaultIfEmpty().Max();
-                    production += bestProd;
-                    continue;
-                }
-
-                var oxyFarmDef = def as MyOxygenFarmDefinition;
-                if (oxyFarmDef != null)
-                {
-                    if (oxyFarmDef.ProducedGas.Equals(result))
-                        production += oxyFarmDef.MaxGasOutput * MyUtilities.SunMovementMultiplier * (oxyFarmDef.IsTwoSided ? 1 : 0.5f);
-                    continue;
-                }
-
-                if (def is MyGasTankDefinition)
-                    continue;
-
-                var prodDef = def as MyProductionBlockDefinition;
-                if (prodDef == null) continue;
-                production += ProductionConsumptionOfBy(result, prodDef) * kv.Value;
-            }
-            return production;
+            if (id.Equals(MyResourceDistributorComponent.ElectricityId))
+                return TotalPowerStorage;
+            return m_gasStorageCache.GetValueOrDefault(id, 0);
         }
 
         public void AddToSelf(MyBlockSetInfo other)

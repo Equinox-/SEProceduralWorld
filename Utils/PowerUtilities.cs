@@ -7,6 +7,7 @@ using Sandbox.Common.ObjectBuilders.Definitions;
 using Sandbox.Definitions;
 using Sandbox.Game;
 using VRage;
+using VRage.Collections;
 using VRage.Utils;
 
 namespace ProcBuild.Utils
@@ -111,7 +112,7 @@ namespace ProcBuild.Utils
             // ignore MyShipWelderDefinition
         }
 
-        private static readonly MyCache<MyCubeBlockDefinition, MyTuple<string, float>> maxPowerCache = new MyCache<MyCubeBlockDefinition, MyTuple<string, float>>(128);
+        private static readonly MyLRUCache<MyCubeBlockDefinition, MyTuple<string, float>> maxPowerCache = new MyLRUCache<MyCubeBlockDefinition, MyTuple<string, float>>(128);
         public static MyTuple<string, float> MaxPowerConsumption(MyCubeBlockDefinition def)
         {
             return maxPowerCache.GetOrCreate(def, MaxPowerConsumptionInternal);

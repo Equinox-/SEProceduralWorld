@@ -32,9 +32,8 @@ namespace ProcBuild.Creation
     public static class MyGridCreator
     {
 
-        private static readonly MyRoomRemapper Remapper = new MyRoomRemapper();
 
-        public static MyConstructionCopy SpawnRoomAt(MyProceduralRoom room, MatrixD spawnLocation)
+        public static MyConstructionCopy SpawnRoomAt(MyProceduralRoom room, MatrixD spawnLocation, MyRoomRemapper remapper)
         {
             var i = room.Part.PrimaryGrid;
             var o = new MyObjectBuilder_CubeGrid
@@ -55,13 +54,13 @@ namespace ProcBuild.Creation
             o.PositionAndOrientation = new MyPositionAndOrientation(spawnLocation);
 
             var output = new MyConstructionCopy(o);
-            Remapper.Remap(room, output);
+            remapper.Remap(room, output);
             return output;
         }
 
-        public static void AppendRoom(MyConstructionCopy dest, MyProceduralRoom room)
+        public static void AppendRoom(MyConstructionCopy dest, MyProceduralRoom room, MyRoomRemapper remapper)
         {
-            Remapper.Remap(room, dest);
+            remapper.Remap(room, dest);
         }
     }
 }

@@ -10,10 +10,11 @@ using ProcBuild.Storage;
 using VRage;
 using VRageMath;
 using ProcBuild.Utils;
+using Sandbox.ModAPI;
 
 namespace ProcBuild.Generation
 {
-    public class MyGenerator
+    public partial class MyGenerator
     {
         private static bool ValidateAddition(MyProceduralConstruction c, MyProceduralRoom room, bool testOptional)
         {
@@ -53,7 +54,7 @@ namespace ProcBuild.Generation
             return true;
         }
 
-        public static bool StepConstruction(MyProceduralConstruction c, float targetGrowth = 0, bool testOptional = true)
+        public static bool StepConstruction(MyProceduralConstruction c, float targetGrowth = 0, bool testOptional = true, Func<MyPart, bool> filter = null)
         {
             var freeMountPoints = c.Rooms.SelectMany(x => x.MountPoints).Where(x => x.AttachedTo == null).ToList();
 
@@ -62,35 +63,39 @@ namespace ProcBuild.Generation
             // Compute Available Rooms
             var availableRooms = new Dictionary<MyTuple<MyPart, MatrixI>, MyProceduralRoom>();
             foreach (var type in SessionCore.Instance.PartManager)
-                foreach (var point in freeMountPoints)
-                    foreach (var other in type.MountPointsOfType(point.MountPoint.MountType))
-                    {
-                        var mats = point.MountPoint.GetTransform(other);
-                        if (mats == null) continue;
-                        foreach (var mat in mats)
+                if (filter == null || filter.Invoke(type))
+                    foreach (var point in freeMountPoints)
+                        foreach (var other in type.MountPointsOfType(point.MountPoint.MountType))
                         {
-                            var actual = MyUtilities.Multiply(mat, point.Owner.Transform);
-                            var key = MyTuple.Create(type, actual);
-                            if (!availableRooms.ContainsKey(key))
-                                c.RemoveRoom(availableRooms[key] = c.GenerateRoom(actual, type));
+                            var mats = point.MountPoint.GetTransform(other);
+                            if (mats == null) continue;
+                            foreach (var mat in mats)
+                            {
+                                var actual = MyUtilities.Multiply(mat, point.Owner.Transform);
+                                var key = MyTuple.Create(type, actual);
+                                if (!availableRooms.ContainsKey(key))
+                                    c.RemoveRoom(availableRooms[key] = c.GenerateRoom(actual, type));
+                            }
                         }
-                    }
-            SessionCore.Log("Choose from {0} options; generated in {1}", availableRooms.Count, iwatch.Elapsed);
+            if (Settings.Instance.DebugGenerationStages)
+                SessionCore.Log("Choose from {0} options; generated in {1}", availableRooms.Count, iwatch.Elapsed);
 
             iwatch.Restart();
             // Compute room weights
             var weightedRoomChoice = new MyWeightedChoice<MyProceduralRoom>();
 
             var originalError = new List<string>();
-            var originalRequirementError = c.ComputeWeightAgainstTradeRequirements(MyUtilities.LogToList(originalError));
+            var originalRequirementError = c.ComputeErrorAgainstSeed(MyUtilities.LogToList(originalError));
 
             var collisionWatch = new Stopwatch();
             var inoutFactorWatch = new Stopwatch();
             var usefulnessWatch = new Stopwatch();
 
+            var roomErrorCache = new Dictionary<MyPart, double>();
+
             var bestError = double.MaxValue;
-            var bestRoom = "";
-            var sawFactory = false;
+            var bestErrMux = new List<string>();
+            MyProceduralRoom bestRoom = null;
             foreach (var room in availableRooms.Values)
             {
                 try
@@ -129,29 +134,23 @@ namespace ProcBuild.Generation
                     usefulnessWatch.Start();
                     { // Coolness based on how useful this room will be.
                       // If we need power and this room provides power this is high, etc...
-                        var newErrMux = new List<string>();
-                        var newRequirementError = c.ComputeWeightAgainstTradeRequirements(!sawFactory && room.Part.Name.Contains("Factory") ? MyUtilities.LogToList(newErrMux) : null);
-                        for (var i = 0; i < Math.Min(newErrMux.Count, originalError.Count); i++)
-                        {
-                            if (originalError[i].Equals(newErrMux[i])) continue;
-                            SessionCore.Log("Old {0}", originalError[i]);
-                            SessionCore.Log("Fac {0}", newErrMux[i]);
-                        }
+
+                        // This is the same per added room type.
+                        double newRequirementError;
+                        if (!roomErrorCache.TryGetValue(room.Part, out newRequirementError))
+                            roomErrorCache[room.Part] = newRequirementError = c.ComputeErrorAgainstSeed();
                         if (bestError > newRequirementError)
                         {
+                            bestErrMux.Clear();
+                            c.ComputeErrorAgainstSeed(MyUtilities.LogToList(bestErrMux));
                             bestError = newRequirementError;
-                            bestRoom = room.Part.Name;
+                            bestRoom = room;
                         }
                         var avgError = Math.Max(1, (originalRequirementError + newRequirementError) / 2);
                         var error = (originalRequirementError - newRequirementError);
                         const double errorMultiplier = 1e-4;
                         // When error is >0 we've improved the system, so encourage it.
                         coolness += errorMultiplier * error;
-                        if (room.Part.Name.Contains("Factory"))
-                        {
-                            SessionCore.Log("Room {0} has a score of {1}", room.Part.Name, error);
-                            sawFactory = true;
-                        }
                     }
                     usefulnessWatch.Stop();
 
@@ -165,24 +164,30 @@ namespace ProcBuild.Generation
                     c.RemoveRoom(room);
                 }
             }
-            SessionCore.Log("Choose from {0} valid options; generated weights in {1}.  Collision in {2}, inout in {3}, usefulness in {4}",
+            if (Settings.Instance.DebugGenerationStages)
+                SessionCore.Log("Choose from {0} valid options; generated weights in {1}.  Collision in {2}, inout in {3}, usefulness in {4}",
                 weightedRoomChoice.Count, iwatch.Elapsed, collisionWatch.Elapsed, inoutFactorWatch.Elapsed, usefulnessWatch.Elapsed);
 
             if (weightedRoomChoice.Count == 0)
                 return false;
             {
-                var room = weightedRoomChoice.Choose((float)SessionCore.RANDOM.NextDouble(), MyWeightedChoice<MyProceduralRoom>.WeightedNormalization.Exponential);
+                // 50% chance to be in the top 10% of choices.
+                var room = weightedRoomChoice.ChooseByQuantile(SessionCore.RANDOM.NextDouble(), 0.9);
                 room.TakeOwnership(c);
 
                 var newErrMux = new List<string>();
-                var newError = c.ComputeWeightAgainstTradeRequirements(MyUtilities.LogToList(newErrMux));
-                for (var i = 0; i < Math.Min(newErrMux.Count, originalError.Count); i++)
-                {
-                    if (originalError[i].Equals(newErrMux[i])) continue;
-                    SessionCore.Log("Old {0}", originalError[i]);
-                    SessionCore.Log("New {0}", newErrMux[i]);
-                }
-                SessionCore.Log("Added {0} (number {1}) at {2}. Sadness changed {3:e} => {4:e} = {5:e}. Best was {6} with {7:e} less", room.Part.Name, c.Rooms.Count(), room.BoundingBox.Center, originalRequirementError, newError, originalRequirementError - newError, bestRoom, newError - bestError);
+                var newError = c.ComputeErrorAgainstSeed(MyUtilities.LogToList(newErrMux));
+
+                if (Settings.Instance.DebugGenerationStagesWeights)
+                    for (var i = 0; i < Math.Min(newErrMux.Count, Math.Min(bestErrMux.Count, originalError.Count)); i++)
+                    {
+                        if (originalError[i].Equals(newErrMux[i]) && bestErrMux[i].Equals(newErrMux[i])) continue;
+                        SessionCore.Log("Old {0}", originalError[i]);
+                        SessionCore.Log("New {0}", newErrMux[i]);
+                        SessionCore.Log("Best {0}", bestErrMux[i]);
+                    }
+                if (Settings.Instance.DebugGenerationStages)
+                    SessionCore.Log("Added {0} (number {1}) at {2}. Sadness changed {3:e} => {4:e} = {5:e}. Best was {6} with {7:e} less", room.Part.Name, c.Rooms.Count(), room.BoundingBox.Center, originalRequirementError, newError, originalRequirementError - newError, bestRoom, newError - bestError);
                 return true;
             }
         }

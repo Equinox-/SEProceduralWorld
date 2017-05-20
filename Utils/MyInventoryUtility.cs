@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Sandbox.Definitions;
 using Sandbox.Game.Entities;
 using Sandbox.Game.EntityComponents;
+using VRage.Collections;
 using VRage.Game;
 using VRage.Game.Components;
 using VRage.Game.ObjectBuilders.ComponentSystem;
@@ -19,7 +20,7 @@ namespace ProcBuild.Utils
         {
             return CacheInvVolume.GetOrCreate(id, GetInventoryVolumeInternal);
         }
-        private static readonly MyCache<MyDefinitionId, double> CacheInvVolume = new MyCache<MyDefinitionId, double>(128);
+        private static readonly MyLRUCache<MyDefinitionId, double> CacheInvVolume = new MyLRUCache<MyDefinitionId, double>(128);
 
         private static double GetInventoryVolumeInternal(MyDefinitionId id)
         {

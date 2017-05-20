@@ -78,6 +78,7 @@
     <Compile Include="Creation\MyGridRemap_LocalTransform.cs" />
     <Compile Include="Creation\MyGridRemap_Names.cs" />
     <Compile Include="Creation\MyGridRemap_WorldTransform.cs" />
+    <Compile Include="Generation\MyGenerator_Station.cs" />
     <Compile Include="Generation\MyNameGenerator.cs" />
     <Compile Include="Library\MyAdjacencyRule.cs" />
     <Compile Include="Library\MyObjectBuilder_Part.cs" />
@@ -87,16 +88,18 @@
     <Compile Include="Library\MyPartStorage.cs" />
     <Compile Include="Library\MyPartStorage_Intersect.cs" />
     <Compile Include="Library\MyReservedSpace.cs" />
+    <Compile Include="Seeds\MyProceduralWorld.cs" />
     <Compile Include="Settings.cs" />
     <Compile Include="Storage\MyObjectBuilder_ProceduralConstruction.cs" />
     <Compile Include="Storage\MyProceduralConstruction.cs" />
-    <Compile Include="Generation\MyGenerator.cs" />
-    <Compile Include="Storage\MyProceduralConstructionSeed.cs" />
-    <Compile Include="Storage\MyProceduralEnvironment.cs" />
+    <Compile Include="Generation\MyGenerator_Room.cs" />
+    <Compile Include="Seeds\MyProceduralConstructionSeed.cs" />
+    <Compile Include="Seeds\MyProceduralFactionSeed.cs" />
+    <Compile Include="Storage\MySupportedBlockTypes.cs" />
     <Compile Include="Utils\Logging.cs" />
     <Compile Include="Library\MyBlockSetInfo.cs" />
     <Compile Include="Utils\MyBlueprintIndex.cs" />
-    <Compile Include="Utils\MyCache.cs" />
+    <Compile Include="Utils\MyLRUCache.cs" />
     <Compile Include="Library\MyPart.cs" />
     <Compile Include="Library\MyPartManager.cs" />
     <Compile Include="Utils\BlockTransformations.cs" />
@@ -106,9 +109,12 @@
     <Compile Include="Utils\MyUtilities.cs" />
     <Compile Include="SessionCore.cs" />
     <Compile Include="Utils\MyConstantEntityRemap.cs" />
-    <Compile Include="Utils\Noise\OctaveNoise.cs" />
-    <Compile Include="Utils\Noise\SimplexNoise.cs" />
+    <Compile Include="Utils\Noise\MyOctreeNoise.cs" />
     <Compile Include="Utils\MyWeightedChoice.cs" />
+    <Compile Include="Utils\Noise\VRageNoiseExtensions.cs" />
+    <Compile Include="Utils\Noise\VRage\MyCompositeNoise.cs" />
+    <Compile Include="Utils\Noise\VRage\MySimplex.cs" />
+    <Compile Include="Utils\Noise\VRage\IMyModule.cs" />
     <Compile Include="Utils\PowerUtilities.cs" />
   </ItemGroup>
   <ItemGroup>

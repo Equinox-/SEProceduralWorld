@@ -106,8 +106,8 @@ namespace ProcBuild.Library
 
         // Computing mount point transforms is pretty expensive, so we want a fairly large cache.
         // ~256 bytes per entry.  Target a 32MB cache
-        private static readonly MyCache<MyTuple<MyPartMount, MyPartMount>, HashSet<MatrixI>> MountCache =
-            new MyCache<MyTuple<MyPartMount, MyPartMount>, HashSet<MatrixI>>(32 * 1024 * 1024 / 256);
+        private static readonly MyLRUCache<MyTuple<MyPartMount, MyPartMount>, HashSet<MatrixI>> MountCache =
+            new MyLRUCache<MyTuple<MyPartMount, MyPartMount>, HashSet<MatrixI>>(32 * 1024 * 1024 / 256);
 
         private static HashSet<MatrixI> GetTransformInternal(MyTuple<MyPartMount, MyPartMount> meOther)
         {

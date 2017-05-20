@@ -21,7 +21,7 @@ namespace ProcBuild.Library
         private readonly Dictionary<string, Dictionary<string, MyPartMount>> m_mountPoints;
         private readonly Dictionary<Vector3I, MyObjectBuilder_CubeBlock> m_blocks;
         private readonly Dictionary<Vector3I, MyPartMountPointBlock> m_mountPointBlocks;
-        public readonly MyBlockSetInfo BlockSetInfo;
+        public MyBlockSetInfo BlockSetInfo { get; private set; }
         private readonly List<MyReservedSpace> m_reservedSpaces;
 
         public BoundingBox BoundingBox { get; private set; }
@@ -146,18 +146,38 @@ namespace ProcBuild.Library
         }
 
         public IEnumerable<MyReservedSpace> ReservedSpaces => m_reservedSpaces;
-        
+
         #region MetaCompute
+
+        private bool m_initFromGrid = false;
+        private readonly FastResourceLock m_lock = new FastResourceLock();
         public void InitFromGrids(MyObjectBuilder_CubeGrid primaryGrid, ICollection<MyObjectBuilder_CubeGrid> allGrids)
         {
-            ComputeBlockMap(primaryGrid, allGrids);
-            ComputeReservedSpace(primaryGrid, allGrids);
-            ComputeMountPoints(primaryGrid, allGrids);
+            try
+            {
+                if (!m_lock.TryAcquireExclusive())
+                {
+                    m_lock.AcquireExclusive();
+                    if (m_initFromGrid)
+                        return;
+                }
+                // References to BlockInfo aren't threadsafe, so create a new one for this purpose.
+                var blockInfo = new MyBlockSetInfo();
+                ComputeBlockMap(primaryGrid, allGrids, blockInfo);
+                ComputeReservedSpace(primaryGrid, allGrids, blockInfo);
+                ComputeMountPoints(primaryGrid, allGrids, blockInfo);
+                blockInfo.UpdateCache();
+                BlockSetInfo = blockInfo;
 
-            BlockSetInfo.UpdateCache();
+                m_initFromGrid = true;
+            }
+            finally
+            {
+                m_lock.ReleaseExclusive();
+            }
         }
 
-        private void ComputeReservedSpace(MyObjectBuilder_CubeGrid primaryGrid, IEnumerable<MyObjectBuilder_CubeGrid> allGrids)
+        private void ComputeReservedSpace(MyObjectBuilder_CubeGrid primaryGrid, IEnumerable<MyObjectBuilder_CubeGrid> allGrids, MyBlockSetInfo info)
         {
             m_reservedSpaces.Clear();
             ReservedSpace = new BoundingBox();
@@ -177,7 +197,7 @@ namespace ProcBuild.Library
                 }
         }
 
-        private void ComputeMountPoints(MyObjectBuilder_CubeGrid primaryGrid, IEnumerable<MyObjectBuilder_CubeGrid> allGrids)
+        private void ComputeMountPoints(MyObjectBuilder_CubeGrid primaryGrid, IEnumerable<MyObjectBuilder_CubeGrid> allGrids, MyBlockSetInfo info)
         {
             m_mountPoints.Clear();
             foreach (var block in primaryGrid.CubeBlocks)
@@ -217,12 +237,12 @@ namespace ProcBuild.Library
                     m_mountPointBlocks[block.AnchorLocation] = block;
         }
 
-        private void ComputeBlockMap(MyObjectBuilder_CubeGrid primaryGrid, IEnumerable<MyObjectBuilder_CubeGrid> allGrids)
+        private void ComputeBlockMap(MyObjectBuilder_CubeGrid primaryGrid, IEnumerable<MyObjectBuilder_CubeGrid> allGrids, MyBlockSetInfo info)
         {
             m_blocks.Clear();
-            BlockSetInfo.BlockCountByType.Clear();
-            BlockSetInfo.ComponentCost.Clear();
-            BlockSetInfo.PowerConsumptionByGroup.Clear();
+            info.BlockCountByType.Clear();
+            info.ComponentCost.Clear();
+            info.PowerConsumptionByGroup.Clear();
 
             BoundingBox = new BoundingBox((Vector3I)primaryGrid.CubeBlocks[0].Min, (Vector3I)primaryGrid.CubeBlocks[0].Min);
 
@@ -243,15 +263,15 @@ namespace ProcBuild.Library
                     }
                     if (def == null) continue;
 
-                    BlockSetInfo.BlockCountByType.AddValue(def.Id, 1);
+                    info.BlockCountByType.AddValue(def.Id, 1);
 
                     foreach (var c in def.Components)
-                        BlockSetInfo.ComponentCost.AddValue(c.Definition, c.Count);
+                        info.ComponentCost.AddValue(c.Definition, c.Count);
 
                     var powerUsage = PowerUtilities.MaxPowerConsumption(def);
                     // if it is off, ignore it.
                     if (Math.Abs(powerUsage.Item2) > 1e-8 && ((block as MyObjectBuilder_FunctionalBlock)?.Enabled ?? true))
-                        BlockSetInfo.PowerConsumptionByGroup.AddValue(powerUsage.Item1, powerUsage.Item2);
+                        info.PowerConsumptionByGroup.AddValue(powerUsage.Item1, powerUsage.Item2);
                 }
         }
         #endregion

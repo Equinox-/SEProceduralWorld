@@ -11,6 +11,8 @@ using VRage.Serialization;
 using VRageMath;
 using Sandbox.ModAPI;
 using System.IO;
+using Sandbox.Engine.Voxels;
+using VRage.Voxels;
 
 namespace ProcBuild.Library
 {
