@@ -6,6 +6,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "script", "script.csproj", "
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestBench", "..\..\..\..\..\..\..\..\Programming\CSharpTests\TestBench\TestBench.csproj", "{157F89C8-F575-4A10-BE16-FFC99E77DAB8}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ShowDebugSE", "..\..\..\..\..\..\..\..\Programming\SpaceEngineers\ShowDebugSE\ShowDebugSE\ShowDebugSE.csproj", "{98FE7508-151E-4F0C-8EB6-2F09878D1A00}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -20,6 +22,10 @@ Global
 		{157F89C8-F575-4A10-BE16-FFC99E77DAB8}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{157F89C8-F575-4A10-BE16-FFC99E77DAB8}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{157F89C8-F575-4A10-BE16-FFC99E77DAB8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{98FE7508-151E-4F0C-8EB6-2F09878D1A00}.Debug|Any CPU.ActiveCfg = Debug|x64
+		{98FE7508-151E-4F0C-8EB6-2F09878D1A00}.Debug|Any CPU.Build.0 = Debug|x64
+		{98FE7508-151E-4F0C-8EB6-2F09878D1A00}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{98FE7508-151E-4F0C-8EB6-2F09878D1A00}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
