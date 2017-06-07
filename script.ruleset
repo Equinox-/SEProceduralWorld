@@ -69,7 +69,7 @@
     <Rule Id="CA2242" Action="Warning" />
   </Rules>
   <Rules AnalyzerId="SEWhitelistChecker" RuleNamespace="SEWhitelistChecker">
-    <Rule Id="ProhibitedMemberRuleM" Action="Error" />
     <Rule Id="ProhibitedMemberRuleMpublic" Action="Error" />
+    <Rule Id="ProhibitedMemberRuleM" Action="Error" />
   </Rules>
 </RuleSet>
