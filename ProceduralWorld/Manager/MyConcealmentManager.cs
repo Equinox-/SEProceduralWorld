@@ -1,12 +1,5 @@
 ﻿using Sandbox.ModAPI;
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Sandbox.Game.Entities;
-using VRage.Collections;
-using VRage.Game.Components;
 using VRage.ModAPI;
 
 namespace Equinox.ProceduralWorld.Manager

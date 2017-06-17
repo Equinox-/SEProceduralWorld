@@ -10,7 +10,7 @@ using VRageMath;
 
 namespace Equinox.ProceduralWorld.Buildings.Library
 {
-    public partial class MyPartStorage
+    public partial class MyPartMetadata
     {
         public const string MOUNT_PREFIX = "Dummy";
         public const string RESERVED_SPACE_PREFIX = "ReservedSpace";
@@ -25,7 +25,7 @@ namespace Equinox.ProceduralWorld.Buildings.Library
         public BoundingBox BoundingBox { get; private set; }
         public BoundingBox ReservedSpace { get; private set; }
 
-        public MyPartStorage()
+        public MyPartMetadata()
         {
             BlockSetInfo = new MyBlockSetInfo();
             m_mountPoints = new Dictionary<string, Dictionary<string, MyPartMount>>();

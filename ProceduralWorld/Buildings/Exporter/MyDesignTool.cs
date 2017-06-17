@@ -17,14 +17,14 @@ namespace Equinox.ProceduralWorld.Buildings.Exporter
     public class MyDesignTool
     {
         public const string DELEGATED_TAG = "del";
-        public const string MOUNT_DELEGATED = MyPartStorage.MOUNT_PREFIX + " " + DELEGATED_TAG;
-        public const string RESERVED_SPACE_DELEGATED = MyPartStorage.RESERVED_SPACE_PREFIX + " " + DELEGATED_TAG;
+        public const string MOUNT_DELEGATED = MyPartMetadata.MOUNT_PREFIX + " " + DELEGATED_TAG;
+        public const string RESERVED_SPACE_DELEGATED = MyPartMetadata.RESERVED_SPACE_PREFIX + " " + DELEGATED_TAG;
 
         private static bool ApplyDelegate(MyObjectBuilder_CubeGrid grid, MyObjectBuilder_CubeBlock source, string srcName, MyObjectBuilder_CubeBlock dest, Base6Directions.Direction destDir)
         {
             if (srcName.StartsWithICase(MOUNT_DELEGATED))
             {
-                var outName = MyPartStorage.MOUNT_PREFIX + " " + srcName.Substring(MOUNT_DELEGATED.Length).Trim();
+                var outName = MyPartMetadata.MOUNT_PREFIX + " " + srcName.Substring(MOUNT_DELEGATED.Length).Trim();
                 var lTrans = new MatrixI(dest.BlockOrientation);
                 MatrixI iTrans;
                 MatrixI.Invert(ref lTrans, out iTrans);
@@ -38,7 +38,7 @@ namespace Equinox.ProceduralWorld.Buildings.Exporter
                 if (string.IsNullOrWhiteSpace(dest.Name))
                     dest.Name = outName;
                 else
-                    dest.Name = dest.Name + MyPartStorage.MULTI_USE_SENTINEL + outName;
+                    dest.Name = dest.Name + MyPartMetadata.MULTI_USE_SENTINEL + outName;
                 return true;
             }
             else if (srcName.StartsWithICase(RESERVED_SPACE_DELEGATED))
@@ -51,7 +51,7 @@ namespace Equinox.ProceduralWorld.Buildings.Exporter
                 box.Box.Min += del;
                 var boxLocalFloat = MyUtilities.TransformBoundingBox(box.Box, Matrix.Invert(new MatrixI(dest.BlockOrientation).GetFloatMatrix()));
                 var boxLocal = new BoundingBoxI(Vector3I.Floor(boxLocalFloat.Min), Vector3I.Ceiling(boxLocalFloat.Max));
-                var outName = $"{MyPartStorage.RESERVED_SPACE_PREFIX} NE:{boxLocal.Min.X}:{boxLocal.Min.Y}:{boxLocal.Min.Z} PE:{boxLocal.Max.X}:{boxLocal.Max.Y}:{boxLocal.Max.Z}";
+                var outName = $"{MyPartMetadata.RESERVED_SPACE_PREFIX} NE:{boxLocal.Min.X}:{boxLocal.Min.Y}:{boxLocal.Min.Z} PE:{boxLocal.Max.X}:{boxLocal.Max.Y}:{boxLocal.Max.Z}";
                 if (box.IsShared)
                     outName += " shared";
                 if (box.IsOptional)
@@ -59,7 +59,7 @@ namespace Equinox.ProceduralWorld.Buildings.Exporter
                 if (string.IsNullOrWhiteSpace(dest.Name))
                     dest.Name = outName;
                 else
-                    dest.Name = dest.Name + MyPartStorage.MULTI_USE_SENTINEL + outName;
+                    dest.Name = dest.Name + MyPartMetadata.MULTI_USE_SENTINEL + outName;
                 return true;
             }
             return false;
@@ -196,12 +196,12 @@ namespace Equinox.ProceduralWorld.Buildings.Exporter
                         var worldAABB = rel.WorldAABB;
                         worldAABB = MyUtilities.TransformBoundingBox(worldAABB, MatrixD.Invert(blockWorld));
                         var gridAABB = new BoundingBoxI(Vector3I.Floor(worldAABB.Min / grid.GridSize), Vector3I.Ceiling(worldAABB.Max / grid.GridSize));
-                        var code = $"{MyPartStorage.RESERVED_SPACE_PREFIX} NE:{gridAABB.Min.X}:{gridAABB.Min.Y}:{gridAABB.Min.Z} PE:{gridAABB.Max.X}:{gridAABB.Max.Y}:{gridAABB.Max.Z}";
+                        var code = $"{MyPartMetadata.RESERVED_SPACE_PREFIX} NE:{gridAABB.Min.X}:{gridAABB.Min.Y}:{gridAABB.Min.Z} PE:{gridAABB.Max.X}:{gridAABB.Max.Y}:{gridAABB.Max.Z}";
                         SessionCore.Log("Added reserved space for subgrid {0}: Spec is \"{1}\"", rel.CustomName, code);
                         if (blockDest.Name == null || blockDest.Name.Trim().Length == 0)
                             blockDest.Name = code;
                         else
-                            blockDest.Name += MyPartStorage.MULTI_USE_SENTINEL + code;
+                            blockDest.Name += MyPartMetadata.MULTI_USE_SENTINEL + code;
                     }
                     else
                     {
@@ -213,7 +213,7 @@ namespace Equinox.ProceduralWorld.Buildings.Exporter
                 allGrids.AddRange(relatedGrids.Select(relGrid => relGrid.GetObjectBuilder(false)).OfType<MyObjectBuilder_CubeGrid>());
 
                 // Compose description: TODO I'd love if this actually worked :/
-                // var storage = new MyPartStorage();
+                // var storage = new MyPartMetadata();
                 // storage.InitFromGrids(ob, allGrids);
                 // var data = Convert.ToBase64String(MyAPIGateway.Utilities.SerializeToBinary(storage.GetObjectBuilder()));
 

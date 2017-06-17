@@ -70,6 +70,6 @@
   </Rules>
   <Rules AnalyzerId="SEWhitelistChecker" RuleNamespace="SEWhitelistChecker">
     <Rule Id="ProhibitedMemberRuleMpublic" Action="Error" />
-    <Rule Id="ProhibitedMemberRuleM" Action="Error" />
+    <Rule Id="ProhibitedMemberRuleM" Action="Warning" />
   </Rules>
 </RuleSet>

@@ -1,7 +1,51 @@
 ﻿using System;
+using System.Threading;
+using ParallelTasks;
+using Sandbox.Game.Entities.Cube;
+using Sandbox.ModAPI;
+using VRage.Collections;
 
 namespace Equinox.ProceduralWorld
 {
+    public class Example
+    {
+        public struct SliceToProcess
+        {
+            public int ShellIndex;
+            public int MaxShellIndex;
+            public IMyOreDetector Detector;
+        }
+        public MyBinaryStructHeap<int, SliceToProcess> m_Heap = new MyBinaryStructHeap<int, SliceToProcess>();
+
+        public void Add(IMyOreDetector detector, int maxShell)
+        {
+            lock (m_Heap)
+                m_Heap.Insert(new SliceToProcess() { ShellIndex = 0, MaxShellIndex = maxShell, Detector = detector }, 0);
+        }
+
+        public void TickWorker()
+        {
+            if (m_Heap.Count > 0)
+            {
+                SliceToProcess proc;
+                lock (m_Heap)
+                {
+                    proc = m_Heap.RemoveMin();
+                    // This can be here if you want multiple workers able to work with a single ore detector on multiple shells
+                    if (proc.ShellIndex < proc.MaxShellIndex)
+                        m_Heap.Insert(new SliceToProcess() { Detector = proc.Detector, MaxShellIndex = proc.MaxShellIndex, ShellIndex = proc.ShellIndex + 1 }, proc.ShellIndex + 1);
+                }
+
+                // process proc
+
+                // Or here if you want only one worker working on an ore detector at a time.
+                if (proc.ShellIndex < proc.MaxShellIndex)
+                    lock (m_Heap)
+                        m_Heap.Insert(new SliceToProcess() { Detector = proc.Detector, MaxShellIndex = proc.MaxShellIndex, ShellIndex = proc.ShellIndex + 1 }, proc.ShellIndex + 1);
+            }
+        }
+    }
+
     public class Settings
     {
         public static Settings Instance => SessionCore.Instance?.Settings;
@@ -24,7 +68,7 @@ namespace Equinox.ProceduralWorld
         // There will be roughly (1<<FactionShiftBase) factions per cell.
         public int FactionShiftBase = 3;
         // Pockets of ore concentration last roughly this long
-        public double OreMapDensity = 10e3; 
+        public double OreMapDensity = 10e3;
 
         // This is (within */2) of the minimum distance stations encounters are apart.  Keep high for performance reasons.
         // For context, 250e3 for Earth-Moon, 2300e3 for Earth-Mars, 6000e3 for Earth-Alien

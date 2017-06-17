@@ -12,6 +12,8 @@
     <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />
+    <NuGetPackageImportStamp>
+    </NuGetPackageImportStamp>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <PlatformTarget>x64</PlatformTarget>
@@ -23,6 +25,7 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <CodeAnalysisRuleSet>script.ruleset</CodeAnalysisRuleSet>
+    <GenerateSerializationAssemblies>Auto</GenerateSerializationAssemblies>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -34,8 +37,25 @@
     <WarningLevel>4</WarningLevel>
     <CodeAnalysisRuleSet>script.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>bin\x64\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <DebugType>full</DebugType>
+    <PlatformTarget>x64</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>script.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'">
+    <OutputPath>bin\x64\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <Optimize>true</Optimize>
+    <DebugType>pdbonly</DebugType>
+    <PlatformTarget>x64</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>script.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
   <ItemGroup>
-    <Reference Include="HavokWrapper, Version=1.0.6278.22649, Culture=neutral, PublicKeyToken=null" />
     <Reference Include="Sandbox.Game">
       <HintPath>C:\SteamSSD\steamapps\common\SpaceEngineers\..\SpaceEngineers\Bin64\\Sandbox.Game.dll</HintPath>
     </Reference>
@@ -85,7 +105,7 @@
     <Compile Include="ProceduralWorld\Buildings\Game\MyLoadingConstruction.cs" />
     <Compile Include="ProceduralWorld\Buildings\Game\MyProceduralGridComponent.cs" />
     <Compile Include="ProceduralWorld\Buildings\Game\MyProceduralStationModule.cs" />
-    <Compile Include="ProceduralWorld\Buildings\MyBuildingDebugCommands.cs" />
+    <Compile Include="ProceduralWorld\Buildings\MyBuildingControlCommands.cs" />
     <Compile Include="ProceduralWorld\Buildings\Seeds\MyProceduralSpeciality.cs" />
     <Compile Include="ProceduralWorld\Manager\MyProceduralModule.cs" />
     <Compile Include="ProceduralWorld\Manager\MyConcealmentManager.cs" />
@@ -100,7 +120,7 @@
     <Compile Include="ProceduralWorld\Buildings\Library\MyPartDummyUtils.cs" />
     <Compile Include="ProceduralWorld\Buildings\Library\MyPartMount.cs" />
     <Compile Include="ProceduralWorld\Buildings\Library\MyPartMountPointBlock.cs" />
-    <Compile Include="ProceduralWorld\Buildings\Library\MyPartStorage.cs" />
+    <Compile Include="ProceduralWorld\Buildings\Library\MyPartMetadata.cs" />
     <Compile Include="ProceduralWorld\Buildings\Library\MyPartStorage_Intersect.cs" />
     <Compile Include="ProceduralWorld\Buildings\Library\MyReservedSpace.cs" />
     <Compile Include="ProceduralWorld\Buildings\Seeds\MyProceduralWorld.cs" />
@@ -112,10 +132,35 @@
     <Compile Include="ProceduralWorld\Buildings\Seeds\MyProceduralConstructionSeed.cs" />
     <Compile Include="ProceduralWorld\Buildings\Seeds\MyProceduralFactionSeed.cs" />
     <Compile Include="ProceduralWorld\Buildings\Storage\MySupportedBlockTypes.cs" />
+    <Compile Include="ProceduralWorld\Voxels\Asteroids\MyAutomaticAsteroidFieldsComponent.cs" />
     <Compile Include="Utils\Command\MyCommand.cs" />
     <Compile Include="Utils\Command\MyCommandDispatchComponent.cs" />
     <Compile Include="Utils\Command\MyCommandProviderComponent.cs" />
-    <Compile Include="Utils\DotNet\MyMemoryStream.cs" />
+    <Compile Include="Utils\MyMovingAverage.cs" />
+    <Compile Include="Utils\Network\MyRPCRegistry.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>MyRPCRegistry.tt</DependentUpon>
+    </Compile>
+    <Compile Include="Utils\Network\MySyncComponent.cs" />
+    <Compile Include="Utils\Network\MySyncObject.cs" />
+    <Compile Include="Utils\Network\MySyncObjectFactory.cs" />
+    <Compile Include="Utils\Network\MySyncObjectGen.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>MySyncObjectGen.tt</DependentUpon>
+    </Compile>
+    <Compile Include="Utils\Logging\MyFallbackLogger.cs" />
+    <Compile Include="Utils\Session\MySessionBootstrapper.cs" />
+    <Compile Include="Utils\Session\MyModSessionComponentRegistry.cs" />
+    <Compile Include="Utils\Session\MyModSessionComponentRegistryGen.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>MyModSessionComponentRegistryGen.tt</DependentUpon>
+    </Compile>
+    <Compile Include="Utils\Session\MyObjectBuilder_ModSessionComponent.cs" />
+    <Compile Include="Utils\Stream\MySerializer.cs" />
+    <Compile Include="Utils\Stream\MyMemoryStream.cs" />
     <Compile Include="Utils\Cache\MyCacheBase.cs" />
     <Compile Include="Utils\Logging\IMyLogging.cs" />
     <Compile Include="Utils\Logging\MyCustomLogger.cs" />
@@ -126,7 +171,7 @@
     <Compile Include="Utils\MyCloneUtilities.cs" />
     <Compile Include="Utils\MyDefinitionFilter.cs" />
     <Compile Include="Utils\Cache\MyLRUCache.cs" />
-    <Compile Include="ProceduralWorld\Buildings\Library\MyPart.cs" />
+    <Compile Include="ProceduralWorld\Buildings\Library\MyPartFromPrefab.cs" />
     <Compile Include="ProceduralWorld\Buildings\Library\MyPartManager.cs" />
     <Compile Include="Utils\BlockTransformations.cs" />
     <Compile Include="ProceduralWorld\Buildings\Exporter\MyDesignTool.cs" />
@@ -142,6 +187,7 @@
     <Compile Include="Utils\MyConstantEntityRemap.cs" />
     <Compile Include="Utils\Network\MyNetworkComponent.cs" />
     <Compile Include="Utils\Network\MyPacket.cs" />
+    <Compile Include="Utils\Network\MyRPCComponent.cs" />
     <Compile Include="Utils\Noise\MyOctreeNoise.cs" />
     <Compile Include="Utils\MyWeightedChoice.cs" />
     <Compile Include="Utils\Noise\VRageNoiseExtensions.cs" />
@@ -193,7 +239,7 @@
     <Compile Include="Utils\Session\MyModSessionComponent.cs" />
     <Compile Include="Utils\Session\MyModSessionManager.cs" />
     <Compile Include="ProceduralWorld\Voxels\Asteroids\MyAsteroidFieldModule.cs" />
-    <Compile Include="ProceduralWorld\Voxels\Asteroids\IMyAsteroidFieldShape.cs" />
+    <Compile Include="ProceduralWorld\Voxels\Asteroids\MyAsteroidFieldShape.cs" />
     <Compile Include="ProceduralWorld\Voxels\Asteroids\MyAsteroidRing.cs" />
     <Compile Include="ProceduralWorld\Voxels\Asteroids\MyObjectBuilder_AsteroidField.cs" />
     <Compile Include="ProceduralWorld\Voxels\Asteroids\MyProceduralAsteroid.cs" />
@@ -204,6 +250,13 @@
     <Compile Include="ProceduralWorld\Voxels\VoxelBuilder\MyOctreeStorageBuilder.Serialization.cs" />
     <Compile Include="ProceduralWorld\Voxels\VoxelBuilder\MyPlanetStorageProviderBuilder.cs" />
     <Compile Include="ProceduralWorld\Voxels\VoxelBuilder\MyVoxelUtility.cs" />
+    <Compile Include="Utils\Stream\MySerializerGen.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>MySerializerGen.tt</DependentUpon>
+    </Compile>
+    <Compile Include="Utils\Stream\MySerializerRegistry.cs" />
+    <Compile Include="Utils\Vector3I_SurfaceIterator.cs" />
   </ItemGroup>
   <ItemGroup>
     <Analyzer Include="E:\Users\westin\Programming\SpaceEngineers\SEWhitelistDiagnostic\SEWhitelistChecker\SEWhitelistChecker.Vsix\bin\Debug\SEWhitelistChecker.dll" />
@@ -211,12 +264,28 @@
   <ItemGroup>
     <None Include="script.ruleset" />
   </ItemGroup>
+  <ItemGroup>
+    <Content Include="Utils\Network\MyRPCRegistry.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>MyRPCRegistry.cs</LastGenOutput>
+    </Content>
+    <Content Include="Utils\Network\MySyncObjectGen.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>MySyncObjectGen.cs</LastGenOutput>
+    </Content>
+    <Content Include="Utils\Session\MyModSessionComponentRegistryGen.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>MyModSessionComponentRegistryGen.cs</LastGenOutput>
+    </Content>
+    <Content Include="Utils\Stream\MySerializerGen.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>MySerializerGen.cs</LastGenOutput>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it.  
-       Other similar extension points exist, see Microsoft.Common.targets. 
-  <Target Name="BeforeBuild">
-  </Target>
-  <Target Name="AfterBuild">
-  </Target>
-  -->
+       Other similar extension points exist, see Microsoft.Common.targets.  -->
 </Project>

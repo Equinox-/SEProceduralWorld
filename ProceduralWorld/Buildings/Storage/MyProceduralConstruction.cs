@@ -145,7 +145,7 @@ namespace Equinox.ProceduralWorld.Buildings.Storage
             RoomRemoved?.Invoke(room);
         }
 
-        public MyProceduralRoom GenerateRoom(MatrixI transform, MyPart prefab)
+        public MyProceduralRoom GenerateRoom(MatrixI transform, MyPartFromPrefab prefab)
         {
             var tmp = new MyProceduralRoom();
             tmp.Init(this, transform, prefab);
@@ -179,7 +179,7 @@ namespace Equinox.ProceduralWorld.Buildings.Storage
             return m_rooms.Values.Select(room => room.GetCubeAt(pos)).FirstOrDefault(ob => ob != null);
         }
 
-        public bool Intersects(MyPart other, MatrixI otherTransform, MatrixI otherITransform, bool testOptional, bool testQuick = false, MyProceduralRoom ignore = null)
+        public bool Intersects(MyPartFromPrefab other, MatrixI otherTransform, MatrixI otherITransform, bool testOptional, bool testQuick = false, MyProceduralRoom ignore = null)
         {
             return m_rooms.Values.Any(test => test != ignore && test.Intersects(other, otherTransform, otherITransform, testOptional, testQuick));
         }
@@ -201,8 +201,8 @@ namespace Equinox.ProceduralWorld.Buildings.Storage
     {
         public MyProceduralConstruction Owner { get; private set; }
         public long RoomID { get; private set; }
-        public MyPart Part => m_part;
-        private MyPart m_part;
+        public MyPartFromPrefab Part => m_part;
+        private MyPartFromPrefab m_part;
         private MatrixI m_transform, m_invTransform;
         private Dictionary<string, Dictionary<string, MyProceduralMountPoint>> m_mountPoints;
 
@@ -231,7 +231,7 @@ namespace Equinox.ProceduralWorld.Buildings.Storage
             AddedToConstruction?.Invoke();
         }
 
-        internal void Init(MyProceduralConstruction parent, MatrixI transform, MyPart prefab)
+        internal void Init(MyProceduralConstruction parent, MatrixI transform, MyPartFromPrefab prefab)
         {
             Owner = parent;
             RoomID = parent.AcquireID();
@@ -309,9 +309,9 @@ namespace Equinox.ProceduralWorld.Buildings.Storage
             return Vector3I.Transform(prefabPos, ref m_transform);
         }
 
-        public bool Intersects(MyPart other, MatrixI otherTransform, MatrixI otherITransform, bool testOptional, bool testQuick = false)
+        public bool Intersects(MyPartFromPrefab other, MatrixI otherTransform, MatrixI otherITransform, bool testOptional, bool testQuick = false)
         {
-            return MyPartStorage.Intersects(ref m_part, ref m_transform, ref m_invTransform, ref other, ref otherTransform, ref otherITransform, testOptional, testQuick);
+            return MyPartMetadata.Intersects(ref m_part, ref m_transform, ref m_invTransform, ref other, ref otherTransform, ref otherITransform, testOptional, testQuick);
         }
 
         private readonly Dictionary<long, byte> m_intersectsWith = new Dictionary<long, byte>();
@@ -331,7 +331,7 @@ namespace Equinox.ProceduralWorld.Buildings.Storage
                     return (intersect & mask) != 0;
             }
             else intersect = 0;
-            var result = MyPartStorage.Intersects(ref m_part, ref m_transform, ref m_invTransform, ref other.m_part, ref other.m_transform, ref other.m_invTransform, testOptional, testQuick);
+            var result = MyPartMetadata.Intersects(ref m_part, ref m_transform, ref m_invTransform, ref other.m_part, ref other.m_transform, ref other.m_invTransform, testOptional, testQuick);
             intersect |= presentMask;
             if (result)
                 intersect |= mask;

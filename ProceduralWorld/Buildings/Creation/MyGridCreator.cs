@@ -1,10 +1,8 @@
 ﻿using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Threading;
 using Equinox.ProceduralWorld.Buildings.Game;
 using Equinox.ProceduralWorld.Buildings.Storage;
-using Sandbox;
 using Sandbox.Definitions;
 using Sandbox.Game.Entities;
 using Sandbox.ModAPI;
@@ -13,7 +11,6 @@ using VRage.Collections;
 using VRage.Game;
 using VRage.Game.Entity;
 using VRage.Game.ModAPI;
-using VRage.ModAPI;
 using VRage.ObjectBuilders;
 using VRageMath;
 

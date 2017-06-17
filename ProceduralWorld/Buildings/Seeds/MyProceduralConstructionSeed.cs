@@ -7,7 +7,6 @@ using Equinox.ProceduralWorld.Utils;
 using Equinox.Utils;
 using Sandbox.Definitions;
 using Sandbox.Game.EntityComponents;
-using Sandbox.ModAPI.Ingame;
 using VRage.Game;
 using VRage.Game.ObjectBuilders.Definitions;
 using VRageMath;

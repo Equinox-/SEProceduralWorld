@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
-using Equinox.ProceduralWorld.Utils.Session;
+using Equinox.Utils.Logging;
+using Equinox.Utils.Session;
 using VRageMath;
 
 namespace Equinox.ProceduralWorld.Manager
@@ -18,16 +19,19 @@ namespace Equinox.ProceduralWorld.Manager
         }
 
         public abstract IEnumerable<MyProceduralObject> Generate(BoundingSphereD include, BoundingSphereD? exclude);
-        public abstract void UpdateBeforeSimulation(TimeSpan maxTime);
+
+        /// <summary>
+        /// While technically you could change this at runtime... don't.
+        /// </summary>
         public abstract bool RunOnClients { get; }
 
-        public override void Attach()
+        protected override void Attach()
         {
             base.Attach();
             m_manager?.AddModule(this);
         }
 
-        public override void Detach()
+        protected override void Detach()
         {
             base.Detach();
             m_manager?.RemoveModule(this);

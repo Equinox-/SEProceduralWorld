@@ -1,4 +1,4 @@
-﻿using Equinox.Utils.DotNet;
+﻿using Equinox.Utils.Stream;
 
 namespace Equinox.ProceduralWorld.Voxels.VoxelBuilder
 {

@@ -5,9 +5,7 @@ using System.Linq;
 using Equinox.ProceduralWorld.Buildings.Library;
 using Equinox.ProceduralWorld.Buildings.Storage;
 using Equinox.Utils;
-using Sandbox.ModAPI;
 using VRage;
-using VRage.Game.ModAPI;
 using VRageMath;
 
 namespace Equinox.ProceduralWorld.Buildings.Generation
@@ -21,7 +19,7 @@ namespace Equinox.ProceduralWorld.Buildings.Generation
                 return false;
             return true;
             // Reject if this will block another mount point, or one of our mount points would blocked.  Use quick test.
-            var selfRooms = new List<MyTuple<MyPart, MatrixI, MatrixI>>();
+            var selfRooms = new List<MyTuple<MyPartFromPrefab, MatrixI, MatrixI>>();
             selfRooms.Add(MyTuple.Create(room.Part, room.Transform, room.InvTransform));
             foreach (var point in room.MountPoints)
                 if (point.AttachedTo == null)
@@ -47,7 +45,7 @@ namespace Equinox.ProceduralWorld.Buildings.Generation
                             var pos = MyUtilities.Multiply(oppos.Item2, other.Transform);
                             MatrixI ipos;
                             MatrixI.Invert(ref pos, out ipos);
-                            if (!selfRooms.Any(self => MyPartStorage.Intersects(self.Item1, self.Item2, self.Item3, other.Part, pos, ipos, testOptional, true))) continue;
+                            if (!selfRooms.Any(self => MyPartMetadata.Intersects(self.Item1, self.Item2, self.Item3, other.Part, pos, ipos, testOptional, true))) continue;
                             return false;
                         }
             return true;
@@ -55,13 +53,13 @@ namespace Equinox.ProceduralWorld.Buildings.Generation
 
         private readonly HashSet<MyProceduralMountPoint> m_scannedMounts = new HashSet<MyProceduralMountPoint>();
         private readonly Dictionary<MyProceduralMountPoint, HashSet<MyProceduralRoom>> m_roomInvoker = new Dictionary<MyProceduralMountPoint, HashSet<MyProceduralRoom>>();
-        private readonly Dictionary<MatrixI, Dictionary<MyPart, MyProceduralRoom>> m_openRoomsByPosition = new Dictionary<MatrixI, Dictionary<MyPart, MyProceduralRoom>>(MyMatrixIEqualityComparer.Instance);
+        private readonly Dictionary<MatrixI, Dictionary<MyPartFromPrefab, MyProceduralRoom>> m_openRoomsByPosition = new Dictionary<MatrixI, Dictionary<MyPartFromPrefab, MyProceduralRoom>>(MyMatrixIEqualityComparer.Instance);
 
-        private bool TryAddRoom(ref MatrixI transform, MyPart part)
+        private bool TryAddRoom(ref MatrixI transform, MyPartFromPrefab part)
         {
-            Dictionary<MyPart, MyProceduralRoom> position;
+            Dictionary<MyPartFromPrefab, MyProceduralRoom> position;
             if (!m_openRoomsByPosition.TryGetValue(transform, out position))
-                position = m_openRoomsByPosition[transform] = new Dictionary<MyPart, MyProceduralRoom>();
+                position = m_openRoomsByPosition[transform] = new Dictionary<MyPartFromPrefab, MyProceduralRoom>();
             else if (position.ContainsKey(part))
                 return false;
             var room = m_construction.GenerateRoom(transform, part);
@@ -89,7 +87,7 @@ namespace Equinox.ProceduralWorld.Buildings.Generation
                 if (cset.Count == 0)
                     m_roomInvoker.Remove(mount.AttachedTo);
             }
-            Dictionary<MyPart, MyProceduralRoom> rset;
+            Dictionary<MyPartFromPrefab, MyProceduralRoom> rset;
             if (!m_openRoomsByPosition.TryGetValue(lk.Transform, out rset)) return;
             rset.Remove(lk.Part);
             if (rset.Count == 0)
@@ -116,7 +114,7 @@ namespace Equinox.ProceduralWorld.Buildings.Generation
                 if (!m_roomInvoker.TryGetValue(mount.AttachedTo, out cset)) continue;
                 foreach (var lk in cset)
                 {
-                    Dictionary<MyPart, MyProceduralRoom> rset;
+                    Dictionary<MyPartFromPrefab, MyProceduralRoom> rset;
                     if (!m_openRoomsByPosition.TryGetValue(lk.Transform, out rset)) continue;
                     if (rset.Remove(lk.Part))
                         dropped++;
@@ -126,7 +124,7 @@ namespace Equinox.ProceduralWorld.Buildings.Generation
                 m_roomInvoker.Remove(mount.AttachedTo);
             }
             SessionCore.Log("Hit {0} mounts of {1} mounts.  Delta is {2}", hitMounts, totalMounts, dropped);
-            Dictionary<MyPart, MyProceduralRoom> set;
+            Dictionary<MyPartFromPrefab, MyProceduralRoom> set;
             if (m_openRoomsByPosition.TryGetValue(room.Transform, out set))
             {
                 if (set.Remove(room.Part))
@@ -140,7 +138,7 @@ namespace Equinox.ProceduralWorld.Buildings.Generation
         private readonly MyWeightedChoice<MyProceduralRoom> m_weightedRoomChoice = new MyWeightedChoice<MyProceduralRoom>();
         private readonly List<MyProceduralMountPoint> m_freeMountPoints = new List<MyProceduralMountPoint>();
         private MyProceduralConstruction m_construction;
-        public bool StepConstruction(MyProceduralConstruction c, float targetGrowth = 0, bool testOptional = true, Func<MyPart, bool> filter = null)
+        public bool StepConstruction(MyProceduralConstruction c, float targetGrowth = 0, bool testOptional = true, Func<MyPartFromPrefab, bool> filter = null)
         {
             this.m_construction = c;
             var iwatch = new Stopwatch();
@@ -163,7 +161,7 @@ namespace Equinox.ProceduralWorld.Buildings.Generation
                     if (!m_roomInvoker.TryGetValue(mount, out tmp)) continue;
                     foreach (var lk in tmp)
                     {
-                        Dictionary<MyPart, MyProceduralRoom> rset;
+                        Dictionary<MyPartFromPrefab, MyProceduralRoom> rset;
                         if (!m_openRoomsByPosition.TryGetValue(lk.Transform, out rset)) continue;
                         if (rset.Remove(lk.Part))
                             dropEarly++;
@@ -211,7 +209,7 @@ namespace Equinox.ProceduralWorld.Buildings.Generation
             var inoutFactorWatch = new Stopwatch();
             var usefulnessWatch = new Stopwatch();
 
-            var roomErrorCache = new Dictionary<MyPart, double>();
+            var roomErrorCache = new Dictionary<MyPartFromPrefab, double>();
 
             var bestError = double.MaxValue;
             var bestErrMux = new List<string>();

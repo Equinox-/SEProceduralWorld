@@ -8,7 +8,7 @@ using VRageMath;
 
 namespace Equinox.ProceduralWorld.Buildings.Library
 {
-    public partial class MyPartStorage
+    public partial class MyPartMetadata
     {
         public bool CubeExists(Vector3I pos)
         {
@@ -34,17 +34,17 @@ namespace Equinox.ProceduralWorld.Buildings.Library
             }
         }
 
-        public static bool Intersects(MyPart partA, MatrixI transformA, MatrixI invTransformA, MyPart partB, MatrixI transformB, MatrixI invTransformB, bool testOptional, bool testQuick = false)
+        public static bool Intersects(MyPartFromPrefab partA, MatrixI transformA, MatrixI invTransformA, MyPartFromPrefab partB, MatrixI transformB, MatrixI invTransformB, bool testOptional, bool testQuick = false)
         {
             return Intersects(ref partA, ref transformA, ref invTransformA, ref partB, ref transformB, ref invTransformB, testOptional, testQuick);
         }
 
-        public static bool Intersects(MyPart partA, MatrixI transformA, MatrixI invTransformA, ref MyPart partB, ref MatrixI transformB, ref MatrixI invTransformB, bool testOptional, bool testQuick = false)
+        public static bool Intersects(MyPartFromPrefab partA, MatrixI transformA, MatrixI invTransformA, ref MyPartFromPrefab partB, ref MatrixI transformB, ref MatrixI invTransformB, bool testOptional, bool testQuick = false)
         {
             return Intersects(ref partA, ref transformA, ref invTransformA, ref partB, ref transformB, ref invTransformB, testOptional, testQuick);
         }
 
-        public static bool Intersects(ref MyPart partA, ref MatrixI transformA, ref MatrixI invTransformA, ref MyPart partB, ref MatrixI transformB, ref MatrixI invTransformB, bool testOptional, bool testQuick = false)
+        public static bool Intersects(ref MyPartFromPrefab partA, ref MatrixI transformA, ref MatrixI invTransformA, ref MyPartFromPrefab partB, ref MatrixI transformB, ref MatrixI invTransformB, bool testOptional, bool testQuick = false)
         {
             var cheapResult = IntersectsInternalCheap(ref partA, ref transformA, ref invTransformA, ref partB, ref transformB, ref invTransformB, testOptional);
             switch (cheapResult)
@@ -72,12 +72,12 @@ namespace Equinox.ProceduralWorld.Buildings.Library
 
         private struct IntersectKey
         {
-            private readonly MyPart m_partA;
-            private readonly MyPart m_partB;
+            private readonly MyPartFromPrefab m_partA;
+            private readonly MyPartFromPrefab m_partB;
             private readonly MatrixI m_transformAB;
             private readonly bool m_testOptional;
 
-            public IntersectKey(MyPart partA, MyPart partB, MatrixI transformAB, bool testOptional)
+            public IntersectKey(MyPartFromPrefab partA, MyPartFromPrefab partB, MatrixI transformAB, bool testOptional)
             {
                 m_partA = partA;
                 m_partB = partB;
@@ -125,7 +125,7 @@ namespace Equinox.ProceduralWorld.Buildings.Library
             No,
             Maybe
         }
-        private static CheapIntersection IntersectsInternalCheap(ref MyPart partA, ref MatrixI transformA, ref MatrixI invTransformA, ref MyPart partB, ref MatrixI transformB, ref MatrixI invTransformB, bool testOptional)
+        private static CheapIntersection IntersectsInternalCheap(ref MyPartFromPrefab partA, ref MatrixI transformA, ref MatrixI invTransformA, ref MyPartFromPrefab partB, ref MatrixI transformB, ref MatrixI invTransformB, bool testOptional)
         {
             using (partA.LockSharedUsing())
             using (partB.LockSharedUsing())
@@ -168,7 +168,7 @@ namespace Equinox.ProceduralWorld.Buildings.Library
             }
         }
 
-        private static bool IntersectsInternalExpensive(ref MyPart partA, ref MatrixI transformA, ref MatrixI invTransformA, ref MyPart partB, ref MatrixI transformB, ref MatrixI invTransformB, bool testOptional)
+        private static bool IntersectsInternalExpensive(ref MyPartFromPrefab partA, ref MatrixI transformA, ref MatrixI invTransformA, ref MyPartFromPrefab partB, ref MatrixI transformB, ref MatrixI invTransformB, bool testOptional)
         {
             using (partA.LockSharedUsing())
             using (partB.LockSharedUsing())

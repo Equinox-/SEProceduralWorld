@@ -1,9 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Xml.Serialization;
 using ProtoBuf;
 using VRage;
@@ -26,7 +23,8 @@ namespace Equinox.ProceduralWorld.Voxels
         public double AsteroidDensity;
 
         [ProtoMember]
-        public double UsableRegion;
+        [DefaultValue(1)]
+        public double UsableRegion = 1;
 
         [XmlIgnore]
         public readonly HashSet<MyDefinitionId> RequiresOre = new HashSet<MyDefinitionId>(MyDefinitionId.Comparer);
@@ -35,7 +33,6 @@ namespace Equinox.ProceduralWorld.Voxels
         public readonly HashSet<MyDefinitionId> ProhibitsOre = new HashSet<MyDefinitionId>(MyDefinitionId.Comparer);
 
         [ProtoMember]
-        [XmlElement("RequiredOres")]
         [XmlArrayItem("Ore")]
         public SerializableDefinitionId[] RequiresOreSerial
         {
@@ -49,7 +46,6 @@ namespace Equinox.ProceduralWorld.Voxels
         }
 
         [ProtoMember]
-        [XmlElement("ProhibitedOres")]
         [XmlArrayItem("Ore")]
         public SerializableDefinitionId[] ProhibitsOreSerial
         {
@@ -64,31 +60,31 @@ namespace Equinox.ProceduralWorld.Voxels
     }
 
     [ProtoContract]
-    public class MyObjectBuilder_AsteroidRing : MyObjectBuilder_AsteroidField
+    public class MyObjectBuilder_AsteroidRing
     {
         [ProtoMember]
-        public double InnerRadius;
+        public float InnerRadius;
 
         [ProtoMember]
-        public double OuterRadius;
+        public float OuterRadius;
 
         [ProtoMember]
         [DefaultValue(1)]
-        public double VerticalScaleMult = 1;
+        public float VerticalScaleMult = 1;
     }
 
     [ProtoContract]
-    public class MyObjectBuilder_AsteroidSphere : MyObjectBuilder_AsteroidField
+    public class MyObjectBuilder_AsteroidSphere
     {
         [ProtoMember]
-        public double InnerRadius;
+        public float InnerRadius;
 
         [ProtoMember]
-        public double OuterRadius;
+        public float OuterRadius;
     }
-    
+
     [ProtoContract]
-    public abstract class MyObjectBuilder_AsteroidField
+    public class MyObjectBuilder_AsteroidField
     {
         [ProtoMember]
         [DefaultValue(null)]
@@ -96,5 +92,19 @@ namespace Equinox.ProceduralWorld.Voxels
 
         [ProtoMember]
         public MyPositionAndOrientation Transform;
+
+        [ProtoMember]
+        public int Seed;
+
+        [ProtoMember]
+        public double DensityRegionSize = .1;
+
+        [ProtoMember]
+        [DefaultValue(null)]
+        public MyObjectBuilder_AsteroidSphere ShapeSphere;
+
+        [ProtoMember]
+        [DefaultValue(null)]
+        public MyObjectBuilder_AsteroidRing ShapeRing;
     }
 }

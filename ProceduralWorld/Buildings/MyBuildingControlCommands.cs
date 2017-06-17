@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Equinox.ProceduralWorld.Buildings.Creation;
 using Equinox.ProceduralWorld.Buildings.Exporter;
 using Equinox.ProceduralWorld.Buildings.Generation;
@@ -11,6 +9,7 @@ using Equinox.ProceduralWorld.Buildings.Seeds;
 using Equinox.ProceduralWorld.Buildings.Storage;
 using Equinox.Utils;
 using Equinox.Utils.Command;
+using Equinox.Utils.Session;
 using Sandbox.Definitions;
 using Sandbox.ModAPI;
 using VRage.Game.ModAPI;
@@ -20,11 +19,11 @@ using VRageMath;
 
 namespace Equinox.ProceduralWorld.Buildings
 {
-    public class MyBuildingDebugCommands : MyCommandProviderComponent
+    public class MyBuildingControlCommands : MyCommandProviderComponent
     {
         private MyPartManager m_partManager;
 
-        public MyBuildingDebugCommands()
+        public MyBuildingControlCommands()
         {
             DependsOn((MyPartManager x) => m_partManager = x);
             Create("clear").Handler(ClearStations);
@@ -146,5 +145,21 @@ namespace Equinox.ProceduralWorld.Buildings
             });
             return null;
         }
+
+        public override void LoadConfiguration(MyObjectBuilder_ModSessionComponent config)
+        {
+            if (config == null) return;
+            if (config is MyObjectBuilder_BuildingControlCommands) return;
+            Log(MyLogSeverity.Critical, "Configuration type {0} doesn't match component type {1}", config.GetType(), GetType());
+        }
+
+        public override MyObjectBuilder_ModSessionComponent SaveConfiguration()
+        {
+            return new MyObjectBuilder_BuildingControlCommands();
+        }
+    }
+
+    public class MyObjectBuilder_BuildingControlCommands : MyObjectBuilder_ModSessionComponent
+    {
     }
 }

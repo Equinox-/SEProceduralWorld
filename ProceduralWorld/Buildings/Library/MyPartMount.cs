@@ -1,11 +1,9 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Equinox.Utils;
 using Equinox.Utils.Cache;
 using VRage;
-using VRage.Collections;
 using VRageMath;
 
 namespace Equinox.ProceduralWorld.Buildings.Library
@@ -15,13 +13,13 @@ namespace Equinox.ProceduralWorld.Buildings.Library
         public string MountType { private set; get; }
         public string MountName { private set; get; }
         public readonly SortedDictionary<string, List<MyPartMountPointBlock>> m_blocks;
-        private readonly MyPartStorage m_part;
+        private readonly MyPartMetadata m_part;
 
         public MyAdjacencyRule AdjacencyRule { private set; get; }
 
         public IEnumerable<MyPartMountPointBlock> Blocks => m_blocks.Values.SelectMany(x => x);
 
-        public MyPartMount(MyPartStorage part, string mountType, string mountName)
+        public MyPartMount(MyPartMetadata part, string mountType, string mountName)
         {
             m_part = part;
             MountType = mountType;
@@ -168,11 +166,11 @@ namespace Equinox.ProceduralWorld.Buildings.Library
         }
 
         // In order to close off this mount point we need at least this region to be free (in part block space)
-        private MyTuple<MyPart, MatrixI>? m_smallestTerminalAttachment = null;
+        private MyTuple<MyPartFromPrefab, MatrixI>? m_smallestTerminalAttachment = null;
         /// <summary>
         /// Gives a best guess on the smallest possible attachment configuration.
         /// </summary>
-        public MyTuple<MyPart, MatrixI> SmallestTerminalAttachment
+        public MyTuple<MyPartFromPrefab, MatrixI> SmallestTerminalAttachment
         {
             get
             {
@@ -187,7 +185,7 @@ namespace Equinox.ProceduralWorld.Buildings.Library
             m_smallestTerminalAttachment = null;
         }
 
-        private MyTuple<MyPart, MatrixI> ComputeSmallestTerminalAttachment()
+        private MyTuple<MyPartFromPrefab, MatrixI> ComputeSmallestTerminalAttachment()
         {
             foreach (var part in SessionCore.Instance.PartManager.SortedBySize)
                 if (part.MountPointsOfType(MountType).Count() <= 2)
@@ -210,7 +208,7 @@ namespace Equinox.ProceduralWorld.Buildings.Library
                     }
                 }
             SessionCore.Log("Failed to find any module that is attachable to \"{1} {2}\" on {0}", m_part.Name, MountType, MountName);
-            return MyTuple.Create((MyPart)null, default(MatrixI));
+            return MyTuple.Create((MyPartFromPrefab)null, default(MatrixI));
         }
     }
 }

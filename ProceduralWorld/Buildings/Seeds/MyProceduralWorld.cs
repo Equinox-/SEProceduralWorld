@@ -23,7 +23,7 @@ namespace Equinox.ProceduralWorld.Buildings.Seeds
 
         private MyProceduralWorld()
         {
-            Seed = MyAPIGateway.Session.WorkshopId ?? (ulong)MyAPIGateway.Session.SessionSettings.ProceduralSeed;
+            Seed = (ulong)MyAPIGateway.Session.SessionSettings.ProceduralSeed;
             var rand = new Random((int)((Seed >> 32) ^ Seed));
             m_factionNoise = new MySimplex(rand.Next(), 1.0 / Settings.Instance.FactionDensity);
             m_oreNoise = new MyCompositeNoise(8, 1 / (float) Settings.Instance.OreMapDensity, rand.Next());

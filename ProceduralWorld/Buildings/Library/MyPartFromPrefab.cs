@@ -8,11 +8,11 @@ using VRageMath;
 
 namespace Equinox.ProceduralWorld.Buildings.Library
 {
-    public sealed class MyPart : MyPartStorage
+    public partial class MyPartFromPrefab : MyPartMetadata
     {
         public MyPrefabDefinition Prefab { get; }
 
-        public MyPart(MyPrefabDefinition prefab)
+        public MyPartFromPrefab(MyPrefabDefinition prefab)
         {
             Prefab = prefab;
 
@@ -20,9 +20,9 @@ namespace Equinox.ProceduralWorld.Buildings.Library
             // Try init from cache.
             try
             {
-                if (MyAPIGateway.Utilities.FileExistsInLocalStorage(CacheName, typeof(MyPart)))
+                if (MyAPIGateway.Utilities.FileExistsInLocalStorage(CacheName, typeof(MyPartFromPrefab)))
                 {
-                    using (var reader = MyAPIGateway.Utilities.ReadFileInLocalStorage(CacheName, typeof(MyPart)))
+                    using (var reader = MyAPIGateway.Utilities.ReadFileInLocalStorage(CacheName, typeof(MyPartFromPrefab)))
                     {
                         var xml = reader.ReadToEnd();
                         var ob = MyAPIGateway.Utilities.SerializeFromXML<MyObjectBuilder_Part>(xml);
@@ -84,7 +84,7 @@ namespace Equinox.ProceduralWorld.Buildings.Library
                 try
                 {
                     SessionCore.Log("Invalid hash for cached definition of {0}; writing to local storage.  {1} => {2}", Name, chash, nhash);
-                    using (var writer = MyAPIGateway.Utilities.WriteFileInLocalStorage(CacheName, typeof(MyPart)))
+                    using (var writer = MyAPIGateway.Utilities.WriteFileInLocalStorage(CacheName, typeof(MyPartFromPrefab)))
                     {
                         var xml = MyAPIGateway.Utilities.SerializeToXML(obs);
                         writer.Write(xml);

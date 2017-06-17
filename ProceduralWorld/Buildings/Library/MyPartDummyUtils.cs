@@ -86,7 +86,7 @@ namespace Equinox.ProceduralWorld.Buildings.Library
         {
             var nA = block.Name;
             var nB = (block as MyObjectBuilder_TerminalBlock)?.CustomName;
-            return (new[] { nA, nB }).Where(x => x != null).SelectMany(x => x.Split(new string[] { MyPart.MULTI_USE_SENTINEL }, StringSplitOptions.None)).Select(x => x.Trim()).Where(x => x.Length > 0);
+            return (new[] { nA, nB }).Where(x => x != null).SelectMany(x => x.Split(new string[] { MyPartFromPrefab.MULTI_USE_SENTINEL }, StringSplitOptions.None)).Select(x => x.Trim()).Where(x => x.Length > 0);
         }
     }
 }

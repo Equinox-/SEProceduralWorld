@@ -1,8 +1,9 @@
 ﻿using System;
 using System.Text;
-using Equinox.Utils.DotNet;
+using Equinox.Utils.Stream;
 using Sandbox.Definitions;
 using VRage.Utils;
+using VRage.Voxels;
 using VRageMath;
 
 namespace Equinox.ProceduralWorld.Voxels.VoxelBuilder
@@ -16,6 +17,8 @@ namespace Equinox.ProceduralWorld.Voxels.VoxelBuilder
         public long Seed;
         public double Radius;
         public MyPlanetGeneratorDefinition Generator;
+
+        public Vector3I StorageSize { get; private set; }
 
         public int SerializedSize
         {
@@ -46,6 +49,7 @@ namespace Equinox.ProceduralWorld.Voxels.VoxelBuilder
             Radius = radius;
             Seed = seed;
             Version = STORAGE_VERSION;
+            Init();
         }
 
         public void Init(long seed, string generator, double radius)
@@ -57,6 +61,17 @@ namespace Equinox.ProceduralWorld.Voxels.VoxelBuilder
             Radius = radius;
             Seed = seed;
             Version = STORAGE_VERSION;
+            Init();
+        }
+
+        private void Init()
+        {
+            var rad = (float)Radius;
+
+            var maxHeight = rad * Generator.HillParams.Max;
+
+            var halfSize = rad + maxHeight;
+            StorageSize = MyVoxelCoordSystems.FindBestOctreeSize(2 * halfSize);
         }
     }
 }

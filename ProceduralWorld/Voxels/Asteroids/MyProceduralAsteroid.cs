@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Linq;
 using Equinox.ProceduralWorld.Manager;
 using Equinox.ProceduralWorld.Voxels.VoxelBuilder;
 using Sandbox.ModAPI;

@@ -3,8 +3,8 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using Equinox.ProceduralWorld.Utils.Session;
 using Equinox.Utils;
+using Equinox.Utils.Session;
 using Sandbox.Definitions;
 using VRage.Game;
 using VRage.ObjectBuilders;
@@ -12,18 +12,18 @@ using VRage.Utils;
 
 namespace Equinox.ProceduralWorld.Buildings.Library
 {
-    public class MyPartManager : MyLoggingSessionComponent, IEnumerable<MyPart>
+    public class MyPartManager : MyLoggingSessionComponent, IEnumerable<MyPartFromPrefab>
     {
         public const string PREFAB_NAME_PREFIX = "EqProcBuild_";
 
-        private readonly Dictionary<MyDefinitionId, MyPart> m_parts = new Dictionary<MyDefinitionId, MyPart>(MyDefinitionId.Comparer);
+        private readonly Dictionary<MyDefinitionId, MyPartFromPrefab> m_parts = new Dictionary<MyDefinitionId, MyPartFromPrefab>(MyDefinitionId.Comparer);
 
-        private List<MyPart> m_partsBySize;
+        private List<MyPartFromPrefab> m_partsBySize;
 
         /// <summary>
         /// Gets a list of all parts, ascending by the volume of their bounding sphere
         /// </summary>
-        public IEnumerable<MyPart> SortedBySize
+        public IEnumerable<MyPartFromPrefab> SortedBySize
         {
             get
             {
@@ -36,15 +36,15 @@ namespace Equinox.ProceduralWorld.Buildings.Library
 
 
         private static readonly Type[] SuppliedDeps = new[] { typeof(MyPartManager) };
-        public override IEnumerable<Type> SuppliesComponents => SuppliedDeps;
+        public override IEnumerable<Type> SuppliedComponents => SuppliedDeps;
 
-        public override void Attach()
+        protected override void Attach()
         {
             base.Attach();
             LoadAll();
         }
 
-        public override void Detach()
+        protected override void Detach()
         {
             base.Detach();
             m_partsBySize = null;
@@ -61,22 +61,22 @@ namespace Equinox.ProceduralWorld.Buildings.Library
             Log(MyLogSeverity.Info, "Loaded all prefabs ({0}) in {1}", m_parts.Count, watch.Elapsed);
         }
 
-        public MyPart LoadNullable(SerializableDefinitionId prefabID)
+        public MyPartFromPrefab LoadNullable(SerializableDefinitionId prefabID)
         {
-            MyPart part;
+            MyPartFromPrefab part;
             if (m_parts.TryGetValue(prefabID, out part))
                 return part;
             var def = MyDefinitionManager.Static.GetPrefabDefinition(prefabID.SubtypeId);
             return def != null ? Load(def) : null;
         }
 
-        public MyPart Load(MyPrefabDefinition def)
+        public MyPartFromPrefab Load(MyPrefabDefinition def)
         {
-            MyPart part;
+            MyPartFromPrefab part;
             if (m_parts.TryGetValue(def.Id, out part)) return part;
             try
             {
-                var output = new MyPart(def);
+                var output = new MyPartFromPrefab(def);
                 // Can we actually use this with the current mods?
                 MyCubeBlockDefinition test;
                 foreach (var kv in output.BlockSetInfo.BlockCountByType)
@@ -99,7 +99,7 @@ namespace Equinox.ProceduralWorld.Buildings.Library
             return part;
         }
 
-        public IEnumerator<MyPart> GetEnumerator()
+        public IEnumerator<MyPartFromPrefab> GetEnumerator()
         {
             return m_parts.Values.Where(x => x != null).GetEnumerator();
         }
@@ -109,6 +109,23 @@ namespace Equinox.ProceduralWorld.Buildings.Library
             return m_parts.Values.Where(x => x != null).GetEnumerator();
         }
 
-        public MyPart this[MyDefinitionId key] => m_parts.GetValueOrDefault(key, null);
+        public MyPartFromPrefab this[MyDefinitionId key] => m_parts.GetValueOrDefault(key, null);
+
+
+        public override void LoadConfiguration(MyObjectBuilder_ModSessionComponent config)
+        {
+            if (config == null) return;
+            if (config is MyObjectBuilder_PartManager) return;
+            Log(MyLogSeverity.Critical, "Configuration type {0} doesn't match component type {1}", config.GetType(), GetType());
+        }
+
+        public override MyObjectBuilder_ModSessionComponent SaveConfiguration()
+        {
+            return new MyObjectBuilder_PartManager();
+        }
+    }
+
+    public class MyObjectBuilder_PartManager : MyObjectBuilder_ModSessionComponent
+    {
     }
 }

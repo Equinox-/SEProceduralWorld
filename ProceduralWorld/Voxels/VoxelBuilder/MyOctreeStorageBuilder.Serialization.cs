@@ -1,5 +1,5 @@
 ﻿using System;
-using Equinox.Utils.DotNet;
+using Equinox.Utils.Stream;
 using Sandbox.Definitions;
 
 namespace Equinox.ProceduralWorld.Voxels.VoxelBuilder

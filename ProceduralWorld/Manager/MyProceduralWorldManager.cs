@@ -2,16 +2,15 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using Equinox.ProceduralWorld.Buildings.Game;
-using Equinox.ProceduralWorld.Utils.Session;
-using Equinox.ProceduralWorld.Voxels;
 using Equinox.Utils;
-using Sandbox.Game.Entities;
+using Equinox.Utils.Network;
+using Equinox.Utils.Session;
+using ProtoBuf;
 using Sandbox.ModAPI;
 using VRage.Collections;
 using VRage.Game;
-using VRage.Game.Components;
 using VRage.Game.ModAPI;
+using VRage.Game.ModAPI.Interfaces;
 using VRage.ModAPI;
 using VRage.Utils;
 using VRageMath;
@@ -22,10 +21,10 @@ namespace Equinox.ProceduralWorld.Manager
 {
     public class MyProceduralWorldManager : MyLoggingSessionComponent
     {
-        private static readonly TimeSpan TolerableLag = TimeSpan.FromSeconds(MyEngineConstants.UPDATE_STEP_SIZE_IN_SECONDS * 2);
+        public static readonly TimeSpan TolerableLag = TimeSpan.FromSeconds(MyEngineConstants.UPDATE_STEP_SIZE_IN_SECONDS);
 
         private static readonly Type[] SupplyComponents = { typeof(MyProceduralWorldManager) };
-        public override IEnumerable<Type> SuppliesComponents => SupplyComponents;
+        public override IEnumerable<Type> SuppliedComponents => SupplyComponents;
 
         private readonly HashSet<MyProceduralModule> m_modules = new HashSet<MyProceduralModule>();
         private readonly HashSet<MyProceduralModule> m_modulesToAdd = new HashSet<MyProceduralModule>();
@@ -65,7 +64,20 @@ namespace Equinox.ProceduralWorld.Manager
             }
         }
 
-        public override void Detach()
+        protected override void Attach()
+        {
+            MyAPIGateway.Entities.OnEntityAdd += TrackEntity;
+            MyAPIGateway.Entities.GetEntities(null, x =>
+            {
+                TrackEntity(x);
+                return false;
+            });
+            if (MyAPIGateway.Session.IsDecider() && MyAPIGateway.Session.Player?.Controller != null)
+                TrackController(MyAPIGateway.Session.Player.Controller);
+            Log(MyLogSeverity.Info, "Procedural world manager initialized");
+        }
+
+        protected override void Detach()
         {
             var list = m_objectListPool.Get();
             try
@@ -96,17 +108,6 @@ namespace Equinox.ProceduralWorld.Manager
             t.OnMoved += ObjectMoved;
             t.OnRemoved += RemoveFromTree;
             return true;
-        }
-
-        public override void Attach()
-        {
-            MyAPIGateway.Entities.OnEntityAdd += TrackEntity;
-            MyAPIGateway.Entities.GetEntities(null, x =>
-            {
-                TrackEntity(x);
-                return false;
-            });
-            Log(MyLogSeverity.Info, "Procedural world manager initialized");
         }
 
         private readonly Stopwatch m_stopwatch = new Stopwatch();
@@ -163,15 +164,53 @@ namespace Equinox.ProceduralWorld.Manager
             }
         }
 
+        private void TrackController(IMyEntityController controller)
+        {
+            controller.ControlledEntityChanged += ControlledEntityChanged;
+            var currEnt = controller.ControlledEntity as IMyEntity;
+            if (currEnt != null)
+                TrackEntity(currEnt);
+        }
 
         private void TrackEntity(IMyEntity entity)
         {
-            if (entity is IMyCharacter)
-                TrackEntity(entity, MyAPIGateway.Session.SessionSettings.ViewDistance);
+            var player = entity as IMyCharacter;
+            if (player != null)
+            {
+                if (MyAPIGateway.Session.IsDecider() || MyAPIGateway.Session.Player?.Controller == null)
+                    TrackEntity(player, MyAPIGateway.Session.SessionSettings.ViewDistance);
+                else
+                {
+                    MyAPIGateway.Session.Player.Controller.ControlledEntityChanged += ControlledEntityChanged;
+                    var ctrl = player.ControllerInfo?.Controller;
+                    if (MyAPIGateway.Session.Player == null || MyAPIGateway.Session.Player.Controller == ctrl)
+                        TrackEntity(player, MyAPIGateway.Session.SessionSettings.ViewDistance);
+                }
+            }
             else if (entity is IMyCameraBlock)
                 TrackEntity(entity, Math.Min(10000, MyAPIGateway.Session.SessionSettings.ViewDistance));
             else if (entity is IMyRemoteControl)
                 TrackEntity(entity, Math.Min(10000, MyAPIGateway.Session.SessionSettings.ViewDistance));
+        }
+
+        private void ControlledEntityChanged(IMyControllableEntity old, IMyControllableEntity result)
+        {
+            var oldEnt = old as IMyEntity;
+            var resultEnt = result as IMyEntity;
+            if (oldEnt != null)
+                RemoveEntity(oldEnt);
+            if (resultEnt != null)
+                TrackEntity(resultEnt, MyAPIGateway.Session.SessionSettings.ViewDistance);
+        }
+
+        private void RemoveEntity(IMyEntity x)
+        {
+            MyTrackedEntity tracker;
+            if (!m_trackedEntities.TryGetValue(x, out tracker)) return;
+            Log(MyLogSeverity.Debug, "Removing tracking for entity {0} ({1})", x, x.GetFriendlyName());
+            m_dirtyVolumes.Enqueue(tracker.CurrentView);
+            m_trackedEntities.Remove(x);
+            x.OnMarkForClose -= RemoveEntity;
         }
 
         private void TrackEntity(IMyEntity entity, double distance)
@@ -184,13 +223,25 @@ namespace Equinox.ProceduralWorld.Manager
             {
                 m_trackedEntities[entity] = tracker = new MyTrackedEntity(entity);
                 tracker.Radius = distance;
-                entity.OnMarkForClose += x =>
-                {
-                    Log(MyLogSeverity.Debug, "Removing tracking for entity {0} ({1})", x, x.GetFriendlyName());
-                    m_dirtyVolumes.Enqueue(tracker.CurrentView);
-                    m_trackedEntities.Remove(x);
-                };
+                entity.OnMarkForClose += RemoveEntity;
             }
         }
+
+        public override void LoadConfiguration(MyObjectBuilder_ModSessionComponent config)
+        {
+            if (config == null) return;
+            if (config is MyObjectBuilder_ProceduralWorldManager) return;
+            Log(MyLogSeverity.Critical, "Configuration type {0} doesn't match component type {1}", config.GetType(), GetType());
+        }
+
+        public override MyObjectBuilder_ModSessionComponent SaveConfiguration()
+        {
+            return new MyObjectBuilder_ProceduralWorldManager();
+        }
+    }
+
+    [ProtoContract]
+    public class MyObjectBuilder_ProceduralWorldManager : MyObjectBuilder_ModSessionComponent
+    {
     }
 }
