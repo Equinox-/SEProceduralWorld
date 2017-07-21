@@ -94,7 +94,10 @@ namespace Equinox.ProceduralWorld.Buildings.Library
             }
             catch (Exception e)
             {
-                SessionCore.LogBoth("Failed to load prefab {0}.  Cause:\n{1}", def.Id.SubtypeName, e);
+                SessionCore.Log("Failed to load prefab {0}.\n{1}",def.Id.SubtypeName,  e);
+#if DEBUG
+                throw;
+#endif
             }
             return part;
         }

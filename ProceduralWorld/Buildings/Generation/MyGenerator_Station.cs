@@ -4,6 +4,7 @@ using System.Linq;
 using Equinox.ProceduralWorld.Buildings.Creation;
 using Equinox.ProceduralWorld.Buildings.Seeds;
 using Equinox.ProceduralWorld.Buildings.Storage;
+using Equinox.Utils.Logging;
 using Sandbox.ModAPI;
 using VRageMath;
 
@@ -15,7 +16,6 @@ namespace Equinox.ProceduralWorld.Buildings.Generation
         {
             try
             {
-                var gen = new MyGenerator();
 
                 var watch = new Stopwatch();
                 watch.Reset();
@@ -29,12 +29,15 @@ namespace Equinox.ProceduralWorld.Buildings.Generation
                 {
                     var parts = SessionCore.Instance.PartManager.ToList();
                     var part = parts[(int)Math.Floor(parts.Count * seed.DeterministicNoise(1234567))];
-                    construction.GenerateRoom(new MatrixI(Base6Directions.Direction.Forward, Base6Directions.Direction.Up), part);
+                    var room = new MyProceduralRoom();
+                    room.Init(new MatrixI(Base6Directions.Direction.Forward, Base6Directions.Direction.Up), part);
+                    construction.RegisterRoom(room);
                 }
                 var scorePrev = construction.ComputeErrorAgainstSeed();
                 var scoreStableTries = 0;
                 var fastGrowth = 1 + (int)Math.Sqrt(seed.Population / 10f);
                 var absoluteRoomsRemain = 10;
+                var gen = new MyStationGenerator(construction);
                 while (absoluteRoomsRemain-- > 0)
                 {
                     var currentRoomCount = construction.Rooms.Count();
@@ -45,7 +48,7 @@ namespace Equinox.ProceduralWorld.Buildings.Generation
                         SessionCore.Log("Quit because we exceeded the block limit");
                         break;
                     }
-                    if (!gen.StepConstruction(construction, fastGrowth > 0 ? 2 : 0))
+                    if (!gen.StepGeneration(fastGrowth > 0 ? 2 : 0))
                         break;
                     fastGrowth--;
                     var scoreNow = construction.ComputeErrorAgainstSeed();
@@ -64,7 +67,7 @@ namespace Equinox.ProceduralWorld.Buildings.Generation
                         SessionCore.Log("There are {0} remaining mounts.  Giving it {1} tries to close itself.", remainingMounts, triesToClose);
                     var outOfOptions = false;
                     for (var i = 0; i < triesToClose; i++)
-                        if (!gen.StepConstruction(construction, -10))
+                        if (!gen.StepGeneration(-10))
                         {
                             outOfOptions = true;
                             break;
@@ -76,7 +79,7 @@ namespace Equinox.ProceduralWorld.Buildings.Generation
                             SessionCore.Log("Now there are {0} remaining mounts.  Trying without hints. Reason: {1}", remainingMounts, outOfOptions ? "Out of options" : "Out of tries");
                         triesToClose = remainingMounts * 2 + 2;
                         for (var i = 0; i < triesToClose; i++)
-                            if (!gen.StepConstruction(construction, -10, false))
+                            if (!gen.StepGeneration(-10, false))
                             {
                                 outOfOptions = true;
                                 break;
@@ -99,10 +102,14 @@ namespace Equinox.ProceduralWorld.Buildings.Generation
                 SessionCore.Log(msg);
                 return true;
             }
-            catch (Exception e)
+            catch (ArgumentException e)
             {
-                SessionCore.Log(e.ToString());
+                SessionCore.Log("Failed to generate station.\n{0}", e.ToString());
+#if DEBUG
+                throw;
+#else
                 return false;
+#endif
             }
         }
 
@@ -119,10 +126,14 @@ namespace Equinox.ProceduralWorld.Buildings.Generation
                 SessionCore.Log(msg);
                 return true;
             }
-            catch (Exception e)
+            catch (ArgumentException e)
             {
-                SessionCore.Log(e.ToString());
+                SessionCore.Log("Failed to generate station.\n{0}", e.ToString());
+#if DEBUG
+                throw;
+#else
                 return false;
+#endif
             }
         }
     }

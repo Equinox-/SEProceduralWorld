@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using Equinox.ProceduralWorld.Buildings.Library;
 using Equinox.Utils;
+using Equinox.Utils.Logging;
 using Sandbox.Definitions;
 using Sandbox.ModAPI;
 using VRage;
@@ -238,7 +239,10 @@ namespace Equinox.ProceduralWorld.Buildings.Exporter
             }
             catch (Exception e)
             {
-                SessionCore.Log("Error {0}", e.ToString());
+                SessionCore.Log("Failed to parse.  Error:\n{0}", e.ToString());
+#if DEBUG
+                throw;
+#endif
             }
         }
     }

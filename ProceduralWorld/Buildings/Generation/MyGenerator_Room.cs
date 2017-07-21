@@ -15,7 +15,7 @@ namespace Equinox.ProceduralWorld.Buildings.Generation
         private bool ValidateAddition(MyProceduralConstruction c, MyProceduralRoom room, bool testOptional)
         {
             // Buildable?
-            if (c.Intersects(room, testOptional))
+            if (c.Intersects(room, testOptional, true))
                 return false;
             return true;
             // Reject if this will block another mount point, or one of our mount points would blocked.  Use quick test.
@@ -62,7 +62,9 @@ namespace Equinox.ProceduralWorld.Buildings.Generation
                 position = m_openRoomsByPosition[transform] = new Dictionary<MyPartFromPrefab, MyProceduralRoom>();
             else if (position.ContainsKey(part))
                 return false;
-            var room = m_construction.GenerateRoom(transform, part);
+            var room = new MyProceduralRoom();
+            room.Init(transform, part);
+            m_construction.RegisterRoom(room);
             foreach (var mount in room.MountPoints)
                 if (mount.AttachedTo != null)
                 {

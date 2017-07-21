@@ -85,7 +85,10 @@ namespace Equinox.ProceduralWorld
                 }
                 catch (Exception e)
                 {
-                    MyLog.Default.WriteLine(e);
+                    SessionCore.Log("Failed to start bootstrapper.\n{0}", e);
+#if DEBUG
+                    throw;
+#endif
                 }
             }
             base.UpdateBeforeSimulation();
@@ -100,11 +103,16 @@ namespace Equinox.ProceduralWorld
                 }
                 catch (Exception e)
                 {
-                    MyLog.Default.WriteLine(e);
+                    SessionCore.Log("Failed to write default configuration.\n{0}", e);
+#if DEBUG
+                    throw;
+#endif
                 }
                 m_init = true;
             }
         }
+
+        public static MyLoggerBase Logger => Instance?.Manager.GetDependencyProvider<MyLoggerBase>();
 
         public static void Log(string format, params object[] args)
         {

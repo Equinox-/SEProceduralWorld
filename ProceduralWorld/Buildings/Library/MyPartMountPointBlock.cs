@@ -13,6 +13,9 @@ namespace Equinox.ProceduralWorld.Buildings.Library
         public readonly MyPartMount Owner;
         public string Piece { private set; get; }
         public Base6Directions.Direction MountDirection6 { private set; get; }
+        /// <summary>
+        /// Location of the merge block.
+        /// </summary>
         public Vector3I AnchorLocation { private set; get; }
 
         // This means _nothing_.  Don't use it except when computing the adjaceny rule of a mount point.
@@ -86,6 +89,9 @@ namespace Equinox.ProceduralWorld.Buildings.Library
 
         public Vector3I MountDirection => Base6Directions.GetIntVector(MountDirection6);
 
+        /// <summary>
+        /// Location of the opposing merge block.
+        /// </summary>
         public Vector3I MountLocation => AnchorLocation + MountDirection;
 
         public void GetTransforms(MyPartMountPointBlock other, HashSet<MatrixI> cache)

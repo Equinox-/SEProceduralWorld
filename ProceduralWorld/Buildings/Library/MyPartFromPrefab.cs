@@ -93,6 +93,9 @@ namespace Equinox.ProceduralWorld.Buildings.Library
                 catch (Exception e)
                 {
                     SessionCore.Log("Write failed.\n{0}", e);
+#if DEBUG
+                    throw;
+#endif
                 }
             });
         }

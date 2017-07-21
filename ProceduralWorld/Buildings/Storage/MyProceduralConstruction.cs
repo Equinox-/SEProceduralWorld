@@ -14,7 +14,9 @@ namespace Equinox.ProceduralWorld.Buildings.Storage
 {
     public class MyProceduralConstruction
     {
-        private readonly Dictionary<long, MyProceduralRoom> m_rooms;
+        private readonly MyDynamicAABBTree m_roomTree;
+        private readonly Dictionary<Vector3I, MyProceduralMountPoint> m_mountPoints;
+        private readonly Dictionary<int, MyProceduralRoom> m_rooms;
         private readonly List<MyProceduralRoom> m_roomsSafeOrder;
 
         public readonly MyProceduralConstructionSeed Seed;
@@ -23,7 +25,9 @@ namespace Equinox.ProceduralWorld.Buildings.Storage
         public MyProceduralConstruction(MyProceduralConstructionSeed seed)
         {
             m_maxID = 0;
-            m_rooms = new Dictionary<long, MyProceduralRoom>();
+            m_roomTree = new MyDynamicAABBTree(Vector3.Zero);
+            m_rooms = new Dictionary<int, MyProceduralRoom>();
+            m_mountPoints = new Dictionary<Vector3I, MyProceduralMountPoint>();
             m_roomsSafeOrder = new List<MyProceduralRoom>();
             Seed = seed;
             BlockSetInfo = new MyBlockSetInfo();
@@ -117,13 +121,47 @@ namespace Equinox.ProceduralWorld.Buildings.Storage
                 new MyProceduralRoom().Init(room, this);
         }
 
-        internal void RegisterRoom(MyProceduralRoom room)
+        private struct MyRoomRegisterToken : IDisposable
+        {
+            private readonly MyProceduralConstruction m_construction;
+            private readonly MyProceduralRoom m_room;
+
+            public MyRoomRegisterToken(MyProceduralConstruction c, MyProceduralRoom r)
+            {
+                m_construction = c;
+                m_room = r;
+                c.RegisterRoom(r);
+            }
+
+
+            public void Dispose()
+            {
+                m_construction.RemoveRoom(m_room);
+            }
+        }
+
+        public IDisposable RegisterRoomUsing(MyProceduralRoom room)
+        {
+            return new MyRoomRegisterToken(this, room);
+        }
+
+        public void RegisterRoom(MyProceduralRoom room)
         {
             if (m_rooms.ContainsKey(room.RoomID))
                 throw new ArgumentException("Room ID already used");
             m_maxID = Math.Max(m_maxID, room.RoomID);
             m_rooms[room.RoomID] = room;
+            var aabb = room.BoundingBoxBoth;
+            room.m_aabbProxyID = m_roomTree.AddProxy(ref aabb, room, 0);
             m_roomsSafeOrder.Add(room);
+            foreach (var k in room.MountPoints)
+                foreach (var p in k.AnchorLocations)
+                    if (m_mountPoints.ContainsKey(p))
+                        SessionCore.Log("Room {0} at {1} has mount point {4}:{5} that intersect with mount point {6}:{7} of room {2} at {3}", m_mountPoints[p].Owner.Part.Name, m_mountPoints[p].Owner.Transform.Translation,
+                            room.Part.Name, room.Transform.Translation, m_mountPoints[p].MountPoint.MountType, m_mountPoints[p].MountPoint.MountName,
+                            k.MountPoint.MountType, k.MountPoint.MountName);
+                    else
+                        m_mountPoints.Add(p, k);
             using (room.Part.LockSharedUsing())
                 BlockSetInfo.AddToSelf(room.Part.BlockSetInfo);
             RoomAdded?.Invoke(room);
@@ -132,6 +170,7 @@ namespace Equinox.ProceduralWorld.Buildings.Storage
         public void RemoveRoom(MyProceduralRoom room)
         {
             m_rooms.Remove(room.RoomID);
+            m_roomTree.RemoveProxy(room.m_aabbProxyID);
             if (m_roomsSafeOrder[m_roomsSafeOrder.Count - 1] == room)
                 m_roomsSafeOrder.RemoveAt(m_roomsSafeOrder.Count - 1);
             else
@@ -139,26 +178,28 @@ namespace Equinox.ProceduralWorld.Buildings.Storage
                 m_roomsSafeOrder.Remove(room);
                 SessionCore.Log("Possibly unsafe removal of room not at end of safe list");
             }
+            foreach (var k in room.MountPoints)
+                foreach (var p in k.AnchorLocations)
+                    if (!m_mountPoints.Remove(p))
+                        SessionCore.Log("Failed to remove room; mount point wasn't registered");
             room.Orphan();
             using (room.Part.LockSharedUsing())
                 BlockSetInfo.SubtractFromSelf(room.Part.BlockSetInfo);
             RoomRemoved?.Invoke(room);
         }
 
-        public MyProceduralRoom GenerateRoom(MatrixI transform, MyPartFromPrefab prefab)
+        public MyProceduralMountPoint MountPointAt(Vector3I v)
         {
-            var tmp = new MyProceduralRoom();
-            tmp.Init(this, transform, prefab);
-            return tmp;
+            return m_mountPoints.GetValueOrDefault(v);
         }
-
+        
         public void AddCachedRoom(MyProceduralRoom room)
         {
             room.TakeOwnership(this);
         }
 
-        private long m_maxID;
-        internal long AcquireID()
+        private int m_maxID;
+        internal int AcquireID()
         {
             m_maxID++;
             return m_maxID;
@@ -166,17 +207,26 @@ namespace Equinox.ProceduralWorld.Buildings.Storage
 
         public MyProceduralRoom GetRoomAt(Vector3I pos)
         {
-            return m_rooms.Values.FirstOrDefault(room => room.CubeExists(pos));
+            MyProceduralRoom result = null;
+            var aabb = new BoundingBox(pos, pos + 1);
+            m_roomTree.Query((id) =>
+            {
+                var room = m_roomTree.GetUserData<MyProceduralRoom>(id);
+                if (!room.CubeExists(pos)) return true;
+                result = room;
+                return false;
+            }, ref aabb);
+            return result;
         }
 
         public bool CubeExists(Vector3I pos)
         {
-            return m_rooms.Values.Any(room => room.CubeExists(pos));
+            return GetRoomAt(pos) != null;
         }
 
         public MyObjectBuilder_CubeBlock GetCubeAt(Vector3I pos)
         {
-            return m_rooms.Values.Select(room => room.GetCubeAt(pos)).FirstOrDefault(ob => ob != null);
+            return GetRoomAt(pos)?.GetCubeAt(pos);
         }
 
         public bool Intersects(MyPartFromPrefab other, MatrixI otherTransform, MatrixI otherITransform, bool testOptional, bool testQuick = false, MyProceduralRoom ignore = null)
@@ -191,265 +241,9 @@ namespace Equinox.ProceduralWorld.Buildings.Storage
 
         public IEnumerable<MyProceduralRoom> Rooms => m_roomsSafeOrder;
 
-        public MyProceduralRoom GetRoom(long key)
+        public MyProceduralRoom GetRoom(int key)
         {
             return m_rooms.GetValueOrDefault(key, null);
-        }
-    }
-
-    public class MyProceduralRoom
-    {
-        public MyProceduralConstruction Owner { get; private set; }
-        public long RoomID { get; private set; }
-        public MyPartFromPrefab Part => m_part;
-        private MyPartFromPrefab m_part;
-        private MatrixI m_transform, m_invTransform;
-        private Dictionary<string, Dictionary<string, MyProceduralMountPoint>> m_mountPoints;
-
-        public event Action AddedToConstruction, RemovedFromConstruction;
-
-        public MyProceduralRoom()
-        {
-            Owner = null;
-            RoomID = -1;
-        }
-
-        internal void Orphan()
-        {
-            if (Owner != null) RemovedFromConstruction?.Invoke();
-            RoomID = -1;
-            Owner = null;
-        }
-
-        internal void TakeOwnership(MyProceduralConstruction parent)
-        {
-            Orphan();
-            if (parent == null) return;
-            Owner = parent;
-            RoomID = parent.AcquireID();
-            parent.RegisterRoom(this);
-            AddedToConstruction?.Invoke();
-        }
-
-        internal void Init(MyProceduralConstruction parent, MatrixI transform, MyPartFromPrefab prefab)
-        {
-            Owner = parent;
-            RoomID = parent.AcquireID();
-            m_part = prefab;
-            Transform = transform;
-            m_mountPoints = new Dictionary<string, Dictionary<string, MyProceduralMountPoint>>();
-            using (m_part.LockSharedUsing())
-                foreach (var mount in prefab.MountPoints)
-                {
-                    var point = new MyProceduralMountPoint();
-                    point.Init(mount, this);
-                    Dictionary<string, MyProceduralMountPoint> byName;
-                    if (!m_mountPoints.TryGetValue(point.MountPoint.MountType, out byName))
-                        m_mountPoints[point.MountPoint.MountType] = byName = new Dictionary<string, MyProceduralMountPoint>();
-                    byName[point.MountPoint.MountName] = point;
-                }
-            parent?.RegisterRoom(this);
-        }
-
-        public void Init(MyObjectBuilder_ProceduralRoom ob, MyProceduralConstruction parent)
-        {
-            Owner = parent;
-            RoomID = parent != null ? ob.RoomID : -1;
-            m_part = SessionCore.Instance.PartManager.LoadNullable(ob.PrefabID);
-            Transform = ob.Transform;
-            m_mountPoints = new Dictionary<string, Dictionary<string, MyProceduralMountPoint>>();
-            foreach (var mount in ob.MountPoints)
-            {
-                var point = new MyProceduralMountPoint();
-                point.Init(mount, this);
-                Dictionary<string, MyProceduralMountPoint> byName;
-                if (!m_mountPoints.TryGetValue(point.MountPoint.MountType, out byName))
-                    m_mountPoints[point.MountPoint.MountType] = byName = new Dictionary<string, MyProceduralMountPoint>();
-                byName[point.MountPoint.MountName] = point;
-            }
-            parent?.RegisterRoom(this);
-        }
-
-        public MatrixI InvTransform => m_invTransform;
-
-        public MatrixI Transform
-        {
-            get { return m_transform; }
-            private set
-            {
-                m_transform = value;
-                MatrixI.Invert(ref m_transform, out m_invTransform);
-                using (m_part.LockSharedUsing())
-                {
-                    BoundingBox = MyUtilities.TransformBoundingBox(Part.BoundingBox, value);
-                    ReservedSpace = MyUtilities.TransformBoundingBox(Part.ReservedSpace, value);
-                }
-                m_intersectsWith.Clear();
-                foreach (var mount in MountPoints)
-                    mount.m_attachedMounts.Clear();
-            }
-        }
-
-        public MyProceduralMountPoint GetMountPoint(MyPartMount point)
-        {
-            Dictionary<string, MyProceduralMountPoint> byName;
-            return !m_mountPoints.TryGetValue(point.MountType, out byName) ? null : byName?.GetValueOrDefault(point.MountName);
-        }
-
-        public BoundingBox BoundingBox { get; private set; }
-        public BoundingBox ReservedSpace { get; private set; }
-
-        public Vector3I GridToPrefab(Vector3I gridPos)
-        {
-            return Vector3I.Transform(gridPos, ref m_invTransform);
-        }
-
-        public Vector3I PrefabToGrid(Vector3I prefabPos)
-        {
-            return Vector3I.Transform(prefabPos, ref m_transform);
-        }
-
-        public bool Intersects(MyPartFromPrefab other, MatrixI otherTransform, MatrixI otherITransform, bool testOptional, bool testQuick = false)
-        {
-            return MyPartMetadata.Intersects(ref m_part, ref m_transform, ref m_invTransform, ref other, ref otherTransform, ref otherITransform, testOptional, testQuick);
-        }
-
-        private readonly Dictionary<long, byte> m_intersectsWith = new Dictionary<long, byte>();
-        public bool Intersects(MyProceduralRoom other, bool testOptional, bool testQuick = false)
-        {
-            var presentMask = (byte)(testOptional ? 8 : 4);
-            var mask = (byte)(testOptional ? 2 : 1);
-            if (testQuick)
-            {
-                presentMask <<= 4;
-                mask <<= 4;
-            }
-            byte intersect;
-            if (other.Owner == Owner && m_intersectsWith.TryGetValue(other.RoomID, out intersect))
-            {
-                if ((intersect & presentMask) != 0)
-                    return (intersect & mask) != 0;
-            }
-            else intersect = 0;
-            var result = MyPartMetadata.Intersects(ref m_part, ref m_transform, ref m_invTransform, ref other.m_part, ref other.m_transform, ref other.m_invTransform, testOptional, testQuick);
-            intersect |= presentMask;
-            if (result)
-                intersect |= mask;
-            m_intersectsWith[other.RoomID] = intersect;
-            other.m_intersectsWith[RoomID] = intersect;
-            return result;
-        }
-
-        // present and intersecting and matching.
-        public bool IntersectionCached(bool testOptional, bool testQuick = false)
-        {
-            var presentMask = (byte)(testOptional ? 8 : 4);
-            var mask = (byte)(testOptional ? 2 : 1);
-            if (testQuick)
-            {
-                presentMask <<= 4;
-                mask <<= 4;
-            }
-            foreach (var kv in m_intersectsWith)
-                if ((kv.Value & presentMask) != 0 && (kv.Value & mask) != 0 && Owner?.GetRoom(kv.Key) != null)
-                    return true;
-            return false;
-        }
-
-        public bool IsReserved(Vector3 pos, bool testShared = true, bool testOptional = true)
-        {
-            return ReservedSpace.Contains(pos) != ContainmentType.Disjoint && Part.IsReserved(pos, testShared, testOptional);
-        }
-
-        public bool CubeExists(Vector3I pos)
-        {
-            return BoundingBox.Contains((Vector3)pos) != ContainmentType.Disjoint && Part.CubeExists(GridToPrefab(pos));
-        }
-
-        public MyObjectBuilder_CubeBlock GetCubeAt(Vector3I pos)
-        {
-            return BoundingBox.Contains((Vector3)pos) != ContainmentType.Disjoint ? Part.GetCubeAt(GridToPrefab(pos)) : null;
-        }
-
-        public IEnumerable<MyProceduralMountPoint> MountPoints => m_mountPoints?.Values.SelectMany(x => x.Values) ?? Enumerable.Empty<MyProceduralMountPoint>();
-    }
-
-    public class MyProceduralMountPoint
-    {
-        public MyProceduralRoom Owner { get; private set; }
-        private string m_mountType, m_mountInstance;
-        public MyPartMount MountPoint
-        {
-            get
-            {
-                return m_mountType != null && m_mountInstance != null ? Owner?.Part?.MountPoint(m_mountType, m_mountInstance) : null;
-            }
-            private set
-            {
-                m_mountType = value?.MountType;
-                m_mountInstance = value?.MountName;
-            }
-        }
-
-        public MyProceduralMountPoint()
-        {
-            Owner = null;
-            MountPoint = null;
-        }
-
-        private void Orphan()
-        {
-            Owner = null;
-        }
-
-        private void TakeOwnership(MyProceduralRoom parent)
-        {
-            Orphan();
-            Owner = parent;
-        }
-
-        internal void Init(MyPartMount mount, MyProceduralRoom parent)
-        {
-            MountPoint = mount;
-            TakeOwnership(parent);
-        }
-
-        public void Init(MyObjectBuilder_ProceduralMountPoint ob, MyProceduralRoom parent)
-        {
-            MountPoint = parent.Part.MountPoint(ob.TypeID, ob.InstanceID);
-            TakeOwnership(parent);
-        }
-
-        internal readonly Dictionary<long, MyPartMount> m_attachedMounts = new Dictionary<long, MyPartMount>();
-        public MyProceduralMountPoint AttachedTo
-        {
-            get
-            {
-                if (Owner?.Owner == null) return null;
-                foreach (var kv in m_attachedMounts)
-                {
-                    var room = Owner.Owner.GetRoom(kv.Key);
-                    var mount = room?.GetMountPoint(kv.Value);
-                    if (mount == null) continue;
-                    return mount;
-                }
-                // ReSharper disable once LoopCanBeConvertedToQuery
-                foreach (var block in MountPoint.m_blocks.Values.SelectMany(x => x))
-                {
-                    var gridPos = Owner.PrefabToGrid(block.MountLocation);
-                    var room = Owner.Owner.GetRoomAt(gridPos);
-                    if (room == null) continue;
-                    var localPos = room.GridToPrefab(gridPos);
-                    var mountPos = room.Part.MountPointAt(localPos);
-                    if (mountPos == null) continue;
-                    var aux = room.GetMountPoint(mountPos.Owner);
-                    if (aux == null) continue;
-                    m_attachedMounts[room.RoomID] = mountPos.Owner;
-                    aux.m_attachedMounts[Owner.RoomID] = MountPoint;
-                    return aux;
-                }
-                return null;
-            }
         }
     }
 }

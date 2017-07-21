@@ -14,7 +14,7 @@ namespace Equinox.ProceduralWorld.Buildings.Storage
     public class MyObjectBuilder_ProceduralRoom
     {
         [ProtoMember, DefaultValue(0)]
-        public long RoomID;
+        public int RoomID;
         [ProtoMember]
         public SerializableDefinitionId PrefabID;
         [ProtoMember]

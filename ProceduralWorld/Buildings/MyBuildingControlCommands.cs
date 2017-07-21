@@ -117,7 +117,9 @@ namespace Equinox.ProceduralWorld.Buildings
             MyAPIGateway.Parallel.Start(() =>
             {
                 var construction = new MyProceduralConstruction(seed);
-                construction.GenerateRoom(new MatrixI(Base6Directions.Direction.Forward, Base6Directions.Direction.Up), part);
+                var room = new MyProceduralRoom();
+                room.Init(new MatrixI(Base6Directions.Direction.Forward, Base6Directions.Direction.Up), part);
+                construction.RegisterRoom(room);
                 var remapper = new MyRoomRemapper { DebugRoomColors = true };
                 var grids = MyGridCreator.RemapAndBuild(construction, remapper);
                 if (grids == null) return;

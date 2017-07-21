@@ -45,6 +45,7 @@
     <PlatformTarget>x64</PlatformTarget>
     <ErrorReport>prompt</ErrorReport>
     <CodeAnalysisRuleSet>script.ruleset</CodeAnalysisRuleSet>
+    <CodeAnalysisIgnoreGeneratedCode>true</CodeAnalysisIgnoreGeneratedCode>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'">
     <OutputPath>bin\x64\Release\</OutputPath>
@@ -105,8 +106,11 @@
     <Compile Include="ProceduralWorld\Buildings\Game\MyLoadingConstruction.cs" />
     <Compile Include="ProceduralWorld\Buildings\Game\MyProceduralGridComponent.cs" />
     <Compile Include="ProceduralWorld\Buildings\Game\MyProceduralStationModule.cs" />
+    <Compile Include="ProceduralWorld\Buildings\Generation\MyStationGenerator.cs" />
     <Compile Include="ProceduralWorld\Buildings\MyBuildingControlCommands.cs" />
     <Compile Include="ProceduralWorld\Buildings\Seeds\MyProceduralSpeciality.cs" />
+    <Compile Include="ProceduralWorld\Buildings\Storage\MyProceduralMountPoint.cs" />
+    <Compile Include="ProceduralWorld\Buildings\Storage\MyProceduralRoom.cs" />
     <Compile Include="ProceduralWorld\Manager\MyProceduralModule.cs" />
     <Compile Include="ProceduralWorld\Manager\MyConcealmentManager.cs" />
     <Compile Include="ProceduralWorld\Manager\MyProceduralObject.cs" />
@@ -137,6 +141,7 @@
     <Compile Include="Utils\Command\MyCommandDispatchComponent.cs" />
     <Compile Include="Utils\Command\MyCommandProviderComponent.cs" />
     <Compile Include="Utils\MyMovingAverage.cs" />
+    <Compile Include="Utils\MyMultiDictionary.cs" />
     <Compile Include="Utils\Network\MyRPCRegistry.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>

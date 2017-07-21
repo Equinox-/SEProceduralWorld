@@ -64,9 +64,9 @@ namespace Equinox.ProceduralWorld.Voxels.VoxelBuilder
             return entity;
         }
 
-        private static void CastProhibit<R>(object o, out R res) where R : class
+        private static void CastProhibit<TR>(object o, out TR res) where TR : class
         {
-            res = (R) o;
+            res = (TR) o;
         }
 
         public static MyPlanet SpawnPlanet(Vector3D pos, MyPlanetGeneratorDefinition generatorDef, long seed, float size)
