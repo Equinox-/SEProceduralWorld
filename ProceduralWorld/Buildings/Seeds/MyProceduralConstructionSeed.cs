@@ -50,26 +50,29 @@ namespace Equinox.ProceduralWorld.Buildings.Seeds
         public readonly MyDefinitionId? SpecialityExport;
         public readonly MyProceduralStationSpeciality Speciality;
         public readonly string Name;
+        public readonly int Population;
+        public readonly double StorageVolume;
+        public readonly double StorageMass;
 
-        public MyProceduralConstructionSeed(Vector4D locationDepth, Quaternion? orientation, long seed)
+        public MyProceduralConstructionSeed(MyProceduralFactionSeed faction, Vector4D locationDepth, Quaternion? orientation, long seed,
+            int? populationOverride = null)
         {
             Seed = seed;
-            Location = new Vector3D(locationDepth.X, locationDepth.Y, locationDepth.Z);
-            Faction = MyProceduralWorld.Instance.SeedAt(Location);
-            var m_tmpRandom = new Random((int)seed);
-            var density = locationDepth.W;
-            Population = (int)MyMath.Clamp((float)(Math.Round(5 * m_tmpRandom.NextExponential() * density)), 1, 100);
+            Location = locationDepth.XYZ();
+            Faction = faction;
+            var tmpRandom = new Random((int)seed);
+            Population = populationOverride ?? (int)MyMath.Clamp((float)(Math.Round(5 * tmpRandom.NextExponential() * locationDepth.W)), 1, 100);
             var sqrtPopulation = Math.Sqrt(Population);
 
             var choice = new MyWeightedChoice<MyProceduralStationSpeciality>();
             foreach (var kv in Faction.Specialities)
                 foreach (var kt in kv.Key.StationSpecialities)
                     choice.Add(kt.Key, kv.Value * kt.Value);
-            Speciality = choice.Choose(m_tmpRandom.NextDouble(), MyWeightedChoice<MyProceduralStationSpeciality>.WeightedNormalization.ClampToZero);
+            Speciality = choice.Choose(tmpRandom.NextDouble(), MyWeightedChoice<MyProceduralStationSpeciality>.WeightedNormalization.ClampToZero);
             m_exports = new Dictionary<MyDefinitionId, MyTradeRequirements>(MyDefinitionId.Comparer);
             m_imports = new Dictionary<MyDefinitionId, MyTradeRequirements>(MyDefinitionId.Comparer);
             List<MyDefinitionBase> rchoice = null;
-            var specialExport = m_tmpRandom.NextDouble() <= Speciality.SpecializationChance;
+            var specialExport = tmpRandom.NextDouble() <= Speciality.SpecializationChance;
             if (specialExport)
                 rchoice = new List<MyDefinitionBase>();
             foreach (var kv in MyDefinitionManager.Static.GetAllDefinitions())
@@ -86,7 +89,7 @@ namespace Equinox.ProceduralWorld.Buildings.Seeds
             if (specialExport)
             {
                 // ReSharper disable once PossibleNullReferenceException
-                SpecialityExport = rchoice[m_tmpRandom.Next(0, rchoice.Count)].Id;
+                SpecialityExport = rchoice[tmpRandom.Next(0, rchoice.Count)].Id;
                 m_exports.Clear();
                 m_exports.Add(SpecialityExport.Value, default(MyTradeRequirements));
             }
@@ -96,8 +99,8 @@ namespace Equinox.ProceduralWorld.Buildings.Seeds
             if (SpecialityExport.HasValue)
                 nameBuilder.Append(MyDefinitionManager.Static.GetDefinition(SpecialityExport.Value).DisplayNameText).Append(" ");
             else if (Speciality.GeneralizedPrefixes != null && Speciality.GeneralizedPrefixes.Length > 0)
-                nameBuilder.Append(m_tmpRandom.NextUniformChoice(Speciality.GeneralizedPrefixes)).Append(" ");
-            nameBuilder.Append(m_tmpRandom.NextUniformChoice(Speciality.Suffixes));
+                nameBuilder.Append(tmpRandom.NextUniformChoice(Speciality.GeneralizedPrefixes)).Append(" ");
+            nameBuilder.Append(tmpRandom.NextUniformChoice(Speciality.Suffixes));
             Name = nameBuilder.ToString();
 
             // Compute hotlisted import amounts
@@ -105,7 +108,7 @@ namespace Equinox.ProceduralWorld.Buildings.Seeds
                 var keys = m_imports.Keys.ToList();
                 foreach (var kv in keys)
                 {
-                    var baseMult = Population * m_tmpRandom.NextExponential() / keys.Count;
+                    var baseMult = Population * tmpRandom.NextExponential() / keys.Count;
                     var k = MyDefinitionManager.Static.GetDefinition(kv);
                     var pi = k as MyPhysicalItemDefinition;
                     if (k is MyComponentDefinition)
@@ -128,7 +131,7 @@ namespace Equinox.ProceduralWorld.Buildings.Seeds
                 var keys = m_exports.Keys.ToList();
                 foreach (var kv in keys)
                 {
-                    var baseMult = Population * Population * m_tmpRandom.NextExponential() / keys.Count;
+                    var baseMult = Population * Population * tmpRandom.NextExponential() / keys.Count;
                     var k = MyDefinitionManager.Static.GetDefinition(kv);
                     var pi = k as MyPhysicalItemDefinition;
                     if (k is MyComponentDefinition)
@@ -164,11 +167,11 @@ namespace Equinox.ProceduralWorld.Buildings.Seeds
             m_localStorage = new Dictionary<MyDefinitionId, MyTradeRequirements>(MyDefinitionId.Comparer)
             {
                 // ~3MWH / person stored, ~1MW / person produced
-                [MyResourceDistributorComponent.ElectricityId] = new MyTradeRequirements(Population * 3 * m_tmpRandom.NextNormal(1, 0.1), Population * m_tmpRandom.NextNormal(1, 0.1), 10, 10),
+                [MyResourceDistributorComponent.ElectricityId] = new MyTradeRequirements(Population * 3 * tmpRandom.NextNormal(1, 0.1), Population * tmpRandom.NextNormal(1, 0.1), 10, 10),
                 // one large O2 tank / person stored (~18 days), 1 O2/sec/person produced
-                [MyResourceDistributorComponent.OxygenId] = new MyTradeRequirements(Population * 1e5 * m_tmpRandom.NextNormal(1, 0.1), Population * 1 * m_tmpRandom.NextNormal(1, 0.1), 10, 10),
+                [MyResourceDistributorComponent.OxygenId] = new MyTradeRequirements(Population * 1e5 * tmpRandom.NextNormal(1, 0.1), Population * 1 * tmpRandom.NextNormal(1, 0.1), 10, 10),
                 // I don't even know how I'd guess this
-                [MyResourceDistributorComponent.HydrogenId] = new MyTradeRequirements(Population * 1e4 * m_tmpRandom.NextExponential(), m_tmpRandom.NextExponential() * sqrtPopulation)
+                [MyResourceDistributorComponent.HydrogenId] = new MyTradeRequirements(Population * 1e4 * tmpRandom.NextExponential(), tmpRandom.NextExponential() * sqrtPopulation)
             };
 
             // Compute mass & volume of storage
@@ -195,19 +198,19 @@ namespace Equinox.ProceduralWorld.Buildings.Seeds
             m_blockCountRequirements = new Dictionary<MySupportedBlockTypes, MyBlockRequirement>(MySupportedBlockTypesEquality.Instance);
             // living quarters.
             var addlLiving = Faction.AttributeWeight(MyProceduralFactionSpeciality.Housing);
-            m_blockCountRequirements[MySupportedBlockTypes.CryoChamber] = Population + Math.Max(0, (int)Math.Round(sqrtPopulation * (m_tmpRandom.NextNormal(1, 2) + addlLiving)));
-            m_blockCountRequirements[MySupportedBlockTypes.MedicalRoom] = new MyBlockRequirement(Math.Max(1, (int)Math.Round(sqrtPopulation * (m_tmpRandom.NextNormal(0.5, 0.5) + Math.Max(addlLiving, Faction.AttributeWeight(MyProceduralFactionSpeciality.Military))))), 1e3);
-            m_blockCountRequirements[MySupportedBlockTypes.ShipController] = Math.Max(1, (int)Math.Round(Population * m_tmpRandom.NextNormal(0.5, 0.5)));
+            m_blockCountRequirements[MySupportedBlockTypes.CryoChamber] = Population + Math.Max(0, (int)Math.Round(sqrtPopulation * (tmpRandom.NextNormal(1, 2) + addlLiving)));
+            m_blockCountRequirements[MySupportedBlockTypes.MedicalRoom] = new MyBlockRequirement(Math.Max(1, (int)Math.Round(sqrtPopulation * (tmpRandom.NextNormal(0.5, 0.5) + Math.Max(addlLiving, Faction.AttributeWeight(MyProceduralFactionSpeciality.Military))))), 1e3);
+            m_blockCountRequirements[MySupportedBlockTypes.ShipController] = Math.Max(1, (int)Math.Round(Population * tmpRandom.NextNormal(0.5, 0.5)));
             // how "defensive" this group is
-            m_blockCountRequirements[MySupportedBlockTypes.Weapon] = Math.Max(0, (int)Math.Round(Population * m_tmpRandom.NextNormal(2, 2) * Faction.AttributeWeight(MyProceduralFactionSpeciality.Military)));
+            m_blockCountRequirements[MySupportedBlockTypes.Weapon] = Math.Max(0, (int)Math.Round(Population * tmpRandom.NextNormal(2, 2) * Faction.AttributeWeight(MyProceduralFactionSpeciality.Military)));
             // ship repair?
-            m_blockCountRequirements[MySupportedBlockTypes.ShipConstruction] = Math.Max(0, (int)Math.Round(Population * m_tmpRandom.NextNormal(4, 3) * Faction.AttributeWeight(MyProceduralFactionSpeciality.Repair)));
+            m_blockCountRequirements[MySupportedBlockTypes.ShipConstruction] = Math.Max(0, (int)Math.Round(Population * tmpRandom.NextNormal(4, 3) * Faction.AttributeWeight(MyProceduralFactionSpeciality.Repair)));
             // docking?
-            m_blockCountRequirements[MySupportedBlockTypes.Docking] = Math.Max(1, (int)Math.Round(sqrtPopulation * m_tmpRandom.NextNormal(1, 1) * Faction.AttributeWeight(MyProceduralFactionSpeciality.Housing)));
+            m_blockCountRequirements[MySupportedBlockTypes.Docking] = Math.Max(1, (int)Math.Round(sqrtPopulation * tmpRandom.NextNormal(1, 1) * Faction.AttributeWeight(MyProceduralFactionSpeciality.Housing)));
             // comms?
-            m_blockCountRequirements[MySupportedBlockTypes.Communications] = new MyBlockRequirement(Math.Max(1, (int)Math.Round(sqrtPopulation * MyMath.Clamp((float)m_tmpRandom.NextNormal(), 0, 1))), 1e6);
+            m_blockCountRequirements[MySupportedBlockTypes.Communications] = new MyBlockRequirement(Math.Max(1, (int)Math.Round(sqrtPopulation * MyMath.Clamp((float)tmpRandom.NextNormal(), 0, 1))), 1e6);
 
-            Orientation = m_tmpRandom.NextQuaternion();
+            Orientation = tmpRandom.NextQuaternion();
             // Branched, since we want to consume a quaternion from the random.
             if (orientation != null)
                 Orientation = orientation.Value;
@@ -230,11 +233,6 @@ namespace Equinox.ProceduralWorld.Buildings.Seeds
             cti ^= (uint)(Seed >> 32);
             return (double)cti / uint.MaxValue;
         }
-
-        public readonly int Population;
-
-        public readonly double StorageVolume;
-        public readonly double StorageMass;
 
         public struct MyTradeRequirements
         {

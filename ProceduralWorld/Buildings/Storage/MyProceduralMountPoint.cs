@@ -56,7 +56,7 @@ namespace Equinox.ProceduralWorld.Buildings.Storage
 
         public MyProceduralMountPoint AttachedToIn(MyProceduralConstruction construction)
         {
-            foreach (var l in MountLocations)
+            foreach (var l in AnchorLocations)
             {
                 var other = construction.MountPointAt(l);
                 if (other != null) return other;
@@ -68,7 +68,7 @@ namespace Equinox.ProceduralWorld.Buildings.Storage
 
         public override string ToString()
         {
-            return $"ProceduralMount[{MountPoint.MountType}:{MountPoint.MountName} at {MountLocations.Aggregate("", (a, b) => b + ", " + a)}]";
+            return $"ProceduralMount[{MountPoint.MountType}:{MountPoint.MountName} at {string.Join(", ", MountLocations)}]";
         }
     }
 }

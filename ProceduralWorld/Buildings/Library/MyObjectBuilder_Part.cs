@@ -97,6 +97,10 @@ namespace Equinox.ProceduralWorld.Buildings.Library
         public Base6Directions.Direction MountDirection6;
         [ProtoMember]
         public SerializableVector3I AnchorLocation;
+        [ProtoMember]
+        public Base6Directions.Direction? BiasDirection6;
+        [ProtoMember]
+        public Base6Directions.Direction? SecondBiasDirection6;
 
         public long ComputeHash()
         {
@@ -105,6 +109,14 @@ namespace Equinox.ProceduralWorld.Buildings.Library
                 hash ^= Piece.GetHashCode() * 102107L;
             hash ^= (long)MountDirection6 * 85247L;
             hash ^= (long)AnchorLocation.GetHashCode() * 7481L;
+            if (BiasDirection6.HasValue)
+                hash ^= (long) BiasDirection6.Value * 86531L;
+            else
+                hash *= 31L;
+            if (SecondBiasDirection6.HasValue)
+                hash ^= (long)SecondBiasDirection6.Value * 8652331L;
+            else
+                hash *= 9431L;
             return hash;
         }
     }

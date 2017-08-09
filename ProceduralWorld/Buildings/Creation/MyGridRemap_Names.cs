@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using Equinox.Utils;
 using Sandbox.Common.ObjectBuilders;
 using VRage.Game;
@@ -60,14 +61,8 @@ namespace Equinox.ProceduralWorld.Buildings.Creation
 
         private void Remap(RemapType type, ref string current)
         {
-            string prefix = null;
-            if (!m_prefix.TryGetValue(type, out prefix))
-                if (!m_prefix.TryGetValue(RemapType.All, out prefix))
-                    prefix = null;
-            string suffix = null;
-            if (!m_suffix.TryGetValue(type, out suffix))
-                if (!m_suffix.TryGetValue(RemapType.All, out suffix))
-                    suffix = null;
+            string prefix = PrefixFor(type) ?? PrefixFor(RemapType.All);
+            string suffix = SuffixFor(type) ?? SuffixFor(RemapType.All);
             if (!string.IsNullOrWhiteSpace(prefix) && !current.StartsWith(prefix))
                 current = prefix + current;
             if (!string.IsNullOrWhiteSpace(suffix) && !current.EndsWith(suffix))
@@ -94,8 +89,10 @@ namespace Equinox.ProceduralWorld.Buildings.Creation
 
                 var buttonPanel = block as MyObjectBuilder_ButtonPanel;
                 if (buttonPanel?.CustomButtonNames != null)
-                    foreach (var k in buttonPanel.CustomButtonNames.Dictionary.Keys)
+                {
+                    foreach (var k in buttonPanel.CustomButtonNames.Dictionary.Keys.ToArray())
                         buttonPanel.CustomButtonNames[k] = Remap(RemapType.Labels, buttonPanel.CustomButtonNames[k]);
+                }
 
                 toolbars.Clear();
                 toolbars.AddIfNotNull(buttonPanel?.Toolbar);
@@ -105,12 +102,14 @@ namespace Equinox.ProceduralWorld.Buildings.Creation
                 toolbars.AddIfNotNull((block as MyObjectBuilder_TimerBlock)?.Toolbar);
                 toolbars.AddIfNotNull((block as MyObjectBuilder_SensorBlock)?.Toolbar);
                 foreach (var toolbar in toolbars)
+                {
                     foreach (var s in toolbar.Slots)
                     {
                         var termGroup = s.Data as MyObjectBuilder_ToolbarItemTerminalGroup;
                         if (termGroup?.GroupName != null)
                             Remap(RemapType.Groups, ref termGroup.GroupName);
                     }
+                }
             }
 
             if (grid.BlockGroups != null)

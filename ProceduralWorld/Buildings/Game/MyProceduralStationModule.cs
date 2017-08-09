@@ -2,10 +2,14 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Xml.Serialization;
+using Equinox.ProceduralWorld.Buildings.Generation;
 using Equinox.ProceduralWorld.Buildings.Seeds;
 using Equinox.ProceduralWorld.Manager;
+using Equinox.Utils;
+using Equinox.Utils.Noise;
 using Equinox.Utils.Session;
 using ProtoBuf;
+using Sandbox.ModAPI;
 using VRage.Utils;
 using VRageMath;
 
@@ -13,6 +17,26 @@ namespace Equinox.ProceduralWorld.Buildings.Game
 {
     public partial class MyProceduralStationModule : MyProceduralModule
     {
+        private double m_stationMinSpacing = 100e3;
+        private double m_stationMaxSpacing = 1000e3;
+        public MyOctreeNoise StationNoise { get; private set; }
+
+        public MyProceduralFactions Factions { get; private set; }
+        public MyStationGeneratorManager Generator { get; private set; }
+
+        private void RebuildNoiseModules()
+        {
+            var seed = MyAPIGateway.Session.SessionSettings.ProceduralSeed;
+            StationNoise = new MyOctreeNoise(seed * 2383188091L, m_stationMaxSpacing, m_stationMinSpacing, null);
+        }
+
+        public MyProceduralStationModule()
+        {
+            RebuildNoiseModules();
+            DependsOn<MyProceduralFactions>(x => { Factions = x; });
+            DependsOn<MyStationGeneratorManager>(x => { Generator = x; });
+        }
+
         private readonly Dictionary<Vector4I, MyLoadingConstruction> m_instances = new Dictionary<Vector4I, MyLoadingConstruction>(Vector4I.Comparer);
         private readonly LinkedList<MyLoadingConstruction> m_dirtyInstances = new LinkedList<MyLoadingConstruction>();
 
@@ -25,19 +49,19 @@ namespace Equinox.ProceduralWorld.Buildings.Game
 
         public MyLoadingConstruction InstanceAt(Vector3D worldPosition)
         {
-            return InstanceAt(MyProceduralWorld.Instance.StationNoise.GetOctreeNodeAt(worldPosition));
+            return InstanceAt(StationNoise.GetOctreeNodeAt(worldPosition));
         }
 
         public override IEnumerable<MyProceduralObject> Generate(BoundingSphereD include, BoundingSphereD? exclude)
         {
             var aabb = new BoundingBoxD(include.Center - include.Radius, include.Center + include.Radius);
-            foreach (var cell in MyProceduralWorld.Instance.StationNoise.TryGetSpawnIn(aabb, (x) => include.Intersects(x) && (!exclude.HasValue || exclude.Value.Contains(x) != ContainmentType.Contains)))
+            foreach (var cell in StationNoise.TryGetSpawnIn(aabb, (x) => include.Intersects(x) && (!exclude.HasValue || exclude.Value.Contains(x) != ContainmentType.Contains)))
             {
                 MyLoadingConstruction instance;
                 if (!m_instances.TryGetValue(cell.Item1, out instance))
                 {
                     instance = m_instances[cell.Item1] = new MyLoadingConstruction(this, cell.Item1,
-                        new MyProceduralConstructionSeed(cell.Item2, null, cell.Item1.GetHashCode()));
+                        new MyProceduralConstructionSeed(Factions.SeedAt(cell.Item2.XYZ()), cell.Item2, null, cell.Item1.GetHashCode()));
                 }
                 else if (!instance.IsMarkedForRemoval)
                     continue; // Already loaded + not marked for removal -- already in the tree.
@@ -63,33 +87,32 @@ namespace Equinox.ProceduralWorld.Buildings.Game
                 Log(MyLogSeverity.Debug, "Procedural station module hide {3} station entities, removed {0} station entities, {1} object builders, and {2} recipes", removedEntities, removedOBs, removedRecipes, hiddenEntities);
         }
 
-        public override void LoadConfiguration(MyObjectBuilder_ModSessionComponent config)
+        public override void LoadConfiguration(MyObjectBuilder_ModSessionComponent configBase)
         {
-            if (config == null) return;
-            if (config is MyObjectBuilder_ProceduralStation) return;
-            Log(MyLogSeverity.Critical, "Configuration type {0} doesn't match component type {1}", config.GetType(), GetType());
+            var config = configBase as MyObjectBuilder_ProceduralStation;
+            if (config == null)
+            {
+                Log(MyLogSeverity.Critical, "Configuration type {0} doesn't match component type {1}",
+                    configBase.GetType(), GetType());
+                return;
+            }
+            m_stationMinSpacing = config.StationMinSpacing;
+            m_stationMaxSpacing = config.StationMaxSpacing;
+            RebuildNoiseModules();
         }
 
         public override MyObjectBuilder_ModSessionComponent SaveConfiguration()
         {
-            return new MyObjectBuilder_ProceduralStation();
+            return new MyObjectBuilder_ProceduralStation()
+            {
+                StationMinSpacing = m_stationMinSpacing,
+                StationMaxSpacing = m_stationMaxSpacing
+            };
         }
     }
 
     public class MyObjectBuilder_ProceduralStation : MyObjectBuilder_ModSessionComponent
     {
-        // (100 km)^3 cells.
-        [ProtoMember]
-        public double FactionDensity = 1e5;
-
-        // There will be roughly (1<<FactionShiftBase) factions per cell.
-        [ProtoMember]
-        public int FactionShiftBase = 3;
-
-        // Pockets of ore concentration last roughly this long
-        [ProtoMember]
-        public double OreMapDensity = 10e3;
-
         // This is (within */2) of the minimum distance stations encounters are apart.  Keep high for performance reasons.
         // For context, 250e3 for Earth-Moon, 2300e3 for Earth-Mars, 6000e3 for Earth-Alien
         [ProtoMember]

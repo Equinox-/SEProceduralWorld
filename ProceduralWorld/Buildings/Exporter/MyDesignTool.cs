@@ -25,24 +25,45 @@ namespace Equinox.ProceduralWorld.Buildings.Exporter
         {
             if (srcName.StartsWithICase(MOUNT_DELEGATED))
             {
-                var outName = MyPartMetadata.MOUNT_PREFIX + " " + srcName.Substring(MOUNT_DELEGATED.Length).Trim();
+                var lTransOrig = new MatrixI(source.BlockOrientation);
                 var lTrans = new MatrixI(dest.BlockOrientation);
                 MatrixI iTrans;
                 MatrixI.Invert(ref lTrans, out iTrans);
-                outName += " D:" + iTrans.GetDirection(Base6Directions.GetOppositeDirection(destDir)).ToString();
+                var arguments = MyPartDummyUtils.ConfigArguments(srcName.Substring(MOUNT_DELEGATED.Length).Trim()).Select(
+                    (arg) =>
+                    {
+                        if (arg.StartsWithICase(MyPartDummyUtils.ArgumentBiasDirection))
+                        {
+                            Base6Directions.Direction dir;
+                            if (Enum.TryParse(arg.Substring(MyPartDummyUtils.ArgumentBiasDirection.Length), out dir))
+                                return MyPartDummyUtils.ArgumentBiasDirection +
+                                       iTrans.GetDirection(lTransOrig.GetDirection(dir));
+                            else
+                                SessionCore.LogBoth("Failed to parse bias argument \"{0}\"", arg);
+                        } else if (arg.StartsWithICase(MyPartDummyUtils.ArgumentSecondBiasDirection))
+                        {
+                            Base6Directions.Direction dir;
+                            if (Enum.TryParse(arg.Substring(MyPartDummyUtils.ArgumentSecondBiasDirection.Length), out dir))
+                                return MyPartDummyUtils.ArgumentSecondBiasDirection +
+                                       iTrans.GetDirection(lTransOrig.GetDirection(dir));
+                            else
+                                SessionCore.LogBoth("Failed to parse second bias argument \"{0}\"", arg);
+                        }
+                        return arg;
+                    }).ToList();
+                arguments.Add(MyPartDummyUtils.ArgumentMountDirection + iTrans.GetDirection(Base6Directions.GetOppositeDirection(destDir)));
                 var anchorPoint = source.Min + Base6Directions.GetIntVector(destDir);
                 var del = anchorPoint - dest.Min;
                 if (del != Vector3I.Zero)
-                {
-                    outName += " A:" + del.X + ":" + del.Y + ":" + del.Z;
-                }
+                    arguments.Add(MyPartDummyUtils.ArgumentAnchorPoint + del.X + ":" + del.Y + ":" + del.Z);
+                var outName = MyPartMetadata.MOUNT_PREFIX + " " + string.Join(" ", arguments);
                 if (string.IsNullOrWhiteSpace(dest.Name))
                     dest.Name = outName;
                 else
                     dest.Name = dest.Name + MyPartMetadata.MULTI_USE_SENTINEL + outName;
                 return true;
             }
-            else if (srcName.StartsWithICase(RESERVED_SPACE_DELEGATED))
+            if (srcName.StartsWithICase(RESERVED_SPACE_DELEGATED))
             {
                 var baseName = srcName.Substring(RESERVED_SPACE_DELEGATED.Length).Trim();
                 var args = baseName.Split(' ').Select(x => x.Trim()).Where(x => x.Length > 0).ToArray();
@@ -115,11 +136,11 @@ namespace Equinox.ProceduralWorld.Buildings.Exporter
                     var args = useName.Split(' ');
                     var keepArgs = new List<string>(args.Length);
                     foreach (var arg in args)
-                        if (arg.StartsWithICase("D:"))
+                        if (arg.StartsWithICase(MyPartDummyUtils.ArgumentMountDirection))
                         {
                             Base6Directions.Direction dir;
                             if (Enum.TryParse(arg.Substring(2), out dir))
-                                dirs = new Base6Directions.Direction[] { transform.GetDirection(Base6Directions.GetOppositeDirection(dir)) };
+                                dirs = new [] { transform.GetDirection(Base6Directions.GetOppositeDirection(dir)) };
                             else
                                 SessionCore.LogBoth("Failed to parse direction argument \"{0}\"", arg);
                         }
@@ -133,6 +154,7 @@ namespace Equinox.ProceduralWorld.Buildings.Exporter
                     {
                         MyObjectBuilder_CubeBlock tmp;
                         if (!blockMap.TryGetValue(block.Min + Base6Directions.GetIntVector(dir), out tmp)) continue;
+                        if (tmp.ConfigNames().Any(x => x.StartsWithICase(MOUNT_DELEGATED))) continue;
                         if (outputBlock != null)
                             SessionCore.LogBoth("Multiple directions found for {0}", pair.Item2);
                         outputBlock = tmp;
@@ -178,7 +200,7 @@ namespace Equinox.ProceduralWorld.Buildings.Exporter
                 var removedNoController = relatedGrids.RemoveWhere(x => !relatedGridController.ContainsKey(x));
                 if (removedNoController > 0)
                     SessionCore.LogBoth("Failed to find controlling mechanical connection block for all subgrids.  {0} will be excluded", removedNoController);
-                // Need to add reserved space for subgrids.  So compute that.  Yay!
+                // Need to add reserved space for subgrids so they don't overlap.  So compute that.  Yay!
                 foreach (var rel in relatedGrids)
                 {
                     IMyCubeBlock root;
@@ -240,9 +262,6 @@ namespace Equinox.ProceduralWorld.Buildings.Exporter
             catch (Exception e)
             {
                 SessionCore.Log("Failed to parse.  Error:\n{0}", e.ToString());
-#if DEBUG
-                throw;
-#endif
             }
         }
     }

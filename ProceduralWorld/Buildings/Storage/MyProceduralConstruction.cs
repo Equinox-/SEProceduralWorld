@@ -24,7 +24,6 @@ namespace Equinox.ProceduralWorld.Buildings.Storage
 
         public MyProceduralConstruction(MyProceduralConstructionSeed seed)
         {
-            m_maxID = 0;
             m_roomTree = new MyDynamicAABBTree(Vector3.Zero);
             m_rooms = new Dictionary<int, MyProceduralRoom>();
             m_mountPoints = new Dictionary<Vector3I, MyProceduralMountPoint>();
@@ -112,14 +111,14 @@ namespace Equinox.ProceduralWorld.Buildings.Storage
                 return multSurplus * error * error;
         }
 
-        public void Init(MyObjectBuilder_ProceduralConstruction ob)
-        {
-            m_rooms.Clear();
-            m_roomsSafeOrder.Clear();
-            m_maxID = 0;
-            foreach (var room in ob.Room)
-                new MyProceduralRoom().Init(room, this);
-        }
+        // TODO cache recipes?
+        //        public void Init(MyObjectBuilder_ProceduralConstruction ob)
+        //        {
+        //            m_rooms.Clear();
+        //            m_roomsSafeOrder.Clear();
+        //            foreach (var room in ob.Room)
+        //                new MyProceduralRoom().Init(room, this);
+        //        }
 
         private struct MyRoomRegisterToken : IDisposable
         {
@@ -130,9 +129,8 @@ namespace Equinox.ProceduralWorld.Buildings.Storage
             {
                 m_construction = c;
                 m_room = r;
-                c.RegisterRoom(r);
+                c.AddRoom(r);
             }
-
 
             public void Dispose()
             {
@@ -145,23 +143,23 @@ namespace Equinox.ProceduralWorld.Buildings.Storage
             return new MyRoomRegisterToken(this, room);
         }
 
-        public void RegisterRoom(MyProceduralRoom room)
+        public void AddRoom(MyProceduralRoom room)
         {
             if (m_rooms.ContainsKey(room.RoomID))
                 throw new ArgumentException("Room ID already used");
-            m_maxID = Math.Max(m_maxID, room.RoomID);
             m_rooms[room.RoomID] = room;
             var aabb = room.BoundingBoxBoth;
             room.m_aabbProxyID = m_roomTree.AddProxy(ref aabb, room, 0);
             m_roomsSafeOrder.Add(room);
             foreach (var k in room.MountPoints)
-                foreach (var p in k.AnchorLocations)
+                foreach (var p in k.MountLocations)
                     if (m_mountPoints.ContainsKey(p))
                         SessionCore.Log("Room {0} at {1} has mount point {4}:{5} that intersect with mount point {6}:{7} of room {2} at {3}", m_mountPoints[p].Owner.Part.Name, m_mountPoints[p].Owner.Transform.Translation,
                             room.Part.Name, room.Transform.Translation, m_mountPoints[p].MountPoint.MountType, m_mountPoints[p].MountPoint.MountName,
                             k.MountPoint.MountType, k.MountPoint.MountName);
                     else
                         m_mountPoints.Add(p, k);
+            room.TakeOwnership(this);
             using (room.Part.LockSharedUsing())
                 BlockSetInfo.AddToSelf(room.Part.BlockSetInfo);
             RoomAdded?.Invoke(room);
@@ -179,7 +177,7 @@ namespace Equinox.ProceduralWorld.Buildings.Storage
                 SessionCore.Log("Possibly unsafe removal of room not at end of safe list");
             }
             foreach (var k in room.MountPoints)
-                foreach (var p in k.AnchorLocations)
+                foreach (var p in k.MountLocations)
                     if (!m_mountPoints.Remove(p))
                         SessionCore.Log("Failed to remove room; mount point wasn't registered");
             room.Orphan();
@@ -191,18 +189,6 @@ namespace Equinox.ProceduralWorld.Buildings.Storage
         public MyProceduralMountPoint MountPointAt(Vector3I v)
         {
             return m_mountPoints.GetValueOrDefault(v);
-        }
-        
-        public void AddCachedRoom(MyProceduralRoom room)
-        {
-            room.TakeOwnership(this);
-        }
-
-        private int m_maxID;
-        internal int AcquireID()
-        {
-            m_maxID++;
-            return m_maxID;
         }
 
         public MyProceduralRoom GetRoomAt(Vector3I pos)
@@ -236,7 +222,7 @@ namespace Equinox.ProceduralWorld.Buildings.Storage
 
         public bool Intersects(MyProceduralRoom room, bool testOptional, bool testQuick = false)
         {
-            return room.IntersectionCached(testOptional, testQuick) || m_rooms.Values.Any(test => test != room && test.Intersects(room, testOptional, testQuick));
+            return m_rooms.Values.Any(test => test != room && test.Intersects(room, testOptional, testQuick));
         }
 
         public IEnumerable<MyProceduralRoom> Rooms => m_roomsSafeOrder;

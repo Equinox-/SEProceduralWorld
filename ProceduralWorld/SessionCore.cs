@@ -1,9 +1,13 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Equinox.ProceduralWorld.Buildings;
 using Equinox.ProceduralWorld.Buildings.Game;
+using Equinox.ProceduralWorld.Buildings.Generation;
 using Equinox.ProceduralWorld.Buildings.Library;
+using Equinox.ProceduralWorld.Buildings.Seeds;
 using Equinox.ProceduralWorld.Manager;
+using Equinox.ProceduralWorld.Names;
 using Equinox.ProceduralWorld.Voxels;
 using Equinox.ProceduralWorld.Voxels.Asteroids;
 using Equinox.Utils;
@@ -18,13 +22,14 @@ using VRage.Game.Components;
 using VRage.ObjectBuilders;
 using VRage.Utils;
 using VRageMath;
-using MyObjectBuilder_AsteroidField = Equinox.ProceduralWorld.Voxels.Asteroids.MyObjectBuilder_AsteroidField;
 
 namespace Equinox.ProceduralWorld
 {
     [MySessionComponentDescriptor(MyUpdateOrder.BeforeSimulation | MyUpdateOrder.AfterSimulation)]
     public class SessionCore : MyModSessionVRageAdapter
     {
+        public static bool RELEASE = false;
+
         public static MyObjectBuilder_SessionManager DefaultConfiguration()
         {
             var res = new MyObjectBuilder_SessionManager();
@@ -33,32 +38,21 @@ namespace Equinox.ProceduralWorld
             res.SessionComponents.Add(new MyObjectBuilder_CommandDispatch());
             res.SessionComponents.Add(new MyObjectBuilder_Network());
             res.SessionComponents.Add(new MyObjectBuilder_RPC());
+            res.SessionComponents.Add(new MyObjectBuilder_ProceduralWorldManager());
             res.SessionComponents.Add(new MyObjectBuilder_PartManager());
             res.SessionComponents.Add(new MyObjectBuilder_BuildingControlCommands());
-            res.SessionComponents.Add(new MyObjectBuilder_ProceduralWorldManager());
-            //            res.SessionComponents.Add(new MyObjectBuilder_ProceduralStation());
-            res.SessionComponents.Add(new MyObjectBuilder_AutomaticAsteroidFields()
+            res.SessionComponents.Add(new MyObjectBuilder_ProceduralFactions());
+            res.SessionComponents.Add(new MyObjectBuilder_StationGeneratorManager());
+            res.SessionComponents.Add(new MyObjectBuilder_CompositeNameGenerator()
             {
-                AsteroidFields =
+                Generators = new List<MyObjectBuilder_CompositeNameGeneratorEntry>()
                 {
-                    new MyObjectBuilder_AutoAsteroidField()
-                    {
-                        Field = new MyObjectBuilder_AsteroidField()
-                        {
-                            DensityRegionSize=1,
-                            Seed = 1,
-                            Layers = new[]
-                            {
-                                new MyAsteroidLayer() {AsteroidDensity = 0.5, AsteroidMaxSize = 1e3, AsteroidMinSize = 500, AsteroidSpacing = 3.2e3, UsableRegion = 0.5},
-                                new MyAsteroidLayer() {AsteroidDensity = 0.8, AsteroidMaxSize = 500, AsteroidMinSize = 250, AsteroidSpacing = 1.4e3, UsableRegion = 1}
-                            },
-                            ShapeRing = new MyObjectBuilder_AsteroidRing() { InnerRadius=1.9f, OuterRadius=2.1f, VerticalScaleMult=0.1f },
-                            Transform = new MyPositionAndOrientation(MatrixD.Identity)
-                        },
-                        OnPlanets = {new SerializableDefinitionId(typeof(MyObjectBuilder_PlanetGeneratorDefinition), "EarthLike")}
-                    }
+                    new MyObjectBuilder_CompositeNameGeneratorEntry(){Generator = new MyObjectBuilder_StatisticalNameGenerator(), Weight = 0.9f},
+                    new MyObjectBuilder_CompositeNameGeneratorEntry(){Generator = new MyObjectBuilder_ExoticNameGenerator(), Weight = 0.1f}
                 }
             });
+
+            //                        res.SessionComponents.Add(new MyObjectBuilder_ProceduralStation());
             return res;
         }
 
@@ -81,14 +75,34 @@ namespace Equinox.ProceduralWorld
                 {
                     Manager.Register(new MySessionBootstrapper());
                     if (MyAPIGateway.Session.IsDecider())
-                        Manager.AppendConfiguration(DefaultConfiguration());
+                    {
+                        var success = false;
+                        if (RELEASE)
+                            try
+                            {
+                                if (MyAPIGateway.Utilities.FileExistsInWorldStorage("session.xml", typeof(SessionCore)))
+                                {
+                                    using (var reader =
+                                        MyAPIGateway.Utilities.ReadFileInWorldStorage("session.xml",
+                                            typeof(SessionCore)))
+                                    {
+                                        var value = MyAPIGateway.Utilities.SerializeFromXML<MyObjectBuilder_SessionManager>(reader.ReadToEnd());
+                                        Manager.AppendConfiguration(value);
+                                        success = true;
+                                    }
+                                }
+                            }
+                            catch (Exception e)
+                            {
+                                Log("Failed to parse config:\n{0}", e.ToString());
+                            }
+                        if (!success)
+                            Manager.AppendConfiguration(DefaultConfiguration());
+                    }
                 }
                 catch (Exception e)
                 {
                     SessionCore.Log("Failed to start bootstrapper.\n{0}", e);
-#if DEBUG
-                    throw;
-#endif
                 }
             }
             base.UpdateBeforeSimulation();
@@ -104,9 +118,6 @@ namespace Equinox.ProceduralWorld
                 catch (Exception e)
                 {
                     SessionCore.Log("Failed to write default configuration.\n{0}", e);
-#if DEBUG
-                    throw;
-#endif
                 }
                 m_init = true;
             }
@@ -138,30 +149,5 @@ namespace Equinox.ProceduralWorld
                 return false;
             });
         }
-
-        //            MyAPIGateway.Entities.GetEntities(null, (x) =>
-        //            {
-        //                if (!(x is IMyOxygenProvider) || !(x is IMyVoxelBase)) return false;
-        //                var center = x.PositionComp.WorldMatrix;
-        //                center.Translation = x.PositionComp.WorldAABB.Center;
-        //                var radiusBase = x.WorldAABB.HalfExtents.Length() * 2;
-        //                var vertScale = 0.1;
-        //                var baseSpacing = Math.Min(5e3, radiusBase / 10);
-        //                var width = baseSpacing / vertScale;
-        ////                m_modules.Add(new MyAsteroidFieldModule()
-        ////                {
-        ////                    Layers = new[]
-        ////                    {
-        ////                        new MyAsteroidLayer() {AsteroidDensity = 0.5, AsteroidMaxSize = 1e3, AsteroidMinSize = 500, AsteroidSpacing = baseSpacing/2, UsableRegion = 0.5},
-        ////                        new MyAsteroidLayer() {AsteroidDensity = 0.9, AsteroidMaxSize = 500, AsteroidMinSize = 50, AsteroidSpacing = baseSpacing/4, UsableRegion = 1},
-        ////                    },
-        ////                    RingInnerRadius = radiusBase - width,
-        ////                    RingOuterRadius = radiusBase + width,
-        ////                    VerticalScaleMult = vertScale,
-        ////                    Transform = center
-        ////                });
-        //                Log("Ring at {0}", center.Translation + center.Forward * radiusBase);
-        //                return false;
-        //            });
     }
 }

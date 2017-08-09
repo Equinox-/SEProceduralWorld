@@ -10,6 +10,13 @@ namespace Equinox.ProceduralWorld.Buildings.Library
 {
     public static class MyPartDummyUtils
     {
+        public const string ArgumentBiasDirection = "B:";
+        public const string ArgumentSecondBiasDirection = "B2:";
+        public const string ArgumentMountDirection = "D:";
+        public const string ArgumentAnchorPoint = "A:";
+        public const string ArgumentAdjacencyRule = "AR:";
+
+
         public static bool TryParseVector(string data, out Vector3I v)
         {
             var coords = data.Split(':');
@@ -24,7 +31,6 @@ namespace Equinox.ProceduralWorld.Buildings.Library
             v = default(Vector3I);
             return coords.Length == 3 && float.TryParse(coords[0], out v.X) && float.TryParse(coords[1], out v.Y) && float.TryParse(coords[2], out v.Z);
         }
-
         public static MyReservedSpace ParseReservedSpace(float gridSize, MyObjectBuilder_CubeBlock src, string[] args, MyUtilities.LoggingCallback log = null)
         {
             if (log == null) log = SessionCore.Log;
@@ -80,6 +86,11 @@ namespace Equinox.ProceduralWorld.Buildings.Library
             nExt = Vector3.TransformNormal(nExt, srcTra);
             pExt = Vector3.TransformNormal(pExt, srcTra);
             return new MyReservedSpace() { Box = new BoundingBox(nExt, pExt), IsOptional = optional, IsShared = shared };
+        }
+
+        public static IEnumerable<string> ConfigArguments(string args)
+        {
+            return args.Split(' ').Select(x => x.Trim()).Where(x => x.Length > 0);
         }
 
         public static IEnumerable<string> ConfigNames(this MyObjectBuilder_CubeBlock block)

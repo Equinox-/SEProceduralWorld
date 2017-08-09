@@ -56,15 +56,27 @@
     <ErrorReport>prompt</ErrorReport>
     <CodeAnalysisRuleSet>script.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
+  <PropertyGroup>
+    <StartupObject />
+  </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Sandbox.Game">
-      <HintPath>C:\SteamSSD\steamapps\common\SpaceEngineers\..\SpaceEngineers\Bin64\\Sandbox.Game.dll</HintPath>
+    <Reference Include="Sandbox.Common, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>C:\Program Files (x86)\Steam\steamapps\common\SpaceEngineers\Bin64\Sandbox.Common.dll</HintPath>
     </Reference>
-    <Reference Include="Sandbox.Common">
-      <HintPath>C:\SteamSSD\steamapps\common\SpaceEngineers\..\SpaceEngineers\Bin64\\Sandbox.Common.dll </HintPath>
+    <Reference Include="Sandbox.Game, Version=0.1.6410.31501, Culture=neutral, processorArchitecture=AMD64">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>C:\Program Files (x86)\Steam\steamapps\common\SpaceEngineers\Bin64\Sandbox.Game.dll</HintPath>
+    </Reference>
+    <Reference Include="Sandbox.Graphics">
+      <HintPath>C:\Program Files (x86)\Steam\steamapps\common\SpaceEngineers\Bin64\Sandbox.Graphics.dll</HintPath>
     </Reference>
     <Reference Include="SpaceEngineers.Game">
-      <HintPath>..\..\..\..\..\..\..\..\..\..\SteamSSD\steamapps\common\SpaceEngineers\Bin64\SpaceEngineers.Game.dll</HintPath>
+      <HintPath>C:\Program Files (x86)\Steam\steamapps\common\SpaceEngineers\Bin64\SpaceEngineers.Game.dll</HintPath>
+    </Reference>
+    <Reference Include="SpaceEngineers.ObjectBuilders, Version=1.0.0.0, Culture=neutral, processorArchitecture=AMD64">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>C:\Program Files (x86)\Steam\steamapps\common\SpaceEngineers\Bin64\SpaceEngineers.ObjectBuilders.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -73,23 +85,34 @@
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
-    <Reference Include="VRage">
-      <HintPath>C:\SteamSSD\steamapps\common\SpaceEngineers\..\SpaceEngineers\Bin64\\VRage.dll</HintPath>
+    <Reference Include="VRage, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>C:\Program Files (x86)\Steam\steamapps\common\SpaceEngineers\Bin64\VRage.dll</HintPath>
     </Reference>
-    <Reference Include="VRage.Library">
-      <HintPath>C:\SteamSSD\steamapps\common\SpaceEngineers\..\SpaceEngineers\Bin64\\VRage.Library.dll</HintPath>
+    <Reference Include="VRage.Game, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>C:\Program Files (x86)\Steam\steamapps\common\SpaceEngineers\Bin64\VRage.Game.dll</HintPath>
     </Reference>
-    <Reference Include="VRage.Math">
-      <HintPath>C:\SteamSSD\steamapps\common\SpaceEngineers\..\SpaceEngineers\Bin64\\VRage.Math.dll</HintPath>
+    <Reference Include="VRage.Input">
+      <HintPath>C:\Program Files (x86)\Steam\steamapps\common\SpaceEngineers\Bin64\VRage.Input.dll</HintPath>
     </Reference>
-    <Reference Include="VRage.Game">
-      <HintPath>C:\SteamSSD\steamapps\common\SpaceEngineers\..\SpaceEngineers\Bin64\\VRage.Game.dll</HintPath>
+    <Reference Include="VRage.Library, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>C:\Program Files (x86)\Steam\steamapps\common\SpaceEngineers\Bin64\VRage.Library.dll</HintPath>
     </Reference>
-    <Reference Include="VRage.Render">
-      <HintPath>C:\SteamSSD\steamapps\common\SpaceEngineers\..\SpaceEngineers\Bin64\\VRage.Render.dll</HintPath>
+    <Reference Include="VRage.Math, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>C:\Program Files (x86)\Steam\steamapps\common\SpaceEngineers\Bin64\VRage.Math.dll</HintPath>
     </Reference>
-    <Reference Include="SpaceEngineers.ObjectBuilders">
-      <HintPath>C:\SteamSSD\steamapps\common\SpaceEngineers\..\SpaceEngineers\Bin64\\SpaceEngineers.ObjectBuilders.dll</HintPath>
+    <Reference Include="VRage.Render, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>C:\Program Files (x86)\Steam\steamapps\common\SpaceEngineers\Bin64\VRage.Render.dll</HintPath>
+    </Reference>
+    <Reference Include="VRage.Render11">
+      <HintPath>C:\Program Files (x86)\Steam\steamapps\common\SpaceEngineers\Bin64\VRage.Render11.dll</HintPath>
+    </Reference>
+    <Reference Include="VRage.Scripting">
+      <HintPath>C:\Program Files (x86)\Steam\steamapps\common\SpaceEngineers\Bin64\VRage.Scripting.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
@@ -107,6 +130,7 @@
     <Compile Include="ProceduralWorld\Buildings\Game\MyProceduralGridComponent.cs" />
     <Compile Include="ProceduralWorld\Buildings\Game\MyProceduralStationModule.cs" />
     <Compile Include="ProceduralWorld\Buildings\Generation\MyStationGenerator.cs" />
+    <Compile Include="ProceduralWorld\Buildings\Generation\MyStationGeneratorManager.cs" />
     <Compile Include="ProceduralWorld\Buildings\MyBuildingControlCommands.cs" />
     <Compile Include="ProceduralWorld\Buildings\Seeds\MyProceduralSpeciality.cs" />
     <Compile Include="ProceduralWorld\Buildings\Storage\MyProceduralMountPoint.cs" />
@@ -115,9 +139,9 @@
     <Compile Include="ProceduralWorld\Manager\MyConcealmentManager.cs" />
     <Compile Include="ProceduralWorld\Manager\MyProceduralObject.cs" />
     <Compile Include="ProceduralWorld\Manager\MyProceduralWorldManager.cs" />
-    <Compile Include="ProceduralWorld\Buildings\Generation\MyEnglishNameGenerator.cs" />
-    <Compile Include="ProceduralWorld\Buildings\Generation\MyGenerator_Station.cs" />
-    <Compile Include="ProceduralWorld\Buildings\Generation\MyExoticNameGenerator.cs" />
+    <Compile Include="ProceduralWorld\Names\MyCompositeNameGenerator.cs" />
+    <Compile Include="ProceduralWorld\Names\MyStatisticalNameGenerator.cs" />
+    <Compile Include="ProceduralWorld\Names\MyExoticNameGenerator.cs" />
     <Compile Include="ProceduralWorld\Buildings\Generation\MyStationNameGenerator.cs" />
     <Compile Include="ProceduralWorld\Buildings\Library\MyAdjacencyRule.cs" />
     <Compile Include="ProceduralWorld\Buildings\Library\MyObjectBuilder_Part.cs" />
@@ -127,12 +151,12 @@
     <Compile Include="ProceduralWorld\Buildings\Library\MyPartMetadata.cs" />
     <Compile Include="ProceduralWorld\Buildings\Library\MyPartStorage_Intersect.cs" />
     <Compile Include="ProceduralWorld\Buildings\Library\MyReservedSpace.cs" />
-    <Compile Include="ProceduralWorld\Buildings\Seeds\MyProceduralWorld.cs" />
+    <Compile Include="ProceduralWorld\Buildings\Seeds\MyProceduralFactions.cs" />
     <Compile Include="ProceduralWorld\Manager\MyTrackedEntity.cs" />
+    <Compile Include="ProceduralWorld\Names\MyNameGeneratorBase.cs" />
     <Compile Include="ProceduralWorld\Settings.cs" />
     <Compile Include="ProceduralWorld\Buildings\Storage\MyObjectBuilder_ProceduralConstruction.cs" />
     <Compile Include="ProceduralWorld\Buildings\Storage\MyProceduralConstruction.cs" />
-    <Compile Include="ProceduralWorld\Buildings\Generation\MyGenerator_Room.cs" />
     <Compile Include="ProceduralWorld\Buildings\Seeds\MyProceduralConstructionSeed.cs" />
     <Compile Include="ProceduralWorld\Buildings\Seeds\MyProceduralFactionSeed.cs" />
     <Compile Include="ProceduralWorld\Buildings\Storage\MySupportedBlockTypes.cs" />
@@ -142,6 +166,7 @@
     <Compile Include="Utils\Command\MyCommandProviderComponent.cs" />
     <Compile Include="Utils\MyMovingAverage.cs" />
     <Compile Include="Utils\MyMultiDictionary.cs" />
+    <Compile Include="Utils\MyVectorSwizzling.cs" />
     <Compile Include="Utils\Network\MyRPCRegistry.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
@@ -245,7 +270,6 @@
     <Compile Include="Utils\Session\MyModSessionManager.cs" />
     <Compile Include="ProceduralWorld\Voxels\Asteroids\MyAsteroidFieldModule.cs" />
     <Compile Include="ProceduralWorld\Voxels\Asteroids\MyAsteroidFieldShape.cs" />
-    <Compile Include="ProceduralWorld\Voxels\Asteroids\MyAsteroidRing.cs" />
     <Compile Include="ProceduralWorld\Voxels\Asteroids\MyObjectBuilder_AsteroidField.cs" />
     <Compile Include="ProceduralWorld\Voxels\Asteroids\MyProceduralAsteroid.cs" />
     <Compile Include="ProceduralWorld\Voxels\VoxelBuilder\IMyStorageDataProviderBuilder.cs" />

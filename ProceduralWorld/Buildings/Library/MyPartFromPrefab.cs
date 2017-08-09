@@ -8,11 +8,11 @@ using VRageMath;
 
 namespace Equinox.ProceduralWorld.Buildings.Library
 {
-    public partial class MyPartFromPrefab : MyPartMetadata
+    public class MyPartFromPrefab : MyPartMetadata
     {
         public MyPrefabDefinition Prefab { get; }
 
-        public MyPartFromPrefab(MyPrefabDefinition prefab)
+        public MyPartFromPrefab(MyPartManager manager, MyPrefabDefinition prefab) : base(manager)
         {
             Prefab = prefab;
 
@@ -93,9 +93,6 @@ namespace Equinox.ProceduralWorld.Buildings.Library
                 catch (Exception e)
                 {
                     SessionCore.Log("Write failed.\n{0}", e);
-#if DEBUG
-                    throw;
-#endif
                 }
             });
         }

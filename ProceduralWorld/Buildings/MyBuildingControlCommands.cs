@@ -3,15 +3,18 @@ using System.Collections.Generic;
 using System.Linq;
 using Equinox.ProceduralWorld.Buildings.Creation;
 using Equinox.ProceduralWorld.Buildings.Exporter;
+using Equinox.ProceduralWorld.Buildings.Game;
 using Equinox.ProceduralWorld.Buildings.Generation;
 using Equinox.ProceduralWorld.Buildings.Library;
 using Equinox.ProceduralWorld.Buildings.Seeds;
 using Equinox.ProceduralWorld.Buildings.Storage;
 using Equinox.Utils;
 using Equinox.Utils.Command;
+using Equinox.Utils.Logging;
 using Equinox.Utils.Session;
 using Sandbox.Definitions;
 using Sandbox.ModAPI;
+using VRage;
 using VRage.Game.ModAPI;
 using VRage.ModAPI;
 using VRage.Utils;
@@ -26,11 +29,15 @@ namespace Equinox.ProceduralWorld.Buildings
         public MyBuildingControlCommands()
         {
             DependsOn((MyPartManager x) => m_partManager = x);
-            Create("clear").Handler(ClearStations);
-            Create("list").Handler<int>(ProcessSpawn);
-            Create("info").AllowOnlyOn(MySessionType.PlayerController).Handler<string>(ProcessInfo);
-            Create("stations").Handler(ProcessStationLocations);
-            Create("part").Handler<string>(ProcessDebugPart);
+            if (!SessionCore.RELEASE)
+            {
+                Create("clear").Handler(ClearStations);
+                Create("spawn").AllowOnlyOn(MySessionType.PlayerController).Handler(ProcessSpawn)
+                    .NamedFlag("debug").NamedArgument<int?>("rooms", null).NamedArgument<long>("seed", 0).NamedArgument<int?>(new[] { "pop", "population" }, null);
+                Create("info").AllowOnlyOn(MySessionType.PlayerController).Handler<string>(ProcessInfo);
+                Create("stations").Handler(ProcessStationLocations);
+                Create("part").Handler<string>(ProcessDebugPart);
+            }
             Create("export").PromotedOnly(MyPromoteLevel.Admin).Handler(RunExport);
         }
 
@@ -60,16 +67,23 @@ namespace Equinox.ProceduralWorld.Buildings
 
         private string ProcessStationLocations()
         {
+            var stationModule = Manager.GetDependencyProvider<MyProceduralStationModule>();
+            if (stationModule == null)
+                return "No station module means no stations";
+            var factionModule = Manager.GetDependencyProvider<MyProceduralFactions>();
+            if (factionModule == null)
+                return "No faction module means no stations";
+            var stationNoise = stationModule.StationNoise;
             var sphere = new BoundingSphereD(MyAPIGateway.Session.Camera.Position, MyAPIGateway.Session.SessionSettings.ViewDistance * 10);
             var id = MyAPIGateway.Session.Player.IdentityId;
             foreach (var gps in MyAPIGateway.Session.GPS.GetGpsList(id))
                 if (gps.Name.StartsWith("Station - "))
                     MyAPIGateway.Session.GPS.RemoveGps(id, gps);
             var aabb = new BoundingBoxD(sphere.Center - sphere.Radius, sphere.Center + sphere.Radius);
-            foreach (var s in MyProceduralWorld.Instance.StationNoise.TryGetSpawnIn(aabb, sphere.Intersects))
+            foreach (var s in stationNoise.TryGetSpawnIn(aabb, sphere.Intersects))
             {
                 var position = new Vector3D(s.Item2.X, s.Item2.Y, s.Item2.Z);
-                var cseed = new MyProceduralConstructionSeed(s.Item2, null, s.Item1.GetHashCode());
+                var cseed = new MyProceduralConstructionSeed(factionModule.SeedAt(s.Item2.XYZ()), s.Item2, null, s.Item1.GetHashCode());
                 var gps = MyAPIGateway.Session.GPS.Create("[" + cseed.Faction.Tag + "] " + cseed.Name, "", position, true, true);
                 gps.DiscardAt = MyAPIGateway.Session.ElapsedPlayTime + new TimeSpan(0, 5, 0);
                 MyAPIGateway.Session.GPS.AddGps(id, gps);
@@ -112,14 +126,14 @@ namespace Equinox.ProceduralWorld.Buildings
             if (part == null)
                 return "Unable to find part with name \"" + partName + "\"";
             var position = MyAPIGateway.Session.Camera.Position + MyAPIGateway.Session.Camera.WorldMatrix.Forward * 100;
-            var seed = new MyProceduralConstructionSeed(new Vector4D(position, 0.5), null, 0);
+            var seed = new MyProceduralConstructionSeed(new MyProceduralFactionSeed("dummy", 0), new Vector4D(position, 0.5), null, 0);
 
             MyAPIGateway.Parallel.Start(() =>
             {
                 var construction = new MyProceduralConstruction(seed);
                 var room = new MyProceduralRoom();
                 room.Init(new MatrixI(Base6Directions.Direction.Forward, Base6Directions.Direction.Up), part);
-                construction.RegisterRoom(room);
+                construction.AddRoom(room);
                 var remapper = new MyRoomRemapper { DebugRoomColors = true };
                 var grids = MyGridCreator.RemapAndBuild(construction, remapper);
                 if (grids == null) return;
@@ -133,17 +147,40 @@ namespace Equinox.ProceduralWorld.Buildings
             return null;
         }
 
-        private string ProcessSpawn(int count)
+        private string ProcessSpawn(Dictionary<string, object> kwargs)
         {
+            var generatorModule = Manager.GetDependencyProvider<MyStationGeneratorManager>();
+            if (generatorModule == null)
+                return "No station generator module means no stations";
+            var factionModule = Manager.GetDependencyProvider<MyProceduralFactions>();
+            if (factionModule == null)
+                return "No faction module means no stations";
+
+            var debugMode = (bool)kwargs["debug"];
+            var roomCount = (int?) kwargs["rooms"];
+            var seedVal = (long) kwargs["seed"];
+            var population = (int) kwargs["population"];
             var position = MyAPIGateway.Session.Camera.Position + MyAPIGateway.Session.Camera.WorldMatrix.Forward * 100;
-            var seed = new MyProceduralConstructionSeed(new Vector4D(position, 0.5), null, 0);
+            var seed = new MyProceduralConstructionSeed(factionModule.SeedAt(position), new Vector4D(position, 0.5), null, seedVal, population);
             MyAPIGateway.Parallel.Start(() =>
             {
                 MyProceduralConstruction construction = null;
                 MyConstructionCopy grids;
-                if (!MyGenerator.GenerateFully(seed, ref construction, out grids)) return;
-                if (grids == null) return;
-                MyAPIGateway.Utilities.InvokeOnGameThread(() => grids.SpawnAsync());
+                if (!generatorModule.GenerateFromSeedAndRemap(seed, ref construction, out grids, roomCount))
+                {
+                    this.Error("Failed to generate");
+                    return;
+                }
+                if (grids == null)
+                {
+                    this.Error("Failed to generate: Output grids are null");
+                    return;
+                }
+                MyAPIGateway.Utilities.InvokeOnGameThread(() =>
+                {
+                    var result = grids.SpawnAsync();
+                    result.ForceDebugDraw |= debugMode;
+                });
             });
             return null;
         }

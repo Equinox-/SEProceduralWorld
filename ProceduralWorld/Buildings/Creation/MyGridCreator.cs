@@ -95,6 +95,7 @@ namespace Equinox.ProceduralWorld.Buildings.Creation
 
         public MyProceduralGridComponent SpawnAsync()
         {
+            SessionCore.Log("Starting spawn state ");
             var dirtyGrids = new HashSet<long>();
 
             var allGrids = new List<IMyCubeGrid>();
@@ -106,9 +107,12 @@ namespace Equinox.ProceduralWorld.Buildings.Creation
                 PrimaryGrid.IsStatic = true;
                 PrimaryGrid.PersistentFlags &= ~MyPersistentEntityFlags2.InScene;
                 var primaryGrid = MyAPIGateway.Entities.CreateFromObjectBuilderParallel(PrimaryGrid, true, () => FlagIfReady(PrimaryGrid.EntityId, dirtyGrids, allGrids)) as IMyCubeGrid;
-                if (primaryGrid == null) return null;
-                lock (dirtyGrids)
-                    dirtyGrids.Add(PrimaryGrid.EntityId);
+                if (primaryGrid == null)
+                {
+                    SessionCore.Log("Failed to remap primary entity.  Aborting.");
+                    return null;
+                }
+                dirtyGrids.Add(PrimaryGrid.EntityId);
                 allGrids.Add(primaryGrid);
                 SessionCore.Log("Created entity for {0} room grid in {1}", Construction.Rooms.Count(), iwatch.Elapsed);
                 iwatch.Restart();
@@ -117,10 +121,13 @@ namespace Equinox.ProceduralWorld.Buildings.Creation
                     aux.PersistentFlags &= ~MyPersistentEntityFlags2.InScene;
                     // ReSharper disable once ImplicitlyCapturedClosure
                     var res = MyAPIGateway.Entities.CreateFromObjectBuilderParallel(aux, true, () => FlagIfReady(aux.EntityId, dirtyGrids, allGrids)) as IMyCubeGrid;
-                    if (res == null) continue;
+                    if (res == null)
+                    {
+                        SessionCore.Log("Failed to remap secondary entity.  Skipping.");
+                        continue;
+                    }
                     allGrids.Add(res);
-                    lock (dirtyGrids)
-                        dirtyGrids.Add(aux.EntityId);
+                    dirtyGrids.Add(aux.EntityId);
                 }
                 if (AuxGrids.Count > 0)
                     SessionCore.Log("Created {0} aux grids in {1}", AuxGrids.Count, iwatch.Elapsed);

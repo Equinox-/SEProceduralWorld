@@ -47,7 +47,7 @@ namespace Equinox.ProceduralWorld.Buildings.Game
             public MyLoadingConstruction(MyProceduralStationModule module, Vector4I cell, MyProceduralConstructionSeed seed) : base(module)
             {
                 m_cell = cell;
-                m_boundingBox = MyProceduralWorld.Instance.StationNoise.GetNodeAABB(cell);
+                m_boundingBox = module.StationNoise.GetNodeAABB(cell);
                 RaiseMoved();
                 Seed = seed;
 
@@ -70,10 +70,10 @@ namespace Equinox.ProceduralWorld.Buildings.Game
             {
                 SessionCore.Log("Generation stage for {0}", m_cell);
                 m_construction = null;
-                var success = MyGenerator.GenerateFully(Seed, ref m_construction);
-                if (success && !IsMarkedForRemoval)
-                    return true;
-                if (!success) SessionCore.Log("Generation stage failed for {0}", m_cell);
+//                var success = MyGenerator.GenerateFully(Seed, ref m_construction);
+//                if (success && !IsMarkedForRemoval)
+//                    return true;
+//                if (!success) SessionCore.Log("Generation stage failed for {0}", m_cell);
                 m_grids = null;
                 m_component = null;
                 return false;

@@ -187,13 +187,13 @@ namespace Equinox.ProceduralWorld.Buildings.Game
             {
                 if (force || Settings.Instance.DebugDrawBlocks)
                 {
-                    var localAABB = new BoundingBoxD(room.BoundingBox.Min * gridSize, (room.BoundingBox.Max + 1) * gridSize);
+                    var localAABB = new BoundingBoxD((room.BoundingBox.Min - 0.5f) * gridSize, (room.BoundingBox.Max + 0.5f) * gridSize);
                     MySimpleObjectDraw.DrawTransparentBox(ref transform, ref localAABB, ref DebugColorBlocksTotal, MySimpleObjectRasterizer.Wireframe, 1, .02f);
                 }
                 if (force || Settings.Instance.DebugDrawReservedTotal && room.Part.ReservedSpaces.Any())
                 {
                     var temp = MyUtilities.TransformBoundingBox(room.Part.ReservedSpace, room.Transform);
-                    var tmpAABB = new BoundingBoxD(temp.Min * gridSize, (temp.Max + 1) * gridSize);
+                    var tmpAABB = new BoundingBoxD((temp.Min - 0.5f) * gridSize, (temp.Max + 0.5f) * gridSize);
                     MySimpleObjectDraw.DrawTransparentBox(ref transform, ref tmpAABB, ref DebugColorReservedSpaceTotal, MySimpleObjectRasterizer.Wireframe, 1, .02f);
                 }
                 if (force || Settings.Instance.DebugDrawReserved)

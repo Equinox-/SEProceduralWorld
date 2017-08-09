@@ -17,7 +17,7 @@ namespace Equinox.ProceduralWorld.Buildings.Seeds
         public static readonly string[] FactionSuffixes = { "Inc.", "LLC.", "Co.", "Itpl.", "Total", "United" };
         public static readonly string[] Adjectives = { "Dreamy", "Amazing", "World Famous", "General",  };
 
-        public readonly long Seed;
+        public readonly ulong Seed;
         public readonly string FounderName;
         public readonly string Name;
         public readonly string Tag;
@@ -73,18 +73,15 @@ namespace Equinox.ProceduralWorld.Buildings.Seeds
             throw new Exception("Unable to find a tag for " + name);
         }
 
-        public MyProceduralFactionSeed(long seed)
+        public MyProceduralFactionSeed(string founderName, ulong seed)
         {
             Seed = seed;
-            var m_random = new Random((int)seed);
+            var random = new Random((int)seed);
 
-            HueRotation = (float)m_random.NextDouble();
-            SaturationModifier = MyMath.Clamp((float)m_random.NextNormal(), -1, 1);
-            ValueModifier = MyMath.Clamp((float)m_random.NextNormal(), -1, 1);
-
-            // Can we do this using distance from center as the weight?
-            FounderName = m_random.NextDouble() > 0.9 ? MyExoticNameGenerator.GenerateName(m_random.Next()) : MyEnglishNameGenerator.GenerateName(m_random.NextFloat());
-            FounderName = FounderName.Substring(0, 1).ToUpper() + FounderName.Substring(1).ToLower();
+            HueRotation = (float)random.NextDouble();
+            SaturationModifier = MyMath.Clamp((float)random.NextNormal(), -1, 1);
+            ValueModifier = MyMath.Clamp((float)random.NextNormal(), -1, 1);
+            FounderName = founderName.Substring(0, 1).ToUpper() + founderName.Substring(1).ToLower();
 
             m_attributeWeight = new Dictionary<MyProceduralFactionSpeciality, float>();
 
@@ -92,7 +89,7 @@ namespace Equinox.ProceduralWorld.Buildings.Seeds
             var bestKey = MyProceduralFactionSpeciality.Housing;
             foreach (var key in MyProceduralFactionSpeciality.Values)
             {
-                var score = m_attributeWeight[key] = MyMath.Clamp((float)m_random.NextNormal(0.5, 0.5), 0, 2);
+                var score = m_attributeWeight[key] = MyMath.Clamp((float)random.NextNormal(0.5, 0.5), 0, 2);
                 if (!(score > bestScore)) continue;
                 bestKey = key;
                 bestScore = score;
@@ -103,18 +100,18 @@ namespace Equinox.ProceduralWorld.Buildings.Seeds
             // [Name]'s [Adjective] [Speciality] [Suffix]
             var name = new StringBuilder();
             name.Append(FounderName);
-            if (m_random.NextDouble() > 0.2)
+            if (random.NextDouble() > 0.2)
             {
                 name.Append("'s");
-                if (m_random.NextDouble() > 0.5)
-                    name.Append(" ").Append(m_random.NextUniformChoice(Adjectives));
-                name.Append(" ").Append(m_random.NextUniformChoice(BestSpeciality.FactionTags));
+                if (random.NextDouble() > 0.5)
+                    name.Append(" ").Append(random.NextUniformChoice(Adjectives));
+                name.Append(" ").Append(random.NextUniformChoice(BestSpeciality.FactionTags));
 
-                if (m_random.NextDouble() > 0.75)
-                    name.Append(" ").Append(m_random.NextUniformChoice(FactionSuffixes));
+                if (random.NextDouble() > 0.75)
+                    name.Append(" ").Append(random.NextUniformChoice(FactionSuffixes));
             }
             else
-                name.Append(" ").Append(m_random.NextUniformChoice(FactionSuffixes));
+                name.Append(" ").Append(random.NextUniformChoice(FactionSuffixes));
             Name = name.ToString();
             Tag = SelectTag(Name).ToUpper();
         }
@@ -137,11 +134,13 @@ namespace Equinox.ProceduralWorld.Buildings.Seeds
         }
 
 
+        private bool m_creationFailed = false;
         private IMyFaction m_faction = null;
         // This needs to be on the main thread maybe?  Or at least threadsafe.  TODO
         public IMyFaction GetOrCreateFaction()
         {
             if (m_faction != null) return m_faction;
+            if (m_creationFailed) return null;
             MyPriorityParallel.InvokeOnGameThreadBlocking(() =>
             {
                 m_faction = MyAPIGateway.Session.Factions.TryGetFactionByTag(Tag);
@@ -169,7 +168,10 @@ namespace Equinox.ProceduralWorld.Buildings.Seeds
                 MyAPIGateway.Session.Factions.CreateFaction(founderID, Tag, Name, "Your place for " + BestSpeciality.Description + ".  " + specializationString, "");
                 m_faction = MyAPIGateway.Session.Factions.TryGetFactionByTag(Tag);
                 if (m_faction == null)
+                {
                     SessionCore.Log("Failed to create faction Tag={0}, Name={1}", Tag, Name);
+                    m_creationFailed = true;
+                }
             });
             return m_faction;
         }

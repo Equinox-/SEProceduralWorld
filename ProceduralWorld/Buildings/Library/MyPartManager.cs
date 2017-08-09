@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using Equinox.Utils;
+using Equinox.Utils.Logging;
 using Equinox.Utils.Session;
 using Sandbox.Definitions;
 using VRage.Game;
@@ -76,7 +77,7 @@ namespace Equinox.ProceduralWorld.Buildings.Library
             if (m_parts.TryGetValue(def.Id, out part)) return part;
             try
             {
-                var output = new MyPartFromPrefab(def);
+                var output = new MyPartFromPrefab(this, def);
                 // Can we actually use this with the current mods?
                 MyCubeBlockDefinition test;
                 foreach (var kv in output.BlockSetInfo.BlockCountByType)
@@ -94,10 +95,7 @@ namespace Equinox.ProceduralWorld.Buildings.Library
             }
             catch (Exception e)
             {
-                SessionCore.Log("Failed to load prefab {0}.\n{1}",def.Id.SubtypeName,  e);
-#if DEBUG
-                throw;
-#endif
+                this.Error("Failed to load prefab {0}.\n{1}",def.Id.SubtypeName,  e);
             }
             return part;
         }

@@ -24,9 +24,11 @@ namespace Equinox.ProceduralWorld.Buildings.Library
 
         public BoundingBox BoundingBox { get; private set; }
         public BoundingBox ReservedSpace { get; private set; }
+        public MyPartManager Manager { get; }
 
-        public MyPartMetadata()
+        public MyPartMetadata(MyPartManager manager)
         {
+            Manager = manager;
             BlockSetInfo = new MyBlockSetInfo();
             m_mountPoints = new Dictionary<string, Dictionary<string, MyPartMount>>();
             m_mountPointBlocks = new Dictionary<Vector3I, MyPartMountPointBlock>(128, Vector3I.Comparer);
@@ -96,9 +98,9 @@ namespace Equinox.ProceduralWorld.Buildings.Library
             {
                 var res = new MyObjectBuilder_Part
                 {
-                    BlockCountByType = BlockSetInfo.BlockCountByType.Select(x => MySerializableTuple.Create((SerializableDefinitionId) x.Key, x.Value)).ToArray(),
-                    ComponentCost = BlockSetInfo.ComponentCost.Select(x => MySerializableTuple.Create((SerializableDefinitionId) x.Key.Id, x.Value)).ToArray(),
-                    OccupiedLocations = m_blocks.Keys.Select(x => (SerializableVector3I) x).ToArray(),
+                    BlockCountByType = BlockSetInfo.BlockCountByType.Select(x => MySerializableTuple.Create((SerializableDefinitionId)x.Key, x.Value)).ToArray(),
+                    ComponentCost = BlockSetInfo.ComponentCost.Select(x => MySerializableTuple.Create((SerializableDefinitionId)x.Key.Id, x.Value)).ToArray(),
+                    OccupiedLocations = m_blocks.Keys.Select(x => (SerializableVector3I)x).ToArray(),
                     PowerConsumptionByGroup = BlockSetInfo.PowerConsumptionByGroup.Select(x => MySerializableTuple.Create(x.Key, x.Value)).ToArray(),
                     ReservedSpaces = m_reservedSpaces.Select(x => x.GetObjectBuilder()).ToArray(),
                     MountPoints = m_mountPoints.Values.SelectMany(x => x.Values).Select(x => x.GetObjectBuilder()).ToArray()
@@ -226,7 +228,7 @@ namespace Equinox.ProceduralWorld.Buildings.Library
                 foreach (var name in block.ConfigNames())
                 {
                     if (!name.StartsWithICase(MOUNT_PREFIX)) continue;
-                    var parts = name.Substring(MOUNT_PREFIX.Length).Split(' ').Select(x => x.Trim()).Where(x => x.Length > 0).ToArray();
+                    var parts = MyPartDummyUtils.ConfigArguments(name.Substring(MOUNT_PREFIX.Length)).ToArray();
                     if (parts.Length < 3) continue;
                     var spec = parts[0].Split(':');
                     if (spec.Length != 2) continue;
@@ -258,6 +260,7 @@ namespace Equinox.ProceduralWorld.Buildings.Library
                     m_mountPointBlocks[block.AnchorLocation] = block;
         }
 
+        private static readonly HashSet<MyDefinitionId> m_erroredDefinitionIds = new HashSet<MyDefinitionId>(MyDefinitionId.Comparer);
         private void ComputeBlockMap(MyObjectBuilder_CubeGrid primaryGrid, IEnumerable<MyObjectBuilder_CubeGrid> allGrids, MyBlockSetInfo info)
         {
             m_blocks.Clear();
@@ -282,7 +285,12 @@ namespace Equinox.ProceduralWorld.Buildings.Library
                         for (var rangeItr = new Vector3I_RangeIterator(ref blockMin, ref blockMax); rangeItr.IsValid(); rangeItr.MoveNext())
                             m_blocks[rangeItr.Current] = block;
                     }
-                    if (def == null) continue;
+                    if (def == null)
+                    {
+                        if (m_erroredDefinitionIds.Add(blockID))
+                            SessionCore.Log("Failed to find definition for block {0}", blockID);
+                        continue;
+                    }
 
                     info.BlockCountByType.AddValue(def.Id, 1);
 

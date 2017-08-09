@@ -46,7 +46,7 @@ namespace Equinox.ProceduralWorld.Buildings.Creation
         private readonly RemapCollection m_auxiliary = new RemapCollection();
         private readonly RemapCollection m_allPost = new RemapCollection();
 
-        public bool DebugRoomColors = false;
+        public bool DebugRoomColors = true;
 
         public MyRoomRemapper()
         {
@@ -111,17 +111,17 @@ namespace Equinox.ProceduralWorld.Buildings.Creation
             }
 
             // Grab OB copies
-            var begin = new Stopwatch();
-            begin.Restart();
+            var timer = new Stopwatch();
+            timer.Restart();
             var roomGrid = MyCloneUtilities.CloneFast(room.Part.PrimaryGrid);
             var otherGrids = room.Part.Prefab.CubeGrids.Where(x => x != room.Part.PrimaryGrid).Select(MyCloneUtilities.CloneFast).ToList();
             var allGrids = new List<MyObjectBuilder_CubeGrid>(otherGrids) { roomGrid };
             if (Settings.Instance.DebugRoomRemapProfiling)
-                SessionCore.Log("Cloned {0} grids in {1}", allGrids.Count, begin.Elapsed);
+                SessionCore.Log("Cloned {0} grids in {1}", allGrids.Count, timer.Elapsed);
 
 
             // Remap entity IDs
-            begin.Restart();
+            timer.Restart();
             MyAPIGateway.Entities.RemapObjectBuilderCollection(allGrids);
             // If we have a primary ID copy it now.
             if (dest.PrimaryGrid.EntityId != 0)
@@ -134,7 +134,7 @@ namespace Equinox.ProceduralWorld.Buildings.Creation
             else // otherwise, skip
                 dest.PrimaryGrid.EntityId = roomGrid.EntityId;
             if (Settings.Instance.DebugRoomRemapProfiling)
-                SessionCore.Log("Remapped {0} grid IDs in {1}", allGrids.Count, begin.Elapsed);
+                SessionCore.Log("Remapped {0} grid IDs in {1}", allGrids.Count, timer.Elapsed);
 
             // Apply remap operators
             m_allPre.RemapAndReset(allGrids);

@@ -7,45 +7,6 @@ using VRage.Collections;
 
 namespace Equinox.ProceduralWorld
 {
-    public class Example
-    {
-        public struct SliceToProcess
-        {
-            public int ShellIndex;
-            public int MaxShellIndex;
-            public IMyOreDetector Detector;
-        }
-        public MyBinaryStructHeap<int, SliceToProcess> m_Heap = new MyBinaryStructHeap<int, SliceToProcess>();
-
-        public void Add(IMyOreDetector detector, int maxShell)
-        {
-            lock (m_Heap)
-                m_Heap.Insert(new SliceToProcess() { ShellIndex = 0, MaxShellIndex = maxShell, Detector = detector }, 0);
-        }
-
-        public void TickWorker()
-        {
-            if (m_Heap.Count > 0)
-            {
-                SliceToProcess proc;
-                lock (m_Heap)
-                {
-                    proc = m_Heap.RemoveMin();
-                    // This can be here if you want multiple workers able to work with a single ore detector on multiple shells
-                    if (proc.ShellIndex < proc.MaxShellIndex)
-                        m_Heap.Insert(new SliceToProcess() { Detector = proc.Detector, MaxShellIndex = proc.MaxShellIndex, ShellIndex = proc.ShellIndex + 1 }, proc.ShellIndex + 1);
-                }
-
-                // process proc
-
-                // Or here if you want only one worker working on an ore detector at a time.
-                if (proc.ShellIndex < proc.MaxShellIndex)
-                    lock (m_Heap)
-                        m_Heap.Insert(new SliceToProcess() { Detector = proc.Detector, MaxShellIndex = proc.MaxShellIndex, ShellIndex = proc.ShellIndex + 1 }, proc.ShellIndex + 1);
-            }
-        }
-    }
-
     public class Settings
     {
         public static Settings Instance => SessionCore.Instance?.Settings;
@@ -61,12 +22,8 @@ namespace Equinox.ProceduralWorld
         public bool DebugGenerationResults = true;
         public bool DebugGenerationResultsError = true;
         public bool DebugGenerationStagesWeights = false;
-        public bool DebugRoomRemapProfiling = false;
+        public bool DebugRoomRemapProfiling = true;
 
-        // (100 km)^3 cells.
-        public double FactionDensity = 1e5;
-        // There will be roughly (1<<FactionShiftBase) factions per cell.
-        public int FactionShiftBase = 3;
         // Pockets of ore concentration last roughly this long
         public double OreMapDensity = 10e3;
 

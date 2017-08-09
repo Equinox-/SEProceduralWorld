@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Equinox.Utils;
 using Equinox.Utils.Cache;
+using Sandbox.Game.Lights;
 using VRage;
 using VRageMath;
 
@@ -147,6 +148,7 @@ namespace Equinox.ProceduralWorld.Buildings.Library
                         options.Add(x);
                 else
                     options.RemoveWhere(x => !keyCache.Contains(x));
+                if (options.Count <= 0) break;
                 init = true;
             }
             return options.Count > 0 ? options : null;
@@ -187,7 +189,7 @@ namespace Equinox.ProceduralWorld.Buildings.Library
 
         private MyTuple<MyPartFromPrefab, MatrixI> ComputeSmallestTerminalAttachment()
         {
-            foreach (var part in SessionCore.Instance.PartManager.SortedBySize)
+            foreach (var part in m_part.Manager.SortedBySize)
                 if (part.MountPointsOfType(MountType).Count() <= 2)
                     foreach (var mount in part.MountPointsOfType(MountType))
                     {
@@ -196,7 +198,7 @@ namespace Equinox.ProceduralWorld.Buildings.Library
                         foreach (var transform in transforms)
                             return MyTuple.Create(part, transform);
                     }
-            foreach (var part in SessionCore.Instance.PartManager.SortedBySize)
+            foreach (var part in m_part.Manager.SortedBySize)
                 foreach (var mount in part.MountPointsOfType(MountType))
                 {
                     var transforms = GetTransform(mount);

@@ -45,7 +45,6 @@ namespace Equinox.ProceduralWorld.Buildings.Storage
             Orphan();
             if (parent == null) return;
             Owner = parent;
-            parent.RegisterRoom(this);
             AddedToConstruction?.Invoke();
         }
 
@@ -66,23 +65,24 @@ namespace Equinox.ProceduralWorld.Buildings.Storage
                 }
         }
 
-        public void Init(MyObjectBuilder_ProceduralRoom ob, MyProceduralConstruction parent)
-        {
-            RoomID = parent != null ? ob.RoomID : -1;
-            m_part = SessionCore.Instance.PartManager.LoadNullable(ob.PrefabID);
-            Transform = ob.Transform;
-            m_mountPoints = new Dictionary<string, Dictionary<string, MyProceduralMountPoint>>();
-            foreach (var mount in ob.MountPoints)
-            {
-                var point = new MyProceduralMountPoint();
-                point.Init(mount, this);
-                Dictionary<string, MyProceduralMountPoint> byName;
-                if (!m_mountPoints.TryGetValue(point.MountPoint.MountType, out byName))
-                    m_mountPoints[point.MountPoint.MountType] = byName = new Dictionary<string, MyProceduralMountPoint>();
-                byName[point.MountPoint.MountName] = point;
-            }
-            parent?.RegisterRoom(this);
-        }
+// TODO cache recipes?
+//        public void Init(MyObjectBuilder_ProceduralRoom ob, MyProceduralConstruction parent)
+//        {
+//            RoomID = parent != null ? ob.RoomID : -1;
+//            m_part = SessionCore.Instance.PartManager.LoadNullable(ob.PrefabID);
+//            Transform = ob.Transform;
+//            m_mountPoints = new Dictionary<string, Dictionary<string, MyProceduralMountPoint>>();
+//            foreach (var mount in ob.MountPoints)
+//            {
+//                var point = new MyProceduralMountPoint();
+//                point.Init(mount, this);
+//                Dictionary<string, MyProceduralMountPoint> byName;
+//                if (!m_mountPoints.TryGetValue(point.MountPoint.MountType, out byName))
+//                    m_mountPoints[point.MountPoint.MountType] = byName = new Dictionary<string, MyProceduralMountPoint>();
+//                byName[point.MountPoint.MountName] = point;
+//            }
+//            parent?.AddRoom(this);
+//        }
 
         public MatrixI InvTransform => m_invTransform;
 
@@ -101,8 +101,7 @@ namespace Equinox.ProceduralWorld.Buildings.Storage
                     ReservedSpace = MyUtilities.TransformBoundingBox(Part.ReservedSpace, value);
                     BoundingBoxBoth = MyUtilities.TransformBoundingBox(Part.BoundingBoxBoth, value);
                 }
-                m_intersectsWith.Clear();
-                owner?.RegisterRoom(this);
+                owner?.AddRoom(this);
             }
         }
 
@@ -110,6 +109,17 @@ namespace Equinox.ProceduralWorld.Buildings.Storage
         {
             Dictionary<string, MyProceduralMountPoint> byName;
             return !m_mountPoints.TryGetValue(point.MountType, out byName) ? null : byName?.GetValueOrDefault(point.MountName);
+        }
+
+        public MyPartMountPointBlock GetMountPointBlockAt(Vector3I pos)
+        {
+            return Part.MountPointAt(GridToPrefab(pos));
+        }
+
+        public MyProceduralMountPoint GetMountPointAt(Vector3I pos)
+        {
+            MyPartMount backing = Part.MountPointAt(GridToPrefab(pos))?.Owner;
+            return backing != null ? GetMountPoint(backing) : null;
         }
 
         public BoundingBox BoundingBox { get; private set; }
@@ -130,51 +140,14 @@ namespace Equinox.ProceduralWorld.Buildings.Storage
         {
             return MyPartMetadata.Intersects(ref m_part, ref m_transform, ref m_invTransform, ref other, ref otherTransform, ref otherITransform, testOptional, testQuick);
         }
-
-        private readonly Dictionary<int, byte> m_intersectsWith = new Dictionary<int, byte>();
+        
         public bool Intersects(MyProceduralRoom other, bool testOptional, bool testQuick = false)
         {
-            var presentMask = (byte)(testOptional ? 8 : 4);
-            var mask = (byte)(testOptional ? 2 : 1);
-            if (testQuick)
-            {
-                presentMask <<= 4;
-                mask <<= 4;
-            }
-            byte intersect;
-            if (other.Owner == Owner && m_intersectsWith.TryGetValue(other.RoomID, out intersect))
-            {
-                if ((intersect & presentMask) != 0)
-                    return (intersect & mask) != 0;
-            }
-            else intersect = 0;
-            var result = other.BoundingBoxBoth.Intersects(BoundingBoxBoth) &&
+            return other.BoundingBoxBoth.Intersects(BoundingBoxBoth) &&
                 (other.BoundingBox.Intersects(BoundingBox) || other.ReservedSpace.Intersects(ReservedSpace)) &&
                 MyPartMetadata.Intersects(ref m_part, ref m_transform, ref m_invTransform, ref other.m_part, ref other.m_transform, ref other.m_invTransform, testOptional, testQuick);
-            intersect |= presentMask;
-            if (result)
-                intersect |= mask;
-            m_intersectsWith[other.RoomID] = intersect;
-            other.m_intersectsWith[RoomID] = intersect;
-            return result;
         }
-
-        // present and intersecting and matching.
-        public bool IntersectionCached(bool testOptional, bool testQuick = false)
-        {
-            var presentMask = (byte)(testOptional ? 8 : 4);
-            var mask = (byte)(testOptional ? 2 : 1);
-            if (testQuick)
-            {
-                presentMask <<= 4;
-                mask <<= 4;
-            }
-            foreach (var kv in m_intersectsWith)
-                if ((kv.Value & presentMask) != 0 && (kv.Value & mask) != 0 && Owner?.GetRoom(kv.Key) != null)
-                    return true;
-            return false;
-        }
-
+        
         public bool IsReserved(Vector3 pos, bool testShared = true, bool testOptional = true)
         {
             return ReservedSpace.Contains(pos) != ContainmentType.Disjoint && Part.IsReserved(pos, testShared, testOptional);

@@ -49,7 +49,7 @@ namespace Equinox.ProceduralWorld.Buildings.Storage
                 case MySupportedBlockTypes.ShipConstruction:
                     return block is MyShipGrinderDefinition || block is MyShipWelderDefinition;
                 case MySupportedBlockTypes.Docking:
-                    return block is MyMergeBlockDefinition || block.Id.TypeId == typeof(MyObjectBuilder_ShipConnector);
+                    return block.Id.TypeId == typeof(MyObjectBuilder_ShipConnector);
                 case MySupportedBlockTypes.Communications:
                     return block is MyLaserAntennaDefinition || block is MyRadioAntennaDefinition;
                 default:
