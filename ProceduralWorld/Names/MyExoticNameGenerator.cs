@@ -1,8 +1,12 @@
 ﻿using System;
+using System.Collections.Generic;
+using Equinox.ProceduralWorld.Names;
+using Equinox.Utils.Session;
+using VRage.Utils;
 
 namespace Equinox.ProceduralWorld.Buildings.Generation
 {
-    public static class MyExoticNameGenerator
+    public class MyExoticNameGenerator : MyNameGeneratorBase
     {
         private static readonly string[] VowelPhrase = new[] { "a", "au", "e", "ei", "i", "o", "oe", "ou", "u", "ua", "ue", "uo", "uy", "y" };
         private static readonly string[] ConsonantPhrase = new[]
@@ -10,9 +14,10 @@ namespace Equinox.ProceduralWorld.Buildings.Generation
                 "b", "c", "d", "f", "g", "h", "j", "k", "l", "m", "n", "p", "q", "qu", "r", "s", "t", "v", "w", "x", "z", "cc", "ch", "tch", "ck", "dge", "gh", "gu", "ng", "ph", "sc", "sch", "sh", "th", "wh", "xh", "bt", "pt", "kn", "gn", "pn",
                 "mb", "lm", "ps", "rh", "wr", "ti", "ci", "si", "su", "si", "su"
             };
-        public static string GenerateName(int seed)
+
+        public override string Generate(ulong seed)
         {
-            var random = new Random(seed);
+            var random = new Random((int)seed);
             var len = random.Next(5, 10);
             var name = ConsonantPhrase[random.Next(0, ConsonantPhrase.Length)];
             while (name.Length < len)
@@ -29,5 +34,26 @@ namespace Equinox.ProceduralWorld.Buildings.Generation
             }
             return name;
         }
+
+        public override void LoadConfiguration(MyObjectBuilder_ModSessionComponent configOriginal)
+        {
+            var config = configOriginal as MyObjectBuilder_ExoticNameGenerator;
+            if (config == null)
+            {
+                Log(MyLogSeverity.Critical, "Configuration type {0} doesn't match component type {1}",
+                    configOriginal.GetType(),
+                    GetType());
+                return;
+            }
+        }
+
+        public override MyObjectBuilder_ModSessionComponent SaveConfiguration()
+        {
+            return new MyObjectBuilder_ExoticNameGenerator();
+        }
+    }
+
+    public class MyObjectBuilder_ExoticNameGenerator : MyObjectBuilder_NameGeneratorBase
+    {
     }
 }
