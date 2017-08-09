@@ -66,7 +66,7 @@ namespace Equinox.ProceduralWorld.Voxels.VoxelBuilder
 
         private static void CastProhibit<TR>(object o, out TR res) where TR : class
         {
-            res = (TR) o;
+            res = (TR)o;
         }
 
         public static MyPlanet SpawnPlanet(Vector3D pos, MyPlanetGeneratorDefinition generatorDef, long seed, float size)
@@ -85,8 +85,8 @@ namespace Equinox.ProceduralWorld.Voxels.VoxelBuilder
             var outerRadius = averagePlanetRadius + maxHillSize;
             var innerRadius = averagePlanetRadius + minHillSize;
 
-//            var atmosphereRadius = generatorDef.AtmosphereSettings.HasValue &&
-//                generatorDef.AtmosphereSettings.Value.Scale > 1f ? 1 + generatorDef.AtmosphereSettings.Value.Scale : 1.75f;
+            //            var atmosphereRadius = generatorDef.AtmosphereSettings.HasValue &&
+            //                generatorDef.AtmosphereSettings.Value.Scale > 1f ? 1 + generatorDef.AtmosphereSettings.Value.Scale : 1.75f;
             var atmosphereRadius = 1.75f;
             atmosphereRadius *= (float)provider.Radius;
 
@@ -117,7 +117,7 @@ namespace Equinox.ProceduralWorld.Voxels.VoxelBuilder
             planetInitArguments.AtmosphereWavelengths = atmosphereWavelengths;
             planetInitArguments.GravityFalloff = generatorDef.GravityFalloffPower;
             planetInitArguments.MarkAreaEmpty = true;
-//            planetInitArguments.AtmosphereSettings = generatorDef.AtmosphereSettings.HasValue ? generatorDef.AtmosphereSettings.Value : MyAtmosphereSettings.Defaults();
+            //            planetInitArguments.AtmosphereSettings = generatorDef.AtmosphereSettings.HasValue ? generatorDef.AtmosphereSettings.Value : MyAtmosphereSettings.Defaults();
             planetInitArguments.SurfaceGravity = generatorDef.SurfaceGravity;
             planetInitArguments.AddGps = false;
             planetInitArguments.SpherizeWithDistance = true;
@@ -135,19 +135,26 @@ namespace Equinox.ProceduralWorld.Voxels.VoxelBuilder
             return planet;
         }
 
-        public static int FindAsteroidSeed(int seed, float size, HashSet<MyDefinitionId> prohibitsOre, HashSet<MyDefinitionId> requiresOre, int maxTries = 10)
+        public static int FindAsteroidSeed(int seed, float size, HashSet<string> prohibitsOre, HashSet<string> requiresOre, int maxTries = 5)
         {
             if (requiresOre.Count == 0 && prohibitsOre.Count == 0) return seed;
             var gen = MyAsteroidShapeGenerator.AsteroidGenerators[MyAPIGateway.Session.SessionSettings.VoxelGeneratorVersion];
+            var success = false;
             for (var i = 0; i < maxTries; i++)
             {
                 MyAsteroidShapeGenerator.MyCompositeShapeGeneratedDataBuilder data;
                 gen(seed, size, out data);
-                if (requiresOre.Count == 0 || requiresOre.Contains(data.DefaultMaterial.Id) || data.Deposits.Any(x => requiresOre.Contains(x.Material.Id)))
-                    if (prohibitsOre.Count == 0 || (!prohibitsOre.Contains(data.DefaultMaterial.Id) && !data.Deposits.Any(x => prohibitsOre.Contains(x.Material.Id))))
+                if (requiresOre.Count == 0 || requiresOre.Contains(data.DefaultMaterial.MinedOre) || data.Deposits.Any(x => requiresOre.Contains(x.Material.MinedOre)))
+                    if (prohibitsOre.Count == 0 || (!prohibitsOre.Contains(data.DefaultMaterial.MinedOre) &&
+                                                    !data.Deposits.Any(x => prohibitsOre.Contains(x.Material.MinedOre))))
+                    {
+                        success = true;
                         break;
+                    }
                 seed *= 982451653;
             }
+//            if (!success)
+//                SessionCore.Log("Failed to create asteroid with constraints: Prohibit=[{0}], Require=[{1}]", string.Join(", ", prohibitsOre), string.Join(", ", requiresOre));
             return seed;
         }
     }

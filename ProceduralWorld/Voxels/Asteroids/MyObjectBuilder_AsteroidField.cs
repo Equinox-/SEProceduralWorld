@@ -1,13 +1,18 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
+using System.Text;
 using System.Xml.Serialization;
+using Equinox.Utils.Session;
 using ProtoBuf;
+using Sandbox.ModAPI.Ingame;
 using VRage;
 using VRage.Game;
 using VRage.ObjectBuilders;
+using VRageMath;
 
-namespace Equinox.ProceduralWorld.Voxels
+namespace Equinox.ProceduralWorld.Voxels.Asteroids
 {
     [ProtoContract]
     public class MyAsteroidLayer
@@ -27,16 +32,16 @@ namespace Equinox.ProceduralWorld.Voxels
         public double UsableRegion = 1;
 
         [XmlIgnore]
-        public readonly HashSet<MyDefinitionId> RequiresOre = new HashSet<MyDefinitionId>(MyDefinitionId.Comparer);
+        public readonly HashSet<string> RequiresOre = new HashSet<string>();
 
         [XmlIgnore]
-        public readonly HashSet<MyDefinitionId> ProhibitsOre = new HashSet<MyDefinitionId>(MyDefinitionId.Comparer);
+        public readonly HashSet<string> ProhibitsOre = new HashSet<string>();
 
         [ProtoMember]
         [XmlArrayItem("Ore")]
-        public SerializableDefinitionId[] RequiresOreSerial
+        public string[] RequiresOreSerial
         {
-            get { return RequiresOre.Cast<SerializableDefinitionId>().ToArray(); }
+            get { return RequiresOre.ToArray(); }
             set
             {
                 RequiresOre.Clear();
@@ -47,9 +52,9 @@ namespace Equinox.ProceduralWorld.Voxels
 
         [ProtoMember]
         [XmlArrayItem("Ore")]
-        public SerializableDefinitionId[] ProhibitsOreSerial
+        public string[] ProhibitsOreSerial
         {
-            get { return ProhibitsOre.Cast<SerializableDefinitionId>().ToArray(); }
+            get { return ProhibitsOre.ToArray(); }
             set
             {
                 ProhibitsOre.Clear();
@@ -84,20 +89,42 @@ namespace Equinox.ProceduralWorld.Voxels
     }
 
     [ProtoContract]
-    public class MyObjectBuilder_AsteroidField
+    public class MyObjectBuilder_AsteroidField : MyObjectBuilder_ModSessionComponent
     {
         [ProtoMember]
         [DefaultValue(null)]
         public MyAsteroidLayer[] Layers;
 
-        [ProtoMember]
-        public MyPositionAndOrientation Transform;
+        [XmlIgnore]
+        public MatrixD Transform = MatrixD.Identity;
 
+        [ProtoMember]
+        public SerializableVector3D Position { get { return Transform.Translation; } set { Transform.Translation = value; } }
+
+        [ProtoMember]
+        public SerializableVector3D Forward
+        {
+            get { return Transform.Forward; }
+            set
+            {
+                Transform.Forward = value;
+                Transform.Right = Vector3D.Cross(Transform.Forward, Transform.Up);
+            }
+        }
+
+        [ProtoMember]
+        public SerializableVector3D Up
+        {
+            get { return Transform.Up; }
+            set
+            {
+                Transform.Up = value;
+                Transform.Right = Vector3D.Cross(Transform.Forward, Transform.Up);
+            }
+        }
+        
         [ProtoMember]
         public int Seed;
-
-        [ProtoMember]
-        public double DensityRegionSize = .1;
 
         [ProtoMember]
         [DefaultValue(null)]

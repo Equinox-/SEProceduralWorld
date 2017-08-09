@@ -55,7 +55,6 @@ namespace Equinox.ProceduralWorld.Voxels.Asteroids
             foreach (var field in fieldsHere)
             {
                 var structure = new MyObjectBuilder_AsteroidField();
-                structure.DensityRegionSize = field.DensityRegionSize;
                 structure.Seed = (int)(field.Seed ^ planet.EntityId);
                 structure.Layers = new MyAsteroidLayer[field.Layers.Length];
                 for (var i = 0; i < structure.Layers.Length; i++)
@@ -77,8 +76,8 @@ namespace Equinox.ProceduralWorld.Voxels.Asteroids
                 structure.ShapeRing = MyCloneUtilities.Clone(field.ShapeRing);
                 structure.ShapeSphere = MyCloneUtilities.Clone(field.ShapeSphere);
                 var rootTransform = MatrixD.CreateWorld(planet.PositionComp.WorldAABB.Center, planet.WorldMatrix.Forward, planet.WorldMatrix.Up);
-                rootTransform = rootTransform * field.Transform.GetMatrix();
-                structure.Transform = new MyPositionAndOrientation(ref rootTransform);
+                rootTransform = rootTransform * field.Transform;
+                structure.Transform = rootTransform;
                 var scalingFactor = (float) planet.PositionComp.WorldAABB.HalfExtents.Max();
                 if (structure.ShapeRing != null)
                 {

@@ -12,6 +12,7 @@ using Equinox.Utils.Session;
 using ProtoBuf;
 using VRage;
 using VRage.Collections;
+using VRage.Game;
 using VRage.Utils;
 using VRageMath;
 
@@ -20,19 +21,31 @@ namespace Equinox.ProceduralWorld.Voxels.Asteroids
     public partial class MyAsteroidFieldModule : MyProceduralModule
     {
         public IMyAsteroidFieldShape Shape { get; private set; }
-        public Matrix Transform
+        public MatrixD Transform
         {
             get { return m_transform; }
             set
             {
                 m_transform = value;
-                Matrix.Invert(ref m_transform, out m_invTransform);
+                MatrixD.Invert(ref m_transform, out m_invTransform);
             }
         }
-        private Matrix m_transform, m_invTransform;
+        private MatrixD m_transform, m_invTransform;
         private MyAsteroidLayer[] m_layers;
         private IMyModule m_noise = new MySimplexFast(1, 10);
         private IMyModule m_noiseWarp = new MySimplexFast(2, 4e-3);
+        private int m_seed;
+
+        public int Seed
+        {
+            get { return m_seed; }
+            set
+            {
+                m_seed = value;
+                m_noise = new MySimplexFast(m_seed, 10D);
+                m_noiseWarp = new MySimplexFast(m_seed * 173, 10e-3);
+            }
+        }
 
         private readonly Dictionary<Vector4I, MyProceduralAsteroid> m_asteroids = new Dictionary<Vector4I, MyProceduralAsteroid>(Vector4I.Comparer);
 
@@ -64,7 +77,6 @@ namespace Equinox.ProceduralWorld.Voxels.Asteroids
                     if (Vector3D.DistanceSquared(root, localPos) > includePaddedSquared) continue;
                     if (exclude.HasValue && Vector3D.DistanceSquared(excludeRoot, localPos) < excludePaddedSquared)
                         continue;
-
                     var localWeight = Shape.Weight(localPos) + layer.UsableRegion - 1;
                     if (1 - layer.AsteroidDensity > localWeight) continue;
 
@@ -112,7 +124,6 @@ namespace Equinox.ProceduralWorld.Voxels.Asteroids
             if (m_asteroidsToAdd.Count == 0) return false;
             var ast = m_asteroidsToAdd.RemoveMax().Asteroid;
             ast.ExecuteSpawn();
-            //            Log(MyLogSeverity.Debug, "Spawning asteroid at {0}!", ast.m_boundingBox.Center);
             return true;
         }
 
@@ -138,9 +149,9 @@ namespace Equinox.ProceduralWorld.Voxels.Asteroids
             Log(MyLogSeverity.Debug, "Loading configuration for {0}", GetType().Name);
             using (this.IndentUsing())
             {
-                Transform = ob.Transform.GetMatrix();
+                Transform = ob.Transform;
                 Log(MyLogSeverity.Debug, "Position is {0}", Transform.Translation);
-                Log(MyLogSeverity.Debug, "Rotation is {0}", ob.Transform.Orientation);
+                Log(MyLogSeverity.Debug, "Up is {0}", ob.Transform.Up);
                 if (ob.ShapeSphere != null)
                 {
                     Shape = new MyAsteroidSphereShape(ob.ShapeSphere);
@@ -171,42 +182,40 @@ namespace Equinox.ProceduralWorld.Voxels.Asteroids
                         Log(MyLogSeverity.Debug, "Asteroid size = {0} - {1}", layer.AsteroidMinSize, layer.AsteroidMaxSize);
                         Log(MyLogSeverity.Debug, "Spacing {0}", layer.AsteroidSpacing);
                         Log(MyLogSeverity.Debug, "Usable space {0}", layer.UsableRegion);
-                        Log(MyLogSeverity.Debug, "Prohibited ores {0}", layer.ProhibitsOre.Aggregate("", (a, b) => b.SubtypeName + ", " + a));
-                        Log(MyLogSeverity.Debug, "Required ores {0}", layer.RequiresOre.Aggregate("", (a, b) => b.SubtypeName + ", " + a));
+                        Log(MyLogSeverity.Debug, "Prohibited ores {0}", string.Join(", ", layer.ProhibitsOre));
+                        Log(MyLogSeverity.Debug, "Required ores {0}", string.Join(", ", layer.RequiresOre));
                     }
                 }
-                m_noise = new MySimplexFast(ob.Seed, 10D);
-                m_noiseWarp = new MySimplexFast(ob.Seed * 173, 10e-3);
+                Seed = ob.Seed;
             }
         }
 
         public override MyObjectBuilder_ModSessionComponent SaveConfiguration()
         {
-            return new MyObjectBuilder_AsteroidField();
+            var field = new MyObjectBuilder_AsteroidField();
+            field.Transform = Transform;
+            var ring = Shape as MyAsteroidRingShape;
+            var sphere = Shape as MyAsteroidSphereShape;
+            if (ring != null)
+            {
+                field.ShapeRing = new MyObjectBuilder_AsteroidRing()
+                {
+                    InnerRadius = ring.InnerRadius,
+                    OuterRadius = ring.OuterRadius,
+                    VerticalScaleMult = ring.VerticalScaleMult
+                };
+            }
+            else if (sphere != null)
+            {
+                field.ShapeSphere = new MyObjectBuilder_AsteroidSphere()
+                {
+                    InnerRadius = sphere.InnerRadius,
+                    OuterRadius = sphere.OuterRadius
+                };
+            }
+            field.Layers = m_layers;
+            field.Seed = Seed;
+            return field;
         }
-    }
-
-    public class MyObjectBuilder_AsteroidField : MyObjectBuilder_ModSessionComponent
-    {
-        [ProtoMember]
-        [DefaultValue(null)]
-        public MyAsteroidLayer[] Layers;
-
-        [ProtoMember]
-        public MyPositionAndOrientation Transform;
-
-        [ProtoMember]
-        public int Seed;
-
-        [ProtoMember]
-        public double DensityRegionSize = .1;
-
-        [ProtoMember]
-        [DefaultValue(null)]
-        public MyObjectBuilder_AsteroidSphere ShapeSphere;
-
-        [ProtoMember]
-        [DefaultValue(null)]
-        public MyObjectBuilder_AsteroidRing ShapeRing;
     }
 }
