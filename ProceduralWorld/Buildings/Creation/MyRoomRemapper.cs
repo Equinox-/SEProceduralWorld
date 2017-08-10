@@ -10,6 +10,7 @@ using VRage;
 using VRage.Game;
 using VRageMath;
 using System.Diagnostics;
+using Equinox.Utils.Logging;
 
 namespace Equinox.ProceduralWorld.Buildings.Creation
 {
@@ -26,7 +27,7 @@ namespace Equinox.ProceduralWorld.Buildings.Creation
                 m_remapByType[remap.GetType()] = remap;
             }
 
-            public T Remap<T>() where T : class, IMyGridRemap
+            public T Remap<T>() where T : IMyGridRemap
             {
                 IMyGridRemap val;
                 if (!m_remapByType.TryGetValue(typeof(T), out val))
@@ -48,21 +49,23 @@ namespace Equinox.ProceduralWorld.Buildings.Creation
 
         public bool DebugRoomColors = true;
 
-        public MyRoomRemapper()
+        public readonly IMyLogging Logger;
+        public MyRoomRemapper(IMyLoggingBase root)
         {
-            m_allPre.Add(new MyGridRemap_Names());
-            m_allPre.Add(new MyGridRemap_Coloring());
-            m_allPre.Add(new MyGridRemap_Ownership());
-            m_primary.Add(new MyGridRemap_LocalTransform());
-            m_auxiliary.Add(new MyGridRemap_WorldTransform());
-            DebugRoomColors = Settings.Instance.DebugDrawRoomColors;
+            Logger = root.CreateProxy(GetType().Name);
+            m_allPre.Add(new MyGridRemap_Names(root));
+            m_allPre.Add(new MyGridRemap_Coloring(root));
+            m_allPre.Add(new MyGridRemap_Ownership(root));
+            m_primary.Add(new MyGridRemap_LocalTransform(root));
+            m_auxiliary.Add(new MyGridRemap_WorldTransform(root));
+            DebugRoomColors = Settings.DebugDrawRoomColors;
         }
 
-        public T Remap<T>() where T : class, IMyGridRemap
+        public T Remap<T>() where T : IMyGridRemap
         {
             var result = m_allPre.Remap<T>() ?? m_primary.Remap<T>() ?? m_auxiliary.Remap<T>() ?? m_allPost.Remap<T>();
             if (result == null)
-                SessionCore.Log("Failed to find remapper {0}", typeof(T));
+                throw new KeyNotFoundException($"Failed to find remapper {typeof(T)}");
             return result;
         }
 
@@ -116,8 +119,7 @@ namespace Equinox.ProceduralWorld.Buildings.Creation
             var roomGrid = MyCloneUtilities.CloneFast(room.Part.PrimaryGrid);
             var otherGrids = room.Part.Prefab.CubeGrids.Where(x => x != room.Part.PrimaryGrid).Select(MyCloneUtilities.CloneFast).ToList();
             var allGrids = new List<MyObjectBuilder_CubeGrid>(otherGrids) { roomGrid };
-            if (Settings.Instance.DebugRoomRemapProfiling)
-                SessionCore.Log("Cloned {0} grids in {1}", allGrids.Count, timer.Elapsed);
+            Logger.Debug("Cloned {0} grids in {1}", allGrids.Count, timer.Elapsed);
 
 
             // Remap entity IDs
@@ -133,8 +135,7 @@ namespace Equinox.ProceduralWorld.Buildings.Creation
             }
             else // otherwise, skip
                 dest.PrimaryGrid.EntityId = roomGrid.EntityId;
-            if (Settings.Instance.DebugRoomRemapProfiling)
-                SessionCore.Log("Remapped {0} grid IDs in {1}", allGrids.Count, timer.Elapsed);
+            Logger.Debug("Remapped {0} grid IDs in {1}", allGrids.Count, timer.Elapsed);
 
             // Apply remap operators
             m_allPre.RemapAndReset(allGrids);

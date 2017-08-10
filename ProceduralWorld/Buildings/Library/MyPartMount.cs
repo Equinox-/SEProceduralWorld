@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Equinox.Utils;
 using Equinox.Utils.Cache;
+using Equinox.Utils.Logging;
 using Sandbox.Game.Lights;
 using VRage;
 using VRageMath;
@@ -13,16 +14,17 @@ namespace Equinox.ProceduralWorld.Buildings.Library
     {
         public string MountType { private set; get; }
         public string MountName { private set; get; }
-        public readonly SortedDictionary<string, List<MyPartMountPointBlock>> m_blocks;
-        private readonly MyPartMetadata m_part;
+        private readonly SortedDictionary<string, List<MyPartMountPointBlock>> m_blocks;
+        public readonly MyPartMetadata Owner;
 
         public MyAdjacencyRule AdjacencyRule { private set; get; }
 
         public IEnumerable<MyPartMountPointBlock> Blocks => m_blocks.Values.SelectMany(x => x);
+        private IMyLogging Logging => Owner.Manager;
 
         public MyPartMount(MyPartMetadata part, string mountType, string mountName)
         {
-            m_part = part;
+            Owner = part;
             MountType = mountType;
             MountName = mountName;
             AdjacencyRule = MyAdjacencyRule.Any;
@@ -131,7 +133,7 @@ namespace Equinox.ProceduralWorld.Buildings.Library
             var other = meOther.Item2;
             if (me.m_blocks.Count == 0 || other.m_blocks.Count == 0) return null;
             var adjacencyRule = me.AdjacencyRule > other.AdjacencyRule ? me.AdjacencyRule : other.AdjacencyRule;
-            if (adjacencyRule == MyAdjacencyRule.ExcludeSelfPrefab && me.m_part == other.m_part) return null;
+            if (adjacencyRule == MyAdjacencyRule.ExcludeSelfPrefab && me.Owner == other.Owner) return null;
             if (adjacencyRule == MyAdjacencyRule.ExcludeSelfMount && me == other) return null;
 
             // get transforms where all pieces line up.
@@ -189,7 +191,7 @@ namespace Equinox.ProceduralWorld.Buildings.Library
 
         private MyTuple<MyPartFromPrefab, MatrixI> ComputeSmallestTerminalAttachment()
         {
-            foreach (var part in m_part.Manager.SortedBySize)
+            foreach (var part in Owner.Manager.SortedBySize)
                 if (part.MountPointsOfType(MountType).Count() <= 2)
                     foreach (var mount in part.MountPointsOfType(MountType))
                     {
@@ -198,18 +200,18 @@ namespace Equinox.ProceduralWorld.Buildings.Library
                         foreach (var transform in transforms)
                             return MyTuple.Create(part, transform);
                     }
-            foreach (var part in m_part.Manager.SortedBySize)
+            foreach (var part in Owner.Manager.SortedBySize)
                 foreach (var mount in part.MountPointsOfType(MountType))
                 {
                     var transforms = GetTransform(mount);
                     if (transforms == null) continue;
                     foreach (var transform in transforms)
                     {
-                        SessionCore.Log("Failed to find any terminal module that is attachable to \"{1} {2}\" on {0}.  Resorting to {3}.", m_part.Name, MountType, MountName, part.Name);
+                        Logging.Error("Failed to find any terminal module that is attachable to \"{1} {2}\" on {0}.  Resorting to {3}.", Owner.Name, MountType, MountName, part.Name);
                         return MyTuple.Create(part, transform);
                     }
                 }
-            SessionCore.Log("Failed to find any module that is attachable to \"{1} {2}\" on {0}", m_part.Name, MountType, MountName);
+            Logging.Error("Failed to find any module that is attachable to \"{1} {2}\" on {0}", Owner.Name, MountType, MountName);
             return MyTuple.Create((MyPartFromPrefab)null, default(MatrixI));
         }
     }

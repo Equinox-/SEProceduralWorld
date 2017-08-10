@@ -1,4 +1,5 @@
-﻿using VRage;
+﻿using Equinox.Utils.Logging;
+using VRage;
 using VRage.Game;
 using VRageMath;
 
@@ -6,6 +7,10 @@ namespace Equinox.ProceduralWorld.Buildings.Creation
 {
     public class MyGridRemap_WorldTransform : IMyGridRemap
     {
+        public MyGridRemap_WorldTransform(IMyLoggingBase root) : base(root)
+        {
+        }
+
         public MatrixD WorldTransform { get; set; }
         public Vector3 WorldLinearVelocity { get; set; } = Vector3.Zero;
 
@@ -18,7 +23,7 @@ namespace Equinox.ProceduralWorld.Buildings.Creation
             grid.LinearVelocity += WorldLinearVelocity;
         }
 
-        public void Remap(MyObjectBuilder_CubeGrid grid)
+        public override void Remap(MyObjectBuilder_CubeGrid grid)
         {
             ApplyTo(grid);
 
@@ -30,7 +35,7 @@ namespace Equinox.ProceduralWorld.Buildings.Creation
             }
         }
 
-        public void Reset()
+        public override void Reset()
         {
         }
     }

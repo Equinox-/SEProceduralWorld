@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using Equinox.ProceduralWorld.Utils;
+using Equinox.Utils.Logging;
 using Sandbox.Definitions;
 using Sandbox.ModAPI;
 using VRage.Game;
@@ -28,7 +29,7 @@ namespace Equinox.ProceduralWorld.Buildings.Library
                         var ob = MyAPIGateway.Utilities.SerializeFromXML<MyObjectBuilder_Part>(xml);
                         if (ob != null)
                         {
-                            SessionCore.Log("Loading {0} from cache", Name);
+                            Logger.Info("Loading {0} from cache", Name);
                             Init(ob);
                             success = true;
                         }
@@ -37,7 +38,7 @@ namespace Equinox.ProceduralWorld.Buildings.Library
             }
             catch (Exception e)
             {
-                SessionCore.Log("Malformed cache for {0}.\n{1}", Name, e);
+                Logger.Warning("Malformed cache for {0}.\n{1}", Name, e);
             }
             // Try init from metadata.  If only this actually worked :/ TODO
             //        if (!success && !string.IsNullOrWhiteSpace(prefab.DisplayNameString))
@@ -72,18 +73,18 @@ namespace Equinox.ProceduralWorld.Buildings.Library
             var chash = cob.ComputeHash();
             Initialized = true;
             InitFromGrids(Prefab.CubeGrids[0], Prefab.CubeGrids);
-            SessionCore.Log("Loaded {0} with {1} mount points, {2} reserved spaces, and {3} blocks.  {4} aux grids", Name, MountPoints.Count(), ReservedSpaces.Count(), PrimaryGrid.CubeBlocks.Count, Prefab.CubeGrids.Length - 1);
+            Logger.Info("Loaded {0} with {1} mount points, {2} reserved spaces, and {3} blocks.  {4} aux grids", Name, MountPoints.Count(), ReservedSpaces.Count(), PrimaryGrid.CubeBlocks.Count, Prefab.CubeGrids.Length - 1);
             foreach (var type in MountPointTypes)
-                SessionCore.Log("    ...of type \"{0}\" there are {1}", type, MountPointsOfType(type).Count());
+                Logger.Info("    ...of type \"{0}\" there are {1}", type, MountPointsOfType(type).Count());
 
             var obs = GetObjectBuilder();
             var nhash = obs.ComputeHash();
             if (nhash == chash) return;
-            MyPriorityParallel.StartBackground(() =>
+            MyAPIGateway.Parallel.StartBackground(() =>
             {
                 try
                 {
-                    SessionCore.Log("Invalid hash for cached definition of {0}; writing to local storage.  {1} => {2}", Name, chash, nhash);
+                    Logger.Info("Invalid hash for cached definition of {0}; writing to local storage.  {1} => {2}", Name, chash, nhash);
                     using (var writer = MyAPIGateway.Utilities.WriteFileInLocalStorage(CacheName, typeof(MyPartFromPrefab)))
                     {
                         var xml = MyAPIGateway.Utilities.SerializeToXML(obs);
@@ -92,7 +93,7 @@ namespace Equinox.ProceduralWorld.Buildings.Library
                 }
                 catch (Exception e)
                 {
-                    SessionCore.Log("Write failed.\n{0}", e);
+                    Logger.Error("Write failed.\n{0}", e);
                 }
             });
         }

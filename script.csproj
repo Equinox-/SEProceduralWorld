@@ -164,8 +164,9 @@
     <Compile Include="Utils\Command\MyCommand.cs" />
     <Compile Include="Utils\Command\MyCommandDispatchComponent.cs" />
     <Compile Include="Utils\Command\MyCommandProviderComponent.cs" />
-    <Compile Include="Utils\MyMovingAverage.cs" />
-    <Compile Include="Utils\MyMultiDictionary.cs" />
+    <Compile Include="Utils\Collections\MyMovingAverage.cs" />
+    <Compile Include="Utils\Collections\MyMultiDictionary.cs" />
+    <Compile Include="Utils\Logging\MyLoggingProxy.cs" />
     <Compile Include="Utils\MyVectorSwizzling.cs" />
     <Compile Include="Utils\Network\MyRPCRegistry.cs">
       <AutoGen>True</AutoGen>
@@ -197,18 +198,18 @@
     <Compile Include="ProceduralWorld\Buildings\Library\MyBlockSetInfo.cs" />
     <Compile Include="Utils\Logging\MyLoggerBase.cs" />
     <Compile Include="Utils\Logging\MyVRageLogger.cs" />
-    <Compile Include="Utils\MyBlueprintIndex.cs" />
+    <Compile Include="Utils\Definitions\MyBlueprintIndex.cs" />
     <Compile Include="Utils\MyCloneUtilities.cs" />
-    <Compile Include="Utils\MyDefinitionFilter.cs" />
+    <Compile Include="Utils\Definitions\MyDefinitionFilter.cs" />
     <Compile Include="Utils\Cache\MyLRUCache.cs" />
     <Compile Include="ProceduralWorld\Buildings\Library\MyPartFromPrefab.cs" />
     <Compile Include="ProceduralWorld\Buildings\Library\MyPartManager.cs" />
     <Compile Include="Utils\BlockTransformations.cs" />
-    <Compile Include="ProceduralWorld\Buildings\Exporter\MyDesignTool.cs" />
-    <Compile Include="Utils\MyInventoryUtility.cs" />
-    <Compile Include="Utils\MyOreUtilities.cs" />
-    <Compile Include="Utils\MyPriorityParallel.cs" />
-    <Compile Include="Utils\MyRNGExtensions.cs" />
+    <Compile Include="ProceduralWorld\Buildings\Exporter\MyDesignTools.cs" />
+    <Compile Include="Utils\Definitions\MyInventoryUtility.cs" />
+    <Compile Include="Utils\Definitions\MyOreUtilities.cs" />
+    <Compile Include="Utils\MyParallelUtilities.cs" />
+    <Compile Include="Utils\Random\MyRandomGenExtensions.cs" />
     <Compile Include="Utils\MySerializableTuple.cs" />
     <Compile Include="Utils\MySessionType.cs" />
     <Compile Include="Utils\MyTupleEquality.cs" />
@@ -219,7 +220,7 @@
     <Compile Include="Utils\Network\MyPacket.cs" />
     <Compile Include="Utils\Network\MyRPCComponent.cs" />
     <Compile Include="Utils\Noise\MyOctreeNoise.cs" />
-    <Compile Include="Utils\MyWeightedChoice.cs" />
+    <Compile Include="Utils\Random\MyWeightedChoice.cs" />
     <Compile Include="Utils\Noise\VRageNoiseExtensions.cs" />
     <Compile Include="Utils\Noise\VRage\Combiners\MyAdd.cs" />
     <Compile Include="Utils\Noise\VRage\Combiners\MyBlend.cs" />
@@ -263,7 +264,7 @@
     <Compile Include="Utils\Pool\MyBufferPool.cs" />
     <Compile Include="Utils\Pool\MyExactBufferPool.cs" />
     <Compile Include="Utils\Pool\MyTypedObjectPool.cs" />
-    <Compile Include="Utils\PowerUtilities.cs" />
+    <Compile Include="Utils\Definitions\MyPowerUtilities.cs" />
     <Compile Include="Utils\Session\MyLoggingSessionComponent.cs" />
     <Compile Include="Utils\Session\MyModSessionVRageAdapter.cs" />
     <Compile Include="Utils\Session\MyModSessionComponent.cs" />
@@ -285,7 +286,6 @@
       <DependentUpon>MySerializerGen.tt</DependentUpon>
     </Compile>
     <Compile Include="Utils\Stream\MySerializerRegistry.cs" />
-    <Compile Include="Utils\Vector3I_SurfaceIterator.cs" />
   </ItemGroup>
   <ItemGroup>
     <Analyzer Include="E:\Users\westin\Programming\SpaceEngineers\SEWhitelistDiagnostic\SEWhitelistChecker\SEWhitelistChecker.Vsix\bin\Debug\SEWhitelistChecker.dll" />

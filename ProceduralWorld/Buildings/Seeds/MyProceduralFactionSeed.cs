@@ -141,7 +141,7 @@ namespace Equinox.ProceduralWorld.Buildings.Seeds
         {
             if (m_faction != null) return m_faction;
             if (m_creationFailed) return null;
-            MyPriorityParallel.InvokeOnGameThreadBlocking(() =>
+            MyParallelUtilities.InvokeOnGameThreadBlocking(() =>
             {
                 m_faction = MyAPIGateway.Session.Factions.TryGetFactionByTag(Tag);
                 if (m_faction != null) return;
@@ -164,12 +164,12 @@ namespace Equinox.ProceduralWorld.Buildings.Seeds
                     specializationString.Append(specials[i].Key.Description);
                 }
                 specializationString.Append(".");
-                SessionCore.Log("Making faction Tag={0}, Name={1}", Tag, Name);
+//                SessionCore.Log("Making faction Tag={0}, Name={1}", Tag, Name);
                 MyAPIGateway.Session.Factions.CreateFaction(founderID, Tag, Name, "Your place for " + BestSpeciality.Description + ".  " + specializationString, "");
                 m_faction = MyAPIGateway.Session.Factions.TryGetFactionByTag(Tag);
                 if (m_faction == null)
                 {
-                    SessionCore.Log("Failed to create faction Tag={0}, Name={1}", Tag, Name);
+//                    SessionCore.Log("Failed to create faction Tag={0}, Name={1}", Tag, Name);
                     m_creationFailed = true;
                 }
             });

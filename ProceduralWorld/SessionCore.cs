@@ -56,14 +56,11 @@ namespace Equinox.ProceduralWorld
             return res;
         }
 
-        public static SessionCore Instance { get; private set; }
-
         public MyPartManager PartManager => Manager.GetDependencyProvider<MyPartManager>();
         public Settings Settings { get; }
         public SessionCore()
         {
             Settings = new Settings();
-            Instance = this;
         }
 
         private bool m_init = false;
@@ -94,7 +91,7 @@ namespace Equinox.ProceduralWorld
                             }
                             catch (Exception e)
                             {
-                                Log("Failed to parse config:\n{0}", e.ToString());
+                                Logger.Error("Failed to parse config:\n{0}", e.ToString());
                             }
                         if (!success)
                             Manager.AppendConfiguration(DefaultConfiguration());
@@ -102,7 +99,7 @@ namespace Equinox.ProceduralWorld
                 }
                 catch (Exception e)
                 {
-                    SessionCore.Log("Failed to start bootstrapper.\n{0}", e);
+                    Logger.Error("Failed to start bootstrapper.\n{0}", e);
                 }
             }
             base.UpdateBeforeSimulation();
@@ -117,29 +114,14 @@ namespace Equinox.ProceduralWorld
                 }
                 catch (Exception e)
                 {
-                    SessionCore.Log("Failed to write default configuration.\n{0}", e);
+                    Logger.Error("Failed to write default configuration.\n{0}", e);
                 }
                 m_init = true;
             }
         }
 
-        public static MyLoggerBase Logger => Instance?.Manager.GetDependencyProvider<MyLoggerBase>();
-
-        public static void Log(string format, params object[] args)
-        {
-            var logger = Instance?.Manager.GetDependencyProvider<MyLoggerBase>();
-            if (logger != null)
-                logger.Info(format, args);
-            else
-                MyLog.Default?.Log(MyLogSeverity.Info, format, args);
-        }
-
-        public static void LogBoth(string fmt, params object[] args)
-        {
-            Log(fmt, args);
-            MyAPIGateway.Utilities.ShowMessage("Exporter", string.Format(fmt, args));
-        }
-
+        private IMyLoggingBase Logger => Manager.FallbackLogger;
+        
         public override void Draw()
         {
             MyAPIGateway.Entities?.GetEntities(null, (x) =>

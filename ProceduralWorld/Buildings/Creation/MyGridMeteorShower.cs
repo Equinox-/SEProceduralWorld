@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Equinox.Utils;
+using Equinox.Utils.Logging;
 using Sandbox.Definitions;
 using VRage.Game;
 using VRage.Game.ModAPI;
@@ -19,8 +20,10 @@ namespace Equinox.ProceduralWorld.Buildings.Creation
             public double Mass;
         }
         private readonly List<MyMeteor> m_impactDirectionRadius = new List<MyMeteor>();
-        public MyGridMeteorShower(params MyMeteor[] impacts)
+        public readonly IMyLogging Logger;
+        public MyGridMeteorShower(IMyLoggingBase rootLogger, params MyMeteor[] impacts)
         {
+            Logger = rootLogger.CreateProxy(GetType().Name);
             foreach (var f in impacts)
                 m_impactDirectionRadius.Add(f);
         }
@@ -97,7 +100,7 @@ namespace Equinox.ProceduralWorld.Buildings.Creation
                         }
                     }
                 // No idea what shape key should be.
-                SessionCore.Log("Apply damage to {0} blocks", damageTotals.Count);
+                Logger.Debug("Apply damage to {0} blocks", damageTotals.Count);
                 var hitInfo = new MyHitInfo() { Normal = direction, Position = impactSphere.Center, Velocity = impact.Velocity, ShapeKey = 0 };
                 foreach (var kv in damageTotals)
                     kv.Key.DoDamage((float)kv.Value, MyDamageType.Explosion, true, hitInfo);

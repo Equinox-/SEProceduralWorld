@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Equinox.Utils;
+using Equinox.Utils.Logging;
 using Sandbox.Definitions;
 using VRage;
 using VRage.Game;
@@ -12,9 +13,9 @@ namespace Equinox.ProceduralWorld.Buildings.Library
 {
     public partial class MyPartMetadata
     {
-        public const string MOUNT_PREFIX = "Dummy";
-        public const string RESERVED_SPACE_PREFIX = "ReservedSpace";
-        public const string MULTI_USE_SENTINEL = "&&";
+        public const string MountPrefix = "Dummy";
+        public const string ReservedSpacePrefix = "ReservedSpace";
+        public const string MultiUseSentinel = "&&";
 
         private readonly Dictionary<string, Dictionary<string, MyPartMount>> m_mountPoints;
         private readonly Dictionary<Vector3I, MyObjectBuilder_CubeBlock> m_blocks;
@@ -25,6 +26,8 @@ namespace Equinox.ProceduralWorld.Buildings.Library
         public BoundingBox BoundingBox { get; private set; }
         public BoundingBox ReservedSpace { get; private set; }
         public MyPartManager Manager { get; }
+
+        protected IMyLogging Logger => Manager;
 
         public MyPartMetadata(MyPartManager manager)
         {
@@ -70,7 +73,7 @@ namespace Equinox.ProceduralWorld.Buildings.Library
                     partsOfType = m_mountPoints[mp.Type] = new Dictionary<string, MyPartMount>();
 
                 partsOfType[mp.Name] = block;
-                foreach (var kv in block.m_blocks.SelectMany(x => x.Value))
+                foreach (var kv in block.Blocks)
                     m_mountPointBlocks[kv.AnchorLocation] = kv;
             }
 
@@ -87,9 +90,9 @@ namespace Equinox.ProceduralWorld.Buildings.Library
 
             BlockSetInfo.UpdateCache();
 
-            SessionCore.Log("Loaded {0} lazily with {1} mount points, {2} reserved spaces, and {3} occupied cubes.", Name, MountPoints.Count(), m_reservedSpaces.Count, m_blocks.Count);
+            Logger.Info("Loaded {0} lazily with {1} mount points, {2} reserved spaces, and {3} occupied cubes.", Name, MountPoints.Count(), m_reservedSpaces.Count, m_blocks.Count);
             foreach (var type in MountPointTypes)
-                SessionCore.Log("    ...of type \"{0}\" there are {1}", type, MountPointsOfType(type).Count());
+                Logger.Info("    ...of type \"{0}\" there are {1}", type, MountPointsOfType(type).Count());
         }
 
         public MyObjectBuilder_Part GetObjectBuilder()
@@ -207,9 +210,10 @@ namespace Equinox.ProceduralWorld.Buildings.Library
             foreach (var block in primaryGrid.CubeBlocks)
                 foreach (var name in block.ConfigNames())
                 {
-                    if (!name.StartsWithICase(RESERVED_SPACE_PREFIX)) continue;
-                    var args = name.Substring(RESERVED_SPACE_PREFIX.Length).Trim().Split(' ').Select(x => x.Trim()).Where(x => x.Length > 0).ToArray();
-                    var box = MyPartDummyUtils.ParseReservedSpace(MyDefinitionManager.Static.GetCubeSize(primaryGrid.GridSizeEnum), block, args, SessionCore.Log);
+                    if (!name.StartsWithICase(ReservedSpacePrefix)) continue;
+                    var args = name.Substring(ReservedSpacePrefix.Length).Trim().Split(' ').Select(x => x.Trim()).Where(x => x.Length > 0).ToArray();
+                    var box = MyPartDummyUtils.ParseReservedSpace(MyDefinitionManager.Static.GetCubeSize(primaryGrid.GridSizeEnum), block, args, 
+                        Logger.Warning);
                     box.Box.Max += (Vector3I)block.Min;
                     box.Box.Min += (Vector3I)block.Min;
                     if (m_reservedSpaces.Count == 0)
@@ -227,8 +231,8 @@ namespace Equinox.ProceduralWorld.Buildings.Library
             {
                 foreach (var name in block.ConfigNames())
                 {
-                    if (!name.StartsWithICase(MOUNT_PREFIX)) continue;
-                    var parts = MyPartDummyUtils.ConfigArguments(name.Substring(MOUNT_PREFIX.Length)).ToArray();
+                    if (!name.StartsWithICase(MountPrefix)) continue;
+                    var parts = MyPartDummyUtils.ConfigArguments(name.Substring(MountPrefix.Length)).ToArray();
                     if (parts.Length < 3) continue;
                     var spec = parts[0].Split(':');
                     if (spec.Length != 2) continue;
@@ -256,7 +260,7 @@ namespace Equinox.ProceduralWorld.Buildings.Library
 
             m_mountPointBlocks.Clear();
             foreach (var mount in MountPoints)
-                foreach (var block in mount.m_blocks.Values.SelectMany(x => x))
+                foreach (var block in mount.Blocks)
                     m_mountPointBlocks[block.AnchorLocation] = block;
         }
 
@@ -288,7 +292,7 @@ namespace Equinox.ProceduralWorld.Buildings.Library
                     if (def == null)
                     {
                         if (m_erroredDefinitionIds.Add(blockID))
-                            SessionCore.Log("Failed to find definition for block {0}", blockID);
+                            Logger.Error("Failed to find definition for block {0}", blockID);
                         continue;
                     }
 
@@ -297,10 +301,10 @@ namespace Equinox.ProceduralWorld.Buildings.Library
                     foreach (var c in def.Components)
                         info.ComponentCost.AddValue(c.Definition, c.Count);
 
-                    var powerUsage = PowerUtilities.MaxPowerConsumption(def);
+                    var powerUsage = MyPowerUtilities.MaxPowerConsumption(def);
                     // if it is off, ignore it.
-                    if (Math.Abs(powerUsage.Item2) > 1e-8 && ((block as MyObjectBuilder_FunctionalBlock)?.Enabled ?? true))
-                        info.PowerConsumptionByGroup.AddValue(powerUsage.Item1, powerUsage.Item2);
+                    if (Math.Abs(powerUsage.Consumption) > 1e-8 && ((block as MyObjectBuilder_FunctionalBlock)?.Enabled ?? true))
+                        info.PowerConsumptionByGroup.AddValue(powerUsage.ResourceGroup, powerUsage.Consumption);
                 }
         }
         #endregion

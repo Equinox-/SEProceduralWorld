@@ -3,6 +3,7 @@ using System.Linq;
 using Equinox.ProceduralWorld.Buildings.Storage;
 using Equinox.ProceduralWorld.Manager;
 using Equinox.Utils;
+using Equinox.Utils.Logging;
 using Sandbox.ModAPI;
 using VRage.Game;
 using VRage.Game.Components;
@@ -31,8 +32,10 @@ namespace Equinox.ProceduralWorld.Buildings.Game
             }
         }
 
+        public readonly IMyLogging Logger;
         public MyProceduralGridComponent(MyProceduralConstruction cc, IEnumerable<IMyCubeGrid> gridsInGroup)
         {
+            Logger = cc.Logger.Root().CreateProxy(GetType().Name);
             Construction = cc;
             m_grids = new List<IMyCubeGrid>(gridsInGroup);
             UpdateReadyState();
@@ -95,7 +98,7 @@ namespace Equinox.ProceduralWorld.Buildings.Game
             IsPersistent = true;
             foreach (var g in m_grids)
             {
-                SessionCore.Log("Mark {0} for saving.  Source: {1}", g.CustomName, source);
+                Logger.Info("Mark {0} for saving.  Source: {1}", g.CustomName, source);
                 g.Save = true;
                 g.OnGridChanged -= OnGridChanged;
                 g.OnBlockAdded -= OnBlockAdded;
@@ -180,23 +183,23 @@ namespace Equinox.ProceduralWorld.Buildings.Game
         public void DebugDraw(bool force = false)
         {
             force |= ForceDebugDraw;
-            if (!force && !Settings.Instance.DebugDraw) return;
+            if (!force && !Settings.DebugDraw) return;
             var transform = Grid.WorldMatrix;
             var gridSize = Grid.GridSize;
             foreach (var room in Construction.Rooms)
             {
-                if (force || Settings.Instance.DebugDrawBlocks)
+                if (force || Settings.DebugDrawBlocks)
                 {
                     var localAABB = new BoundingBoxD((room.BoundingBox.Min - 0.5f) * gridSize, (room.BoundingBox.Max + 0.5f) * gridSize);
                     MySimpleObjectDraw.DrawTransparentBox(ref transform, ref localAABB, ref DebugColorBlocksTotal, MySimpleObjectRasterizer.Wireframe, 1, .02f);
                 }
-                if (force || Settings.Instance.DebugDrawReservedTotal && room.Part.ReservedSpaces.Any())
+                if (force || Settings.DebugDrawReservedTotal && room.Part.ReservedSpaces.Any())
                 {
                     var temp = MyUtilities.TransformBoundingBox(room.Part.ReservedSpace, room.Transform);
                     var tmpAABB = new BoundingBoxD((temp.Min - 0.5f) * gridSize, (temp.Max + 0.5f) * gridSize);
                     MySimpleObjectDraw.DrawTransparentBox(ref transform, ref tmpAABB, ref DebugColorReservedSpaceTotal, MySimpleObjectRasterizer.Wireframe, 1, .02f);
                 }
-                if (force || Settings.Instance.DebugDrawReserved)
+                if (force || Settings.DebugDrawReserved)
                     foreach (var rs in room.Part.ReservedSpaces)
                     {
                         var temp = MyUtilities.TransformBoundingBox(rs.Box, room.Transform);
@@ -214,7 +217,7 @@ namespace Equinox.ProceduralWorld.Buildings.Game
                         MySimpleObjectDraw.DrawTransparentBox(ref transform, ref tmpAABB, ref color, MySimpleObjectRasterizer.Wireframe, 1, .005f);
                     }
                 // ReSharper disable once InvertIf
-                if (force || Settings.Instance.DebugDrawMountPoints)
+                if (force || Settings.DebugDrawMountPoints)
                     foreach (var mount in room.MountPoints)
                     {
                         foreach (var block in mount.MountPoint.Blocks)

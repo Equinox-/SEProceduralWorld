@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using Equinox.Utils.Logging;
 using Equinox.Utils.Noise;
 using Equinox.Utils.Noise.VRage;
 using Sandbox.Definitions;
@@ -24,7 +25,7 @@ namespace Equinox.ProceduralWorld.Buildings.Creation
             }
         }
 
-        public MyGridRemap_LocalDamage()
+        public MyGridRemap_LocalDamage(IMyLoggingBase root) : base(root)
         {
             Seed = 0;
             DamageOffset = 0.5;
@@ -35,7 +36,7 @@ namespace Equinox.ProceduralWorld.Buildings.Creation
         /// </summary>
         public double DamageOffset { get; set; }
 
-        public void Remap(MyObjectBuilder_CubeGrid grid)
+        public override void Remap(MyObjectBuilder_CubeGrid grid)
         {
             if (m_localDamage == null) return;
             var removed = new List<Vector3I>();
@@ -56,7 +57,7 @@ namespace Equinox.ProceduralWorld.Buildings.Creation
                 grid.CubeBlocks.RemoveRange(grid.CubeBlocks.Count - removed.Count, removed.Count);
         }
 
-        public void Reset()
+        public override void Reset()
         {
         }
     }

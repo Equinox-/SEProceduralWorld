@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using Equinox.Utils;
+using Equinox.Utils.Logging;
 using VRage.Game;
 using VRageMath;
 
@@ -9,7 +10,11 @@ namespace Equinox.ProceduralWorld.Buildings.Creation
     {
         public MatrixI LocalTransform { get; set; }
 
-        public void Remap(MyObjectBuilder_CubeGrid grid)
+        public MyGridRemap_LocalTransform(IMyLoggingBase root) : base(root)
+        {
+        }
+
+        public override void Remap(MyObjectBuilder_CubeGrid grid)
         {
             var transformCopy = LocalTransform;
 
@@ -58,7 +63,7 @@ namespace Equinox.ProceduralWorld.Buildings.Creation
                 }
         }
 
-        public void Reset()
+        public override void Reset()
         {
         }
     }

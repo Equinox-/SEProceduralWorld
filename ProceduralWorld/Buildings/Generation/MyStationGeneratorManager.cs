@@ -36,10 +36,10 @@ namespace Equinox.ProceduralWorld.Buildings.Generation
                 var watch = new Stopwatch();
                 watch.Reset();
                 watch.Start();
-                if (Settings.Instance.DebugGenerationResults)
+                if (Settings.DebugGenerationResults)
                     Log(MyLogSeverity.Debug, "Seeded construction\n{0}", seed.ToString());
                 if (construction == null)
-                    construction = new MyProceduralConstruction(seed);
+                    construction = new MyProceduralConstruction(RootLogger, seed);
                 // Seed the generator
                 if (!construction.Rooms.Any())
                 {
@@ -48,7 +48,7 @@ namespace Equinox.ProceduralWorld.Buildings.Generation
                     var room = new MyProceduralRoom();
                     room.Init(new MatrixI(Base6Directions.Direction.Forward, Base6Directions.Direction.Up), part);
                     construction.AddRoom(room);
-                    if (Settings.Instance.DebugGenerationStages || Settings.Instance.DebugGenerationResults)
+                    if (Settings.DebugGenerationStages || Settings.DebugGenerationResults)
                         this.Debug("Added {0} (number {1}) at {2}.", room.Part.Name, construction.Rooms.Count(), room.BoundingBox.Center);
                 }
                 var scorePrev = construction.ComputeErrorAgainstSeed();
@@ -81,7 +81,7 @@ namespace Equinox.ProceduralWorld.Buildings.Generation
                 {
                     var remainingMounts = construction.Rooms.SelectMany(x => x.MountPoints).Count(y => y.AttachedTo == null);
                     var triesToClose = remainingMounts * 2 + 2;
-                    if (Settings.Instance.DebugGenerationResults)
+                    if (Settings.DebugGenerationResults)
                         Log(MyLogSeverity.Debug, "There are {0} remaining mounts.  Giving it {1} tries to close itself.", remainingMounts, triesToClose);
                     var outOfOptions = false;
                     for (var i = 0; i < triesToClose; i++)
@@ -93,7 +93,7 @@ namespace Equinox.ProceduralWorld.Buildings.Generation
                     remainingMounts = construction.Rooms.SelectMany(x => x.MountPoints).Count(y => y.AttachedTo == null);
                     if (remainingMounts > 0)
                     {
-                        if (Settings.Instance.DebugGenerationResults)
+                        if (Settings.DebugGenerationResults)
                             Log(MyLogSeverity.Debug, "Now there are {0} remaining mounts.  Trying without hints. Reason: {1}", remainingMounts, outOfOptions ? "Out of options" : "Out of tries");
                         triesToClose = remainingMounts * 2 + 2;
                         for (var i = 0; i < triesToClose; i++)
@@ -104,13 +104,13 @@ namespace Equinox.ProceduralWorld.Buildings.Generation
                             }
                     }
                     remainingMounts = construction.Rooms.SelectMany(x => x.MountPoints).Count(y => y.AttachedTo == null);
-                    if (Settings.Instance.DebugGenerationResults)
+                    if (Settings.DebugGenerationResults)
                         if (remainingMounts > 0)
                             Log(MyLogSeverity.Debug, "Now there are {0} remaining mounts.  Reason: {1}", remainingMounts, outOfOptions ? "Out of options" : "Out of tries");
                         else
                             Log(MyLogSeverity.Debug, "Sucessfully closed all mount points");
                 }
-                if (Settings.Instance.DebugGenerationResultsError)
+                if (Settings.DebugGenerationResultsError)
                 {
                     using (this.IndentUsing())
                         construction.ComputeErrorAgainstSeed(this.Debug);

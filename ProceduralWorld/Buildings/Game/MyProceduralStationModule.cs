@@ -15,10 +15,8 @@ using VRageMath;
 
 namespace Equinox.ProceduralWorld.Buildings.Game
 {
-    public partial class MyProceduralStationModule : MyProceduralModule
+    public sealed partial class MyProceduralStationModule : MyProceduralModule
     {
-        private double m_stationMinSpacing = 100e3;
-        private double m_stationMaxSpacing = 1000e3;
         public MyOctreeNoise StationNoise { get; private set; }
 
         public MyProceduralFactions Factions { get; private set; }
@@ -27,14 +25,14 @@ namespace Equinox.ProceduralWorld.Buildings.Game
         private void RebuildNoiseModules()
         {
             var seed = MyAPIGateway.Session.SessionSettings.ProceduralSeed;
-            StationNoise = new MyOctreeNoise(seed * 2383188091L, m_stationMaxSpacing, m_stationMinSpacing, null);
+            StationNoise = new MyOctreeNoise(seed * 2383188091L, ConfigReference.StationMaxSpacing, ConfigReference.StationMinSpacing, null);
         }
 
         public MyProceduralStationModule()
         {
-            RebuildNoiseModules();
             DependsOn<MyProceduralFactions>(x => { Factions = x; });
             DependsOn<MyStationGeneratorManager>(x => { Generator = x; });
+            LoadConfiguration(new MyObjectBuilder_ProceduralStation());
         }
 
         private readonly Dictionary<Vector4I, MyLoadingConstruction> m_instances = new Dictionary<Vector4I, MyLoadingConstruction>(Vector4I.Comparer);
@@ -87,6 +85,8 @@ namespace Equinox.ProceduralWorld.Buildings.Game
                 Log(MyLogSeverity.Debug, "Procedural station module hide {3} station entities, removed {0} station entities, {1} object builders, and {2} recipes", removedEntities, removedOBs, removedRecipes, hiddenEntities);
         }
 
+        public MyObjectBuilder_ProceduralStation ConfigReference { get; private set; }
+
         public override void LoadConfiguration(MyObjectBuilder_ModSessionComponent configBase)
         {
             var config = configBase as MyObjectBuilder_ProceduralStation;
@@ -96,18 +96,12 @@ namespace Equinox.ProceduralWorld.Buildings.Game
                     configBase.GetType(), GetType());
                 return;
             }
-            m_stationMinSpacing = config.StationMinSpacing;
-            m_stationMaxSpacing = config.StationMaxSpacing;
             RebuildNoiseModules();
         }
 
         public override MyObjectBuilder_ModSessionComponent SaveConfiguration()
         {
-            return new MyObjectBuilder_ProceduralStation()
-            {
-                StationMinSpacing = m_stationMinSpacing,
-                StationMaxSpacing = m_stationMaxSpacing
-            };
+            return (MyObjectBuilder_ModSessionComponent) ConfigReference.Clone();
         }
     }
 

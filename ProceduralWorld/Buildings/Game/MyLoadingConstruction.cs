@@ -6,6 +6,8 @@ using Equinox.ProceduralWorld.Buildings.Seeds;
 using Equinox.ProceduralWorld.Buildings.Storage;
 using Equinox.ProceduralWorld.Manager;
 using Equinox.ProceduralWorld.Utils;
+using Equinox.Utils.Logging;
+using Sandbox.ModAPI;
 using VRage;
 using VRage.Game.ModAPI;
 using VRageMath;
@@ -62,13 +64,13 @@ namespace Equinox.ProceduralWorld.Buildings.Game
                     var station = x as MyLoadingConstruction;
                     if (station == null) return;
                     station.TimeRemoved = DateTime.UtcNow;
-                    SessionCore.Log("Marking entity for removal!");
+                    Module.Debug("Marking station entity for removal!");
                 };
             }
 
             private bool Stage_Generate()
             {
-                SessionCore.Log("Generation stage for {0}", m_cell);
+                Module.Debug("Generation stage for {0}", m_cell);
                 m_construction = null;
 //                var success = MyGenerator.GenerateFully(Seed, ref m_construction);
 //                if (success && !IsMarkedForRemoval)
@@ -81,19 +83,19 @@ namespace Equinox.ProceduralWorld.Buildings.Game
 
             private bool Stage_Build()
             {
-                SessionCore.Log("Build stage for {0}", m_cell);
+                Module.Debug("Build stage for {0}", m_cell);
                 m_grids = MyGridCreator.RemapAndBuild(m_construction);
-                if (m_grids == null) SessionCore.Log("Build stage failed for {0}", m_cell);
+                if (m_grids == null) Module.Debug("Build stage failed for {0}", m_cell);
                 if (m_grids != null && !IsMarkedForRemoval) return true;
                 m_component = null;
                 return false;
             }
             private void Stage_SpawnGrid()
             {
-                SessionCore.Log("Spawn stage for {0}", m_cell);
+                Module.Debug("Spawn stage for {0}", m_cell);
                 m_component = m_grids.SpawnAsync();
                 if (m_component == null)
-                    SessionCore.Log("Spawn stage failed for {0}", m_cell);
+                    Module.Debug("Spawn stage failed for {0}", m_cell);
 
                 using (m_creationQueueSemaphore.AcquireExclusiveUsing())
                     m_creationQueued = false;
@@ -113,28 +115,28 @@ namespace Equinox.ProceduralWorld.Buildings.Game
                 if (IsMarkedForRemoval) return;
                 if (m_construction == null)
                 {
-                    MyPriorityParallel.StartBackground(() =>
+                    MyAPIGateway.Parallel.StartBackground(() =>
                     {
                         if (!Stage_Generate()) return;
                         if (!Stage_Build()) return;
-                        MyPriorityParallel.InvokeOnGameThread(Stage_SpawnGrid);
+                        MyAPIGateway.Utilities.InvokeOnGameThread(Stage_SpawnGrid);
                     });
                 }
                 else if (m_grids == null)
                 {
-                    MyPriorityParallel.StartBackground(() =>
+                    MyAPIGateway.Parallel.StartBackground(() =>
                     {
                         if (!Stage_Build()) return;
-                        MyPriorityParallel.InvokeOnGameThread(Stage_SpawnGrid);
+                        MyAPIGateway.Utilities.InvokeOnGameThread(Stage_SpawnGrid);
                     });
                 }
                 else if (m_component == null)
                 {
-                    MyPriorityParallel.InvokeOnGameThread(Stage_SpawnGrid);
+                    MyAPIGateway.Utilities.InvokeOnGameThread(Stage_SpawnGrid);
                 }
                 else if (m_component.IsConcealed)
                 {
-                    MyPriorityParallel.InvokeOnGameThread(() =>
+                    MyAPIGateway.Utilities.InvokeOnGameThread(() =>
                     {
                         m_component.IsConcealed = false;
                         using (m_creationQueueSemaphore.AcquireExclusiveUsing())
@@ -154,9 +156,9 @@ namespace Equinox.ProceduralWorld.Buildings.Game
                     if (m_creationQueued)
                         return false;
                 var dt = DateTime.UtcNow - TimeRemoved;
-                if (dt > Settings.Instance.StationConcealPersistence && m_component != null && !m_component.IsConcealed)
+                if (dt > Module.ConfigReference.StationConcealPersistence && m_component != null && !m_component.IsConcealed)
                     m_component.IsConcealed = true;
-                if (dt > Settings.Instance.StationEntityPersistence && m_component != null)
+                if (dt > Module.ConfigReference.StationEntityPersistence && m_component != null)
                 {
                     removedEntities++;
                     var grids = new List<IMyCubeGrid>(m_component.GridsInGroup);
@@ -164,18 +166,18 @@ namespace Equinox.ProceduralWorld.Buildings.Game
                         grid.Close();
                     m_component = null;
                 }
-                if (dt > Settings.Instance.StationObjectBuilderPersistence && m_grids != null)
+                if (dt > Module.ConfigReference.StationObjectBuilderPersistence && m_grids != null)
                 {
                     removedOB++;
                     m_grids = null;
                 }
                 // ReSharper disable once InvertIf
-                if (dt > Settings.Instance.StationRecipePersistence && m_construction != null)
+                if (dt > Module.ConfigReference.StationRecipePersistence && m_construction != null)
                 {
                     removedRecipe++;
                     m_construction = null;
                 }
-                return dt > Settings.Instance.StationRecipePersistence;
+                return dt > Module.ConfigReference.StationRecipePersistence;
             }
         }
     }

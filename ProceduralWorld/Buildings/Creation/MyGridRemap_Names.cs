@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using Equinox.Utils;
+using Equinox.Utils.Logging;
 using Sandbox.Common.ObjectBuilders;
 using VRage.Game;
 
@@ -8,6 +9,10 @@ namespace Equinox.ProceduralWorld.Buildings.Creation
 {
     public class MyGridRemap_Names : IMyGridRemap
     {
+        public MyGridRemap_Names(IMyLoggingBase root) : base(root)
+        {
+        }
+
         public enum RemapType
         {
             All = 0,
@@ -30,7 +35,7 @@ namespace Equinox.ProceduralWorld.Buildings.Creation
 
             public int GetHashCode(RemapType obj)
             {
-                return (int) obj;
+                return (int)obj;
             }
         }
 
@@ -75,7 +80,7 @@ namespace Equinox.ProceduralWorld.Buildings.Creation
             return current;
         }
 
-        public void Remap(MyObjectBuilder_CubeGrid grid)
+        public override void Remap(MyObjectBuilder_CubeGrid grid)
         {
             if (grid.DisplayName != null)
                 Remap(RemapType.Grids, ref grid.DisplayName);
@@ -118,7 +123,7 @@ namespace Equinox.ProceduralWorld.Buildings.Creation
         }
 
         // Name transform is deterministic, so we can skip storing any cache.
-        public void Reset()
+        public override void Reset()
         {
         }
     }

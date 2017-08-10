@@ -33,7 +33,6 @@ namespace Equinox.ProceduralWorld.Buildings.Library
         }
         public static MyReservedSpace ParseReservedSpace(float gridSize, MyObjectBuilder_CubeBlock src, string[] args, MyUtilities.LoggingCallback log = null)
         {
-            if (log == null) log = SessionCore.Log;
             var optional = false;
             var shared = false;
             var nSet = false;
@@ -50,7 +49,7 @@ namespace Equinox.ProceduralWorld.Buildings.Library
                         nExt = tmp;
                     }
                     else
-                        log("Failed to decode negative extent argument \"{0}\"", arg);
+                        log?.Invoke("Failed to decode negative extent argument \"{0}\"", arg);
                 }
                 else if (arg.StartsWithICase("PE:"))
                 {
@@ -61,14 +60,14 @@ namespace Equinox.ProceduralWorld.Buildings.Library
                         pExt = tmp;
                     }
                     else
-                        log("Failed to decode positive extent argument \"{0}\"", arg);
+                        log?.Invoke("Failed to decode positive extent argument \"{0}\"", arg);
                 }
                 else if (arg.Equals("share", StringComparison.CurrentCultureIgnoreCase) || arg.Equals("shared", StringComparison.CurrentCultureIgnoreCase))
                     shared = true;
                 else if (arg.Equals("opt", StringComparison.CurrentCultureIgnoreCase) || arg.Equals("optional", StringComparison.CurrentCultureIgnoreCase) || arg.Equals("hint", StringComparison.CurrentCultureIgnoreCase))
                     optional = true;
                 else
-                    log("Failed to decode argument \"{0}\"", arg);
+                    log?.Invoke("Failed to decode argument \"{0}\"", arg);
             if (!nSet || !pSet)
             {
                 var sense = src as MyObjectBuilder_SensorBlock;
@@ -80,7 +79,7 @@ namespace Equinox.ProceduralWorld.Buildings.Library
                         pExt = (Vector3)sense.FieldMax / gridSize;
                 }
                 else
-                    log("Isn't a sensor block and isn't fully specified");
+                    log?.Invoke("Isn't a sensor block and isn't fully specified");
             }
             var srcTra = new MatrixI(src.BlockOrientation).GetFloatMatrix();
             nExt = Vector3.TransformNormal(nExt, srcTra);
@@ -97,7 +96,7 @@ namespace Equinox.ProceduralWorld.Buildings.Library
         {
             var nA = block.Name;
             var nB = (block as MyObjectBuilder_TerminalBlock)?.CustomName;
-            return (new[] { nA, nB }).Where(x => x != null).SelectMany(x => x.Split(new string[] { MyPartFromPrefab.MULTI_USE_SENTINEL }, StringSplitOptions.None)).Select(x => x.Trim()).Where(x => x.Length > 0);
+            return (new[] { nA, nB }).Where(x => x != null).SelectMany(x => x.Split(new string[] { MyPartMetadata.MultiUseSentinel }, StringSplitOptions.None)).Select(x => x.Trim()).Where(x => x.Length > 0);
         }
     }
 }

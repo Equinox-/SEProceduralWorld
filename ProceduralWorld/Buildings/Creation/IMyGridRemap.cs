@@ -1,13 +1,22 @@
 ﻿using System.Collections.Generic;
 using System.Diagnostics;
+using BuffPanel.Logging;
+using Equinox.Utils.Logging;
 using VRage.Game;
 
 namespace Equinox.ProceduralWorld.Buildings.Creation
 {
-    public interface IMyGridRemap
+    public abstract class IMyGridRemap
     {
-        void Remap(MyObjectBuilder_CubeGrid grid);
-        void Reset();
+        public readonly IMyLogging Logger;
+
+        protected IMyGridRemap(IMyLoggingBase root)
+        {
+            Logger = root.CreateProxy(GetType().Name);
+        }
+
+        public abstract void Remap(MyObjectBuilder_CubeGrid grid);
+        public abstract void Reset();
     }
 
     public static class MyGridRemapExtensions
@@ -23,8 +32,7 @@ namespace Equinox.ProceduralWorld.Buildings.Creation
                 count++;
             }
             remap.Reset();
-            if (Settings.Instance.DebugRoomRemapProfiling)
-                SessionCore.Log("Remap module {0} ran on {1} grids in {2}", remap.GetType().Name, count, watch.Elapsed);
+            remap.Logger.Debug("Ran on {0} grids in {1}", count, watch.Elapsed);
         }
     }
 }

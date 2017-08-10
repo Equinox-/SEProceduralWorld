@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Equinox.Utils;
+using Equinox.Utils.Logging;
 using VRage.Game;
 using VRageMath;
 
@@ -22,6 +23,8 @@ namespace Equinox.ProceduralWorld.Buildings.Library
 
         // This means _nothing_.  Don't use it except when computing the adjaceny rule of a mount point.
         internal MyAdjacencyRule AdjacencyRule { private set; get; }
+
+        private IMyLogging Logging => Owner.Owner.Manager;
 
         public MyPartMountPointBlock(MyPartMount owner)
         {
@@ -46,7 +49,7 @@ namespace Equinox.ProceduralWorld.Buildings.Library
                     if (Enum.TryParse(arg.Substring(MyPartDummyUtils.ArgumentMountDirection.Length), out tmpMountDirection))
                         MountDirection6 = blockOrientation.GetDirection(tmpMountDirection);
                     else
-                        SessionCore.Log("Failed to parse mount point direction argument \"{0}\"", arg);
+                        Logging.Error("Failed to parse mount point direction argument \"{0}\"", arg);
                 }
                 else if (arg.StartsWithICase(MyPartDummyUtils.ArgumentBiasDirection))
                 {
@@ -54,7 +57,7 @@ namespace Equinox.ProceduralWorld.Buildings.Library
                     if (Enum.TryParse(arg.Substring(MyPartDummyUtils.ArgumentBiasDirection.Length), out tmpBiasDirection))
                         BiasDirection6 = blockOrientation.GetDirection(tmpBiasDirection);
                     else
-                        SessionCore.Log("Failed to parse bias direction argument \"{0}\"", arg);
+                        Logging.Error("Failed to parse bias direction argument \"{0}\"", arg);
                 }
                 else if (arg.StartsWithICase(MyPartDummyUtils.ArgumentSecondBiasDirection))
                 {
@@ -62,7 +65,7 @@ namespace Equinox.ProceduralWorld.Buildings.Library
                     if (Enum.TryParse(arg.Substring(MyPartDummyUtils.ArgumentSecondBiasDirection.Length), out tmpBiasDirection))
                         SecondBiasDirection6 = blockOrientation.GetDirection(tmpBiasDirection);
                     else
-                        SessionCore.Log("Failed to parse second bias direction argument \"{0}\"", arg);
+                        Logging.Error("Failed to parse second bias direction argument \"{0}\"", arg);
                 }
                 else if (arg.StartsWithICase(MyPartDummyUtils.ArgumentAnchorPoint))
                 {
@@ -72,7 +75,7 @@ namespace Equinox.ProceduralWorld.Buildings.Library
                         AnchorLocation = block.Min + anchor;
                         continue;
                     }
-                    SessionCore.Log("Failed to parse anchor location argument \"{0}\"", arg);
+                    Logging.Error("Failed to parse anchor location argument \"{0}\"", arg);
                 }
                 else if (arg.StartsWithICase(MyPartDummyUtils.ArgumentAdjacencyRule)) // Adjacency Rule
                 {
@@ -80,10 +83,10 @@ namespace Equinox.ProceduralWorld.Buildings.Library
                     if (Enum.TryParse(arg.Substring(MyPartDummyUtils.ArgumentAdjacencyRule.Length), out rule))
                         AdjacencyRule = rule;
                     else
-                        SessionCore.Log("Failed to parse adjacency rule argument \"{0}\"", arg);
+                        Logging.Error("Failed to parse adjacency rule argument \"{0}\"", arg);
                 }
                 else
-                    SessionCore.Log("Failed to parse mount point argument \"{0}\"", arg);
+                    Logging.Error("Failed to parse mount point argument \"{0}\"", arg);
             }
             // ReSharper disable once InvertIf
             if (SecondBiasDirection6.HasValue && !BiasDirection6.HasValue)

@@ -1,4 +1,5 @@
 ﻿using System;
+using Equinox.Utils.Logging;
 using VRage;
 using VRage.Game;
 using VRageMath;
@@ -7,6 +8,10 @@ namespace Equinox.ProceduralWorld.Buildings.Creation
 {
     public class MyGridRemap_Coloring : IMyGridRemap
     {
+        public MyGridRemap_Coloring(IMyLoggingBase root) : base(root)
+        {
+        }
+
         public SerializableVector3? OverrideColor { get; set; } = null;
 
         public float HueRotation { get; set; } = 0;
@@ -27,13 +32,13 @@ namespace Equinox.ProceduralWorld.Buildings.Creation
             color.Z = MyMath.Clamp(color.Z * (ValueModifier + 1), -1, 1);
         }
 
-        public void Remap(MyObjectBuilder_CubeGrid grid)
+        public override void Remap(MyObjectBuilder_CubeGrid grid)
         {
             foreach (var block in grid.CubeBlocks)
                 RemapColor(ref block.ColorMaskHSV);
         }
 
-        public void Reset()
+        public override void Reset()
         {
         }
     }

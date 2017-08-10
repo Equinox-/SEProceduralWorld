@@ -4,32 +4,35 @@ using System.Linq;
 using System.Text;
 using Equinox.ProceduralWorld.Buildings.Library;
 using Equinox.Utils;
+using Equinox.Utils.Command;
 using Equinox.Utils.Logging;
+using Equinox.Utils.Session;
 using Sandbox.Definitions;
 using Sandbox.ModAPI;
 using VRage;
 using VRage.Game;
 using VRage.Game.ModAPI;
 using VRage.ObjectBuilders;
+using VRage.Utils;
 using VRageMath;
 
 namespace Equinox.ProceduralWorld.Buildings.Exporter
 {
-    public class MyDesignTool
+    public class MyDesignTools : MyCommandProviderComponent
     {
-        public const string DELEGATED_TAG = "del";
-        public const string MOUNT_DELEGATED = MyPartMetadata.MOUNT_PREFIX + " " + DELEGATED_TAG;
-        public const string RESERVED_SPACE_DELEGATED = MyPartMetadata.RESERVED_SPACE_PREFIX + " " + DELEGATED_TAG;
+        public const string DelegatedTag = "del";
+        public const string MountDelegated = MyPartMetadata.MountPrefix + " " + DelegatedTag;
+        public const string ReservedSpaceDelegated = MyPartMetadata.ReservedSpacePrefix + " " + DelegatedTag;
 
-        private static bool ApplyDelegate(MyObjectBuilder_CubeGrid grid, MyObjectBuilder_CubeBlock source, string srcName, MyObjectBuilder_CubeBlock dest, Base6Directions.Direction destDir)
+        private bool ApplyDelegate(MyObjectBuilder_CubeGrid grid, MyObjectBuilder_CubeBlock source, string srcName, MyObjectBuilder_CubeBlock dest, Base6Directions.Direction destDir)
         {
-            if (srcName.StartsWithICase(MOUNT_DELEGATED))
+            if (srcName.StartsWithICase(MountDelegated))
             {
                 var lTransOrig = new MatrixI(source.BlockOrientation);
                 var lTrans = new MatrixI(dest.BlockOrientation);
                 MatrixI iTrans;
                 MatrixI.Invert(ref lTrans, out iTrans);
-                var arguments = MyPartDummyUtils.ConfigArguments(srcName.Substring(MOUNT_DELEGATED.Length).Trim()).Select(
+                var arguments = MyPartDummyUtils.ConfigArguments(srcName.Substring(MountDelegated.Length).Trim()).Select(
                     (arg) =>
                     {
                         if (arg.StartsWithICase(MyPartDummyUtils.ArgumentBiasDirection))
@@ -39,7 +42,7 @@ namespace Equinox.ProceduralWorld.Buildings.Exporter
                                 return MyPartDummyUtils.ArgumentBiasDirection +
                                        iTrans.GetDirection(lTransOrig.GetDirection(dir));
                             else
-                                SessionCore.LogBoth("Failed to parse bias argument \"{0}\"", arg);
+                                this.Error("Failed to parse bias argument \"{0}\"", arg);
                         } else if (arg.StartsWithICase(MyPartDummyUtils.ArgumentSecondBiasDirection))
                         {
                             Base6Directions.Direction dir;
@@ -47,7 +50,7 @@ namespace Equinox.ProceduralWorld.Buildings.Exporter
                                 return MyPartDummyUtils.ArgumentSecondBiasDirection +
                                        iTrans.GetDirection(lTransOrig.GetDirection(dir));
                             else
-                                SessionCore.LogBoth("Failed to parse second bias argument \"{0}\"", arg);
+                                this.Error("Failed to parse second bias argument \"{0}\"", arg);
                         }
                         return arg;
                     }).ToList();
@@ -56,24 +59,24 @@ namespace Equinox.ProceduralWorld.Buildings.Exporter
                 var del = anchorPoint - dest.Min;
                 if (del != Vector3I.Zero)
                     arguments.Add(MyPartDummyUtils.ArgumentAnchorPoint + del.X + ":" + del.Y + ":" + del.Z);
-                var outName = MyPartMetadata.MOUNT_PREFIX + " " + string.Join(" ", arguments);
+                var outName = MyPartMetadata.MountPrefix + " " + string.Join(" ", arguments);
                 if (string.IsNullOrWhiteSpace(dest.Name))
                     dest.Name = outName;
                 else
-                    dest.Name = dest.Name + MyPartMetadata.MULTI_USE_SENTINEL + outName;
+                    dest.Name = dest.Name + MyPartMetadata.MultiUseSentinel + outName;
                 return true;
             }
-            if (srcName.StartsWithICase(RESERVED_SPACE_DELEGATED))
+            if (srcName.StartsWithICase(ReservedSpaceDelegated))
             {
-                var baseName = srcName.Substring(RESERVED_SPACE_DELEGATED.Length).Trim();
+                var baseName = srcName.Substring(ReservedSpaceDelegated.Length).Trim();
                 var args = baseName.Split(' ').Select(x => x.Trim()).Where(x => x.Length > 0).ToArray();
-                var box = MyPartDummyUtils.ParseReservedSpace(MyDefinitionManager.Static.GetCubeSize(grid.GridSizeEnum), source, args, (x, y) => SessionCore.LogBoth($"\"{srcName}\": " + x, y));
+                var box = MyPartDummyUtils.ParseReservedSpace(MyDefinitionManager.Static.GetCubeSize(grid.GridSizeEnum), source, args, this.Error);
                 var del = source.Min - (Vector3I)dest.Min;
                 box.Box.Max += del;
                 box.Box.Min += del;
                 var boxLocalFloat = MyUtilities.TransformBoundingBox(box.Box, Matrix.Invert(new MatrixI(dest.BlockOrientation).GetFloatMatrix()));
                 var boxLocal = new BoundingBoxI(Vector3I.Floor(boxLocalFloat.Min), Vector3I.Ceiling(boxLocalFloat.Max));
-                var outName = $"{MyPartMetadata.RESERVED_SPACE_PREFIX} NE:{boxLocal.Min.X}:{boxLocal.Min.Y}:{boxLocal.Min.Z} PE:{boxLocal.Max.X}:{boxLocal.Max.Y}:{boxLocal.Max.Z}";
+                var outName = $"{MyPartMetadata.ReservedSpacePrefix} NE:{boxLocal.Min.X}:{boxLocal.Min.Y}:{boxLocal.Min.Z} PE:{boxLocal.Max.X}:{boxLocal.Max.Y}:{boxLocal.Max.Z}";
                 if (box.IsShared)
                     outName += " shared";
                 if (box.IsOptional)
@@ -81,18 +84,18 @@ namespace Equinox.ProceduralWorld.Buildings.Exporter
                 if (string.IsNullOrWhiteSpace(dest.Name))
                     dest.Name = outName;
                 else
-                    dest.Name = dest.Name + MyPartMetadata.MULTI_USE_SENTINEL + outName;
+                    dest.Name = dest.Name + MyPartMetadata.MultiUseSentinel + outName;
                 return true;
             }
             return false;
         }
 
-        public static void Process(IMyCubeGrid grid)
+        private void Process(IMyCubeGrid grid)
         {
             if (grid.CustomName == null || !grid.CustomName.StartsWithICase("EqProcBuild")) return;
             var ob = grid.GetObjectBuilder(true) as MyObjectBuilder_CubeGrid;
             if (ob == null) return;
-            SessionCore.Log("Begin processing {0}", grid.CustomName);
+            this.Info("Begin processing {0}", grid.CustomName);
             try
             {
                 var dummyDel = new List<MyTuple<MyObjectBuilder_CubeBlock, string>>();
@@ -103,7 +106,7 @@ namespace Equinox.ProceduralWorld.Buildings.Exporter
                     var mount = false;
                     foreach (var name in block.ConfigNames())
                     {
-                        if (!name.StartsWithICase(MOUNT_DELEGATED) && !name.StartsWithICase(RESERVED_SPACE_DELEGATED)) continue;
+                        if (!name.StartsWithICase(MountDelegated) && !name.StartsWithICase(ReservedSpaceDelegated)) continue;
                         dummyDel.Add(MyTuple.Create(block, name));
                         mount = true;
                         break;
@@ -117,7 +120,7 @@ namespace Equinox.ProceduralWorld.Buildings.Exporter
                         blockMap[rangeItr.Current] = block;
                     blockKeep.Add(block);
                 }
-                SessionCore.Log("Found {0} blocks to keep, {1} block mounts to remap", blockKeep.Count, dummyDel.Count);
+                this.Info("Found {0} blocks to keep, {1} block mounts to remap", blockKeep.Count, dummyDel.Count);
                 foreach (var pair in dummyDel)
                 {
                     var block = pair.Item1;
@@ -142,7 +145,7 @@ namespace Equinox.ProceduralWorld.Buildings.Exporter
                             if (Enum.TryParse(arg.Substring(2), out dir))
                                 dirs = new [] { transform.GetDirection(Base6Directions.GetOppositeDirection(dir)) };
                             else
-                                SessionCore.LogBoth("Failed to parse direction argument \"{0}\"", arg);
+                                this.Error("Failed to parse direction argument \"{0}\"", arg);
                         }
                         else
                             keepArgs.Add(arg);
@@ -154,14 +157,14 @@ namespace Equinox.ProceduralWorld.Buildings.Exporter
                     {
                         MyObjectBuilder_CubeBlock tmp;
                         if (!blockMap.TryGetValue(block.Min + Base6Directions.GetIntVector(dir), out tmp)) continue;
-                        if (tmp.ConfigNames().Any(x => x.StartsWithICase(MOUNT_DELEGATED))) continue;
+                        if (tmp.ConfigNames().Any(x => x.StartsWithICase(MountDelegated))) continue;
                         if (outputBlock != null)
-                            SessionCore.LogBoth("Multiple directions found for {0}", pair.Item2);
+                            this.Error("Multiple directions found for {0}", pair.Item2);
                         outputBlock = tmp;
                         outputDir = dir;
                     }
                     if (outputBlock == null || !ApplyDelegate(ob, block, useName, outputBlock, outputDir))
-                        SessionCore.LogBoth("Failed to find delegated mount point for {0}", pair.Item2);
+                        this.Error("Failed to find delegated mount point for {0}", pair.Item2);
                 }
                 ob.CubeBlocks = blockKeep;
 
@@ -199,14 +202,14 @@ namespace Equinox.ProceduralWorld.Buildings.Exporter
                 relatedGrids.Remove(grid);
                 var removedNoController = relatedGrids.RemoveWhere(x => !relatedGridController.ContainsKey(x));
                 if (removedNoController > 0)
-                    SessionCore.LogBoth("Failed to find controlling mechanical connection block for all subgrids.  {0} will be excluded", removedNoController);
+                    this.Error("Failed to find the mechanical connection block for all subgrids.  {0} will be excluded", removedNoController);
                 // Need to add reserved space for subgrids so they don't overlap.  So compute that.  Yay!
                 foreach (var rel in relatedGrids)
                 {
                     IMyCubeBlock root;
                     if (!relatedGridController.TryGetValue(rel, out root))
                     {
-                        SessionCore.LogBoth("Unable to find the controller for grid {0}", rel.CustomName);
+                        this.Error("Unable to find the mechanical connection for grid {0}", rel.CustomName);
                         continue;
                     }
                     MyObjectBuilder_CubeBlock blockDest;
@@ -219,16 +222,16 @@ namespace Equinox.ProceduralWorld.Buildings.Exporter
                         var worldAABB = rel.WorldAABB;
                         worldAABB = MyUtilities.TransformBoundingBox(worldAABB, MatrixD.Invert(blockWorld));
                         var gridAABB = new BoundingBoxI(Vector3I.Floor(worldAABB.Min / grid.GridSize), Vector3I.Ceiling(worldAABB.Max / grid.GridSize));
-                        var code = $"{MyPartMetadata.RESERVED_SPACE_PREFIX} NE:{gridAABB.Min.X}:{gridAABB.Min.Y}:{gridAABB.Min.Z} PE:{gridAABB.Max.X}:{gridAABB.Max.Y}:{gridAABB.Max.Z}";
-                        SessionCore.Log("Added reserved space for subgrid {0}: Spec is \"{1}\"", rel.CustomName, code);
+                        var code = $"{MyPartMetadata.ReservedSpacePrefix} NE:{gridAABB.Min.X}:{gridAABB.Min.Y}:{gridAABB.Min.Z} PE:{gridAABB.Max.X}:{gridAABB.Max.Y}:{gridAABB.Max.Z}";
+                        this.Info("Added reserved space for subgrid {0}: Spec is \"{1}\"", rel.CustomName, code);
                         if (blockDest.Name == null || blockDest.Name.Trim().Length == 0)
                             blockDest.Name = code;
                         else
-                            blockDest.Name += MyPartMetadata.MULTI_USE_SENTINEL + code;
+                            blockDest.Name += MyPartMetadata.MultiUseSentinel + code;
                     }
                     else
                     {
-                        SessionCore.LogBoth("Unable to find the OB for grid block {0} ({1}, {2}, {3}).  Is it a delegate?", (root as IMyTerminalBlock)?.CustomName ?? root.Name, root.Min.X, root.Min.Y, root.Min.Z);
+                        this.Error("Unable to find the OB for grid block {0} ({1}, {2}, {3}).  Is it a delegate?", (root as IMyTerminalBlock)?.CustomName ?? root.Name, root.Min.X, root.Min.Y, root.Min.Z);
                     }
                 }
 
@@ -247,13 +250,13 @@ namespace Equinox.ProceduralWorld.Buildings.Exporter
                 };
 
                 var fileName = "export_" + grid.CustomName + ".sbc";
-                SessionCore.LogBoth("Saving {1} grids as {0}", fileName, defOut.CubeGrids.Length);
+                this.Info("Saving {1} grids as {0}", fileName, defOut.CubeGrids.Length);
 
                 var mishMash = new MyObjectBuilder_Definitions()
                 {
                     Prefabs = new MyObjectBuilder_PrefabDefinition[] { defOut }
                 };
-                var writer = MyAPIGateway.Utilities.WriteBinaryFileInLocalStorage(fileName, typeof(MyDesignTool));
+                var writer = MyAPIGateway.Utilities.WriteBinaryFileInLocalStorage(fileName, typeof(MyDesignTools));
                 var obCode = MyAPIGateway.Utilities.SerializeToXML(mishMash);
                 obCode = obCode.Replace("encoding=\"utf-16\"", "encoding=\"utf-8\"");
                 writer.Write(Encoding.UTF8.GetBytes(obCode));
@@ -261,8 +264,44 @@ namespace Equinox.ProceduralWorld.Buildings.Exporter
             }
             catch (Exception e)
             {
-                SessionCore.Log("Failed to parse.  Error:\n{0}", e.ToString());
+                this.Error("Failed to parse.  Error:\n{0}", e.ToString());
             }
         }
+
+        public MyDesignTools()
+        {
+            Create("export").PromotedOnly(MyPromoteLevel.Admin).Handler(RunExport);
+            // TODO a way to "sideload" prefabs from storage for testing
+            // Create("sideload");
+        }
+
+        private string RunExport()
+        {
+            MyAPIGateway.Entities.GetEntities(null, x =>
+            {
+                var grid = x as IMyCubeGrid;
+                if (grid != null)
+                    Process(grid);
+                return false;
+            });
+            return null;
+        }
+
+
+        public override void LoadConfiguration(MyObjectBuilder_ModSessionComponent config)
+        {
+            if (config == null) return;
+            if (config is MyObjectBuilder_DesignTools) return;
+            Log(MyLogSeverity.Critical, "Configuration type {0} doesn't match component type {1}", config.GetType(), GetType());
+        }
+
+        public override MyObjectBuilder_ModSessionComponent SaveConfiguration()
+        {
+            return new MyObjectBuilder_DesignTools();
+        }
+    }
+
+    public class MyObjectBuilder_DesignTools : MyObjectBuilder_ModSessionComponent
+    {
     }
 }

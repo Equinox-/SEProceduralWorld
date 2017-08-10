@@ -312,7 +312,7 @@ namespace Equinox.ProceduralWorld.Buildings.Generation
 
         private void AppendRooms()
         {
-            if (Settings.Instance.DebugGenerationStages)
+            if (Settings.DebugGenerationStages)
                 m_manager.Debug("Choose from {0} valid options", m_weightedChoice.Count);
             var bestRoom = m_weightedChoice.ChooseBest();
 
@@ -323,11 +323,11 @@ namespace Equinox.ProceduralWorld.Buildings.Generation
             CommitRoom(room);
             var newError = m_construction.ComputeErrorAgainstSeed();
 
-            if (Settings.Instance.DebugGenerationStages)
+            if (Settings.DebugGenerationStages)
                 m_manager.Debug("Added {0} (number {1}) at {2}. Sadness changed {3:e} => {4:e} = {5:e}.  Best was {6}",
                     room.Part.Name, m_construction.Rooms.Count(), room.BoundingBox.Center, originalRequirementError, newError, originalRequirementError - newError,
                     bestRoom?.Part.Name);
-            else if (Settings.Instance.DebugGenerationResults)
+            else if (Settings.DebugGenerationResults)
                 m_manager.Debug("Added {0} (number {1}) at {2}.", room.Part.Name, m_construction.Rooms.Count(), room.BoundingBox.Center);
 
             m_manager.Debug("    I'm at {0}.  Parents at {1}", room.BoundingBox.Center, string.Join(" ", room.MountPoints.Select(x => x.AttachedTo?.Owner?.BoundingBox.Center).Where(x => x != null).Select(x => x.Value)));

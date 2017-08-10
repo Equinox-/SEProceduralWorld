@@ -4,6 +4,7 @@ using System.Linq;
 using Equinox.ProceduralWorld.Buildings.Library;
 using Equinox.ProceduralWorld.Buildings.Seeds;
 using Equinox.Utils;
+using Equinox.Utils.Logging;
 using Sandbox.Definitions;
 using Sandbox.Game.EntityComponents;
 using VRage.Game;
@@ -22,8 +23,11 @@ namespace Equinox.ProceduralWorld.Buildings.Storage
         public readonly MyProceduralConstructionSeed Seed;
         public readonly MyBlockSetInfo BlockSetInfo;
 
-        public MyProceduralConstruction(MyProceduralConstructionSeed seed)
+        public readonly IMyLogging Logger;
+
+        public MyProceduralConstruction(IMyLogging logBase, MyProceduralConstructionSeed seed)
         {
+            Logger = logBase.Root().CreateProxy(GetType().Name);
             m_roomTree = new MyDynamicAABBTree(Vector3.Zero);
             m_rooms = new Dictionary<int, MyProceduralRoom>();
             m_mountPoints = new Dictionary<Vector3I, MyProceduralMountPoint>();
@@ -154,7 +158,7 @@ namespace Equinox.ProceduralWorld.Buildings.Storage
             foreach (var k in room.MountPoints)
                 foreach (var p in k.MountLocations)
                     if (m_mountPoints.ContainsKey(p))
-                        SessionCore.Log("Room {0} at {1} has mount point {4}:{5} that intersect with mount point {6}:{7} of room {2} at {3}", m_mountPoints[p].Owner.Part.Name, m_mountPoints[p].Owner.Transform.Translation,
+                        Logger.Warning("Room {0} at {1} has mount point {4}:{5} that intersect with mount point {6}:{7} of room {2} at {3}", m_mountPoints[p].Owner.Part.Name, m_mountPoints[p].Owner.Transform.Translation,
                             room.Part.Name, room.Transform.Translation, m_mountPoints[p].MountPoint.MountType, m_mountPoints[p].MountPoint.MountName,
                             k.MountPoint.MountType, k.MountPoint.MountName);
                     else
@@ -174,12 +178,12 @@ namespace Equinox.ProceduralWorld.Buildings.Storage
             else
             {
                 m_roomsSafeOrder.Remove(room);
-                SessionCore.Log("Possibly unsafe removal of room not at end of safe list");
+                Logger.Warning("Possibly unsafe removal of room not at end of safe list");
             }
             foreach (var k in room.MountPoints)
                 foreach (var p in k.MountLocations)
                     if (!m_mountPoints.Remove(p))
-                        SessionCore.Log("Failed to remove room; mount point wasn't registered");
+                        Logger.Warning("Failed to remove room; mount point wasn't registered");
             room.Orphan();
             using (room.Part.LockSharedUsing())
                 BlockSetInfo.SubtractFromSelf(room.Part.BlockSetInfo);

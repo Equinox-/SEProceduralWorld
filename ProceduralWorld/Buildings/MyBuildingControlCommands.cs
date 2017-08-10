@@ -38,19 +38,6 @@ namespace Equinox.ProceduralWorld.Buildings
                 Create("stations").Handler(ProcessStationLocations);
                 Create("part").Handler<string>(ProcessDebugPart);
             }
-            Create("export").PromotedOnly(MyPromoteLevel.Admin).Handler(RunExport);
-        }
-
-        private string RunExport()
-        {
-            MyAPIGateway.Entities.GetEntities(null, x =>
-            {
-                var grid = x as IMyCubeGrid;
-                if (grid != null)
-                    MyDesignTool.Process(grid);
-                return false;
-            });
-            return null;
         }
 
         private string ClearStations()
@@ -130,11 +117,11 @@ namespace Equinox.ProceduralWorld.Buildings
 
             MyAPIGateway.Parallel.Start(() =>
             {
-                var construction = new MyProceduralConstruction(seed);
+                var construction = new MyProceduralConstruction(RootLogger, seed);
                 var room = new MyProceduralRoom();
                 room.Init(new MatrixI(Base6Directions.Direction.Forward, Base6Directions.Direction.Up), part);
                 construction.AddRoom(room);
-                var remapper = new MyRoomRemapper { DebugRoomColors = true };
+                var remapper = new MyRoomRemapper(RootLogger) { DebugRoomColors = true };
                 var grids = MyGridCreator.RemapAndBuild(construction, remapper);
                 if (grids == null) return;
                 MyAPIGateway.Utilities.InvokeOnGameThread(() =>
@@ -157,9 +144,9 @@ namespace Equinox.ProceduralWorld.Buildings
                 return "No faction module means no stations";
 
             var debugMode = (bool)kwargs["debug"];
-            var roomCount = (int?) kwargs["rooms"];
-            var seedVal = (long) kwargs["seed"];
-            var population = (int) kwargs["population"];
+            var roomCount = (int?)kwargs["rooms"];
+            var seedVal = (long)kwargs["seed"];
+            var population = (int)kwargs["population"];
             var position = MyAPIGateway.Session.Camera.Position + MyAPIGateway.Session.Camera.WorldMatrix.Forward * 100;
             var seed = new MyProceduralConstructionSeed(factionModule.SeedAt(position), new Vector4D(position, 0.5), null, seedVal, population);
             MyAPIGateway.Parallel.Start(() =>
