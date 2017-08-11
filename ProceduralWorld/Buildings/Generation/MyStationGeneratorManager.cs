@@ -43,7 +43,7 @@ namespace Equinox.ProceduralWorld.Buildings.Generation
                 // Seed the generator
                 if (!construction.Rooms.Any())
                 {
-                    var parts = PartManager.Where(x => x.Name.Contains("WFC")).ToList();
+                    var parts = PartManager.ToList();
                     var part = parts[(int)Math.Floor(parts.Count * seed.DeterministicNoise(1234567))];
                     var room = new MyProceduralRoom();
                     room.Init(new MatrixI(Base6Directions.Direction.Forward, Base6Directions.Direction.Up), part);

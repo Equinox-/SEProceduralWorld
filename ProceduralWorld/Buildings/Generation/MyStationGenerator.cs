@@ -286,7 +286,7 @@ namespace Equinox.ProceduralWorld.Buildings.Generation
                         var error = count - targetGrowth;
                         // We are reducing the number of mounts.  Divide by total mounts since this isn't an issue when we have lots of choices.
                         if (count <= 0)
-                            growthScore -= error * error * 10 / Math.Sqrt(1 + freeMountPointCount);
+                            growthScore -= error * error * 1e3 / Math.Sqrt(1 + freeMountPointCount);
                         else // increasing the number of mounts.  The more mounts we have the larger of an issue this is.
                             growthScore -= error * error * Math.Sqrt(1 + freeMountPointCount);
                     }
@@ -317,8 +317,8 @@ namespace Equinox.ProceduralWorld.Buildings.Generation
             var bestRoom = m_weightedChoice.ChooseBest();
 
             // 50% chance to be in the top 1% of choices.
-            // var room = m_weightedRoomChoice.ChooseByQuantile(c.Seed.DeterministicNoise(c.Rooms.Count()), 0.99);
-            var room = bestRoom;
+             var room = m_weightedChoice.ChooseByQuantile(m_construction.Seed.DeterministicNoise(m_construction.Rooms.Count()), 0.99);
+//            var room = bestRoom;
             var originalRequirementError = m_construction.ComputeErrorAgainstSeed();
             CommitRoom(room);
             var newError = m_construction.ComputeErrorAgainstSeed();

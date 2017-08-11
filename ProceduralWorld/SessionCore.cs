@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Equinox.ProceduralWorld.Buildings;
+using Equinox.ProceduralWorld.Buildings.Exporter;
 using Equinox.ProceduralWorld.Buildings.Game;
 using Equinox.ProceduralWorld.Buildings.Generation;
 using Equinox.ProceduralWorld.Buildings.Library;
@@ -51,6 +52,7 @@ namespace Equinox.ProceduralWorld
                     new MyObjectBuilder_CompositeNameGeneratorEntry(){Generator = new MyObjectBuilder_ExoticNameGenerator(), Weight = 0.1f}
                 }
             });
+            res.SessionComponents.Add(new MyObjectBuilder_DesignTools());
 
             //                        res.SessionComponents.Add(new MyObjectBuilder_ProceduralStation());
             return res;

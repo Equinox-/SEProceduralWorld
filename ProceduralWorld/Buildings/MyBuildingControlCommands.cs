@@ -15,6 +15,7 @@ using Equinox.Utils.Session;
 using Sandbox.Definitions;
 using Sandbox.ModAPI;
 using VRage;
+using VRage.Game;
 using VRage.Game.ModAPI;
 using VRage.ModAPI;
 using VRage.Utils;
@@ -29,15 +30,12 @@ namespace Equinox.ProceduralWorld.Buildings
         public MyBuildingControlCommands()
         {
             DependsOn((MyPartManager x) => m_partManager = x);
-            if (!SessionCore.RELEASE)
-            {
-                Create("clear").Handler(ClearStations);
-                Create("spawn").AllowOnlyOn(MySessionType.PlayerController).Handler(ProcessSpawn)
-                    .NamedFlag("debug").NamedArgument<int?>("rooms", null).NamedArgument<long>("seed", 0).NamedArgument<int?>(new[] { "pop", "population" }, null);
-                Create("info").AllowOnlyOn(MySessionType.PlayerController).Handler<string>(ProcessInfo);
-                Create("stations").Handler(ProcessStationLocations);
-                Create("part").Handler<string>(ProcessDebugPart);
-            }
+            Create("clear").Handler(ClearStations);
+            Create("spawn").AllowOnlyOn(MySessionType.PlayerController).Handler(ProcessSpawn)
+                .NamedFlag("debug").NamedArgument<int?>("rooms", null).NamedArgument<long>("seed", 0).NamedArgument<int?>(new[] { "pop", "population" }, null);
+            Create("info").AllowOnlyOn(MySessionType.PlayerController).Handler<string>(ProcessInfo);
+            Create("stations").Handler(ProcessStationLocations);
+            Create("part").Handler<string>(ProcessDebugPart);
         }
 
         private string ClearStations()
@@ -146,7 +144,7 @@ namespace Equinox.ProceduralWorld.Buildings
             var debugMode = (bool)kwargs["debug"];
             var roomCount = (int?)kwargs["rooms"];
             var seedVal = (long)kwargs["seed"];
-            var population = (int)kwargs["population"];
+            var population = (int?)kwargs["population"];
             var position = MyAPIGateway.Session.Camera.Position + MyAPIGateway.Session.Camera.WorldMatrix.Forward * 100;
             var seed = new MyProceduralConstructionSeed(factionModule.SeedAt(position), new Vector4D(position, 0.5), null, seedVal, population);
             MyAPIGateway.Parallel.Start(() =>

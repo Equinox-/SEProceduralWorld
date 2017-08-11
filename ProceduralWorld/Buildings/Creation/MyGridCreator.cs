@@ -108,11 +108,11 @@ namespace Equinox.ProceduralWorld.Buildings.Creation
                 if (removed && dirtyGrids.Count == 0)
                     MyAPIGateway.Utilities.InvokeOnGameThread(() =>
                     {
-                        foreach (var grid in grids)
-                        {
-                            grid.PersistentFlags |= MyPersistentEntityFlags2.InScene;
-                            grid.OnAddedToScene(grid);
-                        }
+//                        foreach (var grid in grids)
+//                        {
+//                            grid.PersistentFlags |= MyPersistentEntityFlags2.InScene;
+//                            grid.OnAddedToScene(grid);
+//                        }
                         foreach (var grid in grids)
                             grid.Components.Get<MyProceduralGridComponent>()?.UpdateReadyState();
                     });
@@ -131,13 +131,15 @@ namespace Equinox.ProceduralWorld.Buildings.Creation
             var dirtyGrids = new HashSet<long>();
 
             var allGrids = new List<IMyCubeGrid>();
+            // TODO it's kind of sketchy to add all these physically interconnected grids on different ticks...
+            // However my old hack no longer works and I can't think of another
             // This ensures that dirtyGrids gets populated before the spawning callback runs.
             lock (dirtyGrids)
             {
                 var iwatch = new Stopwatch();
                 iwatch.Restart();
                 PrimaryGrid.IsStatic = true;
-                PrimaryGrid.PersistentFlags &= ~MyPersistentEntityFlags2.InScene;
+//                PrimaryGrid.PersistentFlags &= ~MyPersistentEntityFlags2.InScene;
                 var primaryGrid = MyAPIGateway.Entities.CreateFromObjectBuilderParallel(PrimaryGrid, true, () => FlagIfReady(PrimaryGrid.EntityId, dirtyGrids, allGrids)) as IMyCubeGrid;
                 if (primaryGrid == null)
                 {
@@ -150,7 +152,7 @@ namespace Equinox.ProceduralWorld.Buildings.Creation
                 iwatch.Restart();
                 foreach (var aux in AuxGrids)
                 {
-                    aux.PersistentFlags &= ~MyPersistentEntityFlags2.InScene;
+//                    aux.PersistentFlags &= ~MyPersistentEntityFlags2.InScene;
                     // ReSharper disable once ImplicitlyCapturedClosure
                     var res = MyAPIGateway.Entities.CreateFromObjectBuilderParallel(aux, true, () => FlagIfReady(aux.EntityId, dirtyGrids, allGrids)) as IMyCubeGrid;
                     if (res == null)
