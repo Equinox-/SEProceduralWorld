@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using Equinox.ProceduralWorld.Buildings;
 using Equinox.ProceduralWorld.Buildings.Exporter;
 using Equinox.ProceduralWorld.Buildings.Game;
@@ -16,6 +17,8 @@ using Equinox.Utils.Command;
 using Equinox.Utils.Logging;
 using Equinox.Utils.Network;
 using Equinox.Utils.Session;
+using Sandbox.Common.ObjectBuilders;
+using Sandbox.Definitions;
 using Sandbox.ModAPI;
 using VRage;
 using VRage.Game;
@@ -78,32 +81,58 @@ namespace Equinox.ProceduralWorld
 
         private bool LoadConfigFromFile()
         {
-            var success = false;
-            if (RELEASE)
+            try
             {
-                try
+                if (MyAPIGateway.Utilities.FileExistsInWorldStorage("session.xml", typeof(SessionCore)))
                 {
-                    if (MyAPIGateway.Utilities.FileExistsInWorldStorage("session.xml", typeof(SessionCore)))
+                    using (var reader =
+                        MyAPIGateway.Utilities.ReadFileInWorldStorage("session.xml",
+                            typeof(SessionCore)))
                     {
-                        using (var reader =
-                            MyAPIGateway.Utilities.ReadFileInWorldStorage("session.xml",
-                                typeof(SessionCore)))
-                        {
-                            var value =
-                                MyAPIGateway.Utilities
-                                    .SerializeFromXML<MyObjectBuilder_SessionManager>(reader.ReadToEnd());
-                            Manager.AppendConfiguration(value);
-                            success = true;
-                        }
+                        var value =
+                            MyAPIGateway.Utilities
+                                .SerializeFromXML<MyObjectBuilder_SessionManager>(reader.ReadToEnd());
+                        Manager.AppendConfiguration(value);
+                        return true;
                     }
                 }
-                catch (Exception e)
+            }
+            catch (Exception e)
+            {
+                Logger.Error("Failed to parse config:\n{0}", e.ToString());
+            }
+            return false;
+        }
+
+        private bool LoadConfigFromModpack()
+        {
+            var prefab = MyDefinitionManager.Static.GetPrefabDefinition("EqProcWorldConfig");
+            if (prefab == null)
+                return false;
+            foreach (var grid in prefab.CubeGrids)
+            {
+                foreach (var block in grid.CubeBlocks)
                 {
-                    Logger.Error("Failed to parse config:\n{0}", e.ToString());
-                    success = false;
+                    var pbOb = block as MyObjectBuilder_MyProgrammableBlock;
+                    var content = pbOb?.Program;
+                    if (string.IsNullOrEmpty(content)) continue;
+                    try
+                    {
+                        var data = Encoding.UTF8.GetString(Convert.FromBase64String(content));
+                        var value =
+                            MyAPIGateway.Utilities
+                                .SerializeFromXML<MyObjectBuilder_SessionManager>(data);
+                        Manager.AppendConfiguration(value);
+                        return true;
+                    }
+                    catch (Exception e)
+                    {
+                        Logger.Error("Failed to parse config inside PB {0} in grid {1}: {2}", pbOb.CustomName,
+                            grid.DisplayName, e.Message);
+                    }
                 }
             }
-            return success;
+            return false;
         }
 
         private bool m_init = false;
@@ -116,8 +145,10 @@ namespace Equinox.ProceduralWorld
                     Manager.Register(new MySessionBootstrapper());
                     if (MyAPIGateway.Session.IsDecider())
                     {
-                        if (!LoadConfigFromFile())
+                        if (!RELEASE || (!LoadConfigFromFile() && !LoadConfigFromModpack()))
+                        {
                             Manager.AppendConfiguration(DefaultConfiguration());
+                        }
                     }
                 }
                 catch (Exception e)
