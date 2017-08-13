@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using Equinox.ProceduralWorld.Buildings.Library;
 using Equinox.Utils;
 using Equinox.Utils.Command;
@@ -43,7 +44,8 @@ namespace Equinox.ProceduralWorld.Buildings.Exporter
                                        iTrans.GetDirection(lTransOrig.GetDirection(dir));
                             else
                                 this.Error("Failed to parse bias argument \"{0}\"", arg);
-                        } else if (arg.StartsWithICase(MyPartDummyUtils.ArgumentSecondBiasDirection))
+                        }
+                        else if (arg.StartsWithICase(MyPartDummyUtils.ArgumentSecondBiasDirection))
                         {
                             Base6Directions.Direction dir;
                             if (Enum.TryParse(arg.Substring(MyPartDummyUtils.ArgumentSecondBiasDirection.Length), out dir))
@@ -90,12 +92,13 @@ namespace Equinox.ProceduralWorld.Buildings.Exporter
             return false;
         }
 
-        private void Process(IMyCubeGrid grid)
+        private void Process(CommandFeedback feedback, IMyCubeGrid grid)
         {
             if (grid.CustomName == null || !grid.CustomName.StartsWithICase("EqProcBuild")) return;
             var ob = grid.GetObjectBuilder(true) as MyObjectBuilder_CubeGrid;
             if (ob == null) return;
             this.Info("Begin processing {0}", grid.CustomName);
+            feedback?.Invoke("Processing {0}", grid.CustomName);
             try
             {
                 var dummyDel = new List<MyTuple<MyObjectBuilder_CubeBlock, string>>();
@@ -143,9 +146,12 @@ namespace Equinox.ProceduralWorld.Buildings.Exporter
                         {
                             Base6Directions.Direction dir;
                             if (Enum.TryParse(arg.Substring(2), out dir))
-                                dirs = new [] { transform.GetDirection(Base6Directions.GetOppositeDirection(dir)) };
+                                dirs = new[] {transform.GetDirection(Base6Directions.GetOppositeDirection(dir))};
                             else
+                            {
                                 this.Error("Failed to parse direction argument \"{0}\"", arg);
+                                feedback?.Invoke("Error: Failed to parse direction argument \"{0}\"", arg);
+                            }
                         }
                         else
                             keepArgs.Add(arg);
@@ -159,12 +165,18 @@ namespace Equinox.ProceduralWorld.Buildings.Exporter
                         if (!blockMap.TryGetValue(block.Min + Base6Directions.GetIntVector(dir), out tmp)) continue;
                         if (tmp.ConfigNames().Any(x => x.StartsWithICase(MountDelegated))) continue;
                         if (outputBlock != null)
+                        {
                             this.Error("Multiple directions found for {0}", pair.Item2);
+                            feedback?.Invoke("Error: Multiple directions found for {0}", pair.Item2);
+                        }
                         outputBlock = tmp;
                         outputDir = dir;
                     }
                     if (outputBlock == null || !ApplyDelegate(ob, block, useName, outputBlock, outputDir))
+                    {
                         this.Error("Failed to find delegated mount point for {0}", pair.Item2);
+                        feedback?.Invoke("Error: Failed to find delegated mount point for {0}", pair.Item2);
+                    }
                 }
                 ob.CubeBlocks = blockKeep;
 
@@ -201,8 +213,12 @@ namespace Equinox.ProceduralWorld.Buildings.Exporter
                 }
                 relatedGrids.Remove(grid);
                 var removedNoController = relatedGrids.RemoveWhere(x => !relatedGridController.ContainsKey(x));
-                if (removedNoController > 0)
-                    this.Error("Failed to find the mechanical connection block for all subgrids.  {0} will be excluded", removedNoController);
+                if (removedNoController > 0) {
+                    this.Error("Failed to find the mechanical connection block for all subgrids.  {0} will be excluded",
+                        removedNoController);
+                    feedback?.Invoke("Error: Failed to find the mechanical connection block for all subgrids.  {0} will be excluded",
+                        removedNoController);
+                }
                 // Need to add reserved space for subgrids so they don't overlap.  So compute that.  Yay!
                 foreach (var rel in relatedGrids)
                 {
@@ -210,6 +226,8 @@ namespace Equinox.ProceduralWorld.Buildings.Exporter
                     if (!relatedGridController.TryGetValue(rel, out root))
                     {
                         this.Error("Unable to find the mechanical connection for grid {0}", rel.CustomName);
+                        feedback?.Invoke("Error: Unable to find the mechanical connection for grid {0}",
+                            rel.CustomName);
                         continue;
                     }
                     MyObjectBuilder_CubeBlock blockDest;
@@ -232,6 +250,7 @@ namespace Equinox.ProceduralWorld.Buildings.Exporter
                     else
                     {
                         this.Error("Unable to find the OB for grid block {0} ({1}, {2}, {3}).  Is it a delegate?", (root as IMyTerminalBlock)?.CustomName ?? root.Name, root.Min.X, root.Min.Y, root.Min.Z);
+                        feedback?.Invoke("Unable to the find OB for grid block {0} ({1}, {2}, {3}).  Was it a delegate?", (root as IMyTerminalBlock)?.CustomName ?? root.Name, root.Min.X, root.Min.Y, root.Min.Z);
                     }
                 }
 
@@ -249,8 +268,9 @@ namespace Equinox.ProceduralWorld.Buildings.Exporter
                     CubeGrids = allGrids.ToArray()
                 };
 
-                var fileName = "export_" + grid.CustomName + ".sbc";
+                var fileName = grid.CustomName + ".sbc";
                 this.Info("Saving {1} grids as {0}", fileName, defOut.CubeGrids.Length);
+                feedback?.Invoke("Saving {1} grids as {0}", fileName, defOut.CubeGrids.Length);
 
                 var mishMash = new MyObjectBuilder_Definitions()
                 {
@@ -272,16 +292,54 @@ namespace Equinox.ProceduralWorld.Buildings.Exporter
         {
             Create("export").PromotedOnly(MyPromoteLevel.Admin).Handler(RunExport);
             // TODO a way to "sideload" prefabs from storage for testing
-            // Create("sideload");
+            Create("sideload").PromotedOnly(MyPromoteLevel.Admin).Handler<string>(RunSideload);
         }
 
-        private string RunExport()
+        private string RunSideload(CommandFeedback feedback, string prefabKey)
+        {
+            var partManager = Manager.GetDependencyProvider<MyPartManager>();
+            if (partManager == null)
+                return "Can't sideload parts when there is no part manager";
+            var fileName = prefabKey;
+            if (!fileName.EndsWith(".sbc", StringComparison.OrdinalIgnoreCase))
+                fileName += ".sbc";
+            if (!MyAPIGateway.Utilities.FileExistsInLocalStorage(fileName, typeof(MyDesignTools)))
+                return $"File {fileName} has not been exported.";
+            using (var stream = MyAPIGateway.Utilities.ReadFileInLocalStorage(fileName, typeof(MyDesignTools)))
+            {
+                var content = stream.ReadToEnd();
+                try
+                {
+                    var data = MyAPIGateway.Utilities.SerializeFromXML<MyObjectBuilder_Definitions>(content);
+                    if (data.Prefabs == null || data.Prefabs.Length < 1)
+                        return "The specified file doesn't seem to contain prefabs";
+                    foreach (var prefab in data.Prefabs)
+                    {
+                        var lks = new MyPrefabDefinition();
+                        // We don't actually link this into the definition manager so we can have a null mod context.
+                        lks.Init(prefab, null);
+                        lks.InitLazy(prefab);
+                        partManager.Load(lks, true);
+                        this.Debug("Sideloaded {0}", prefab.Id.SubtypeName);
+                        feedback.Invoke("Sideloaded {0}", prefab.Id.SubtypeName);
+                    }
+                }
+                catch (Exception e)
+                {
+                    this.Error("Failed to sideload prefab {0}.  Error:\n{1}", prefabKey, e.ToString());
+                    return $"Failed to load: {e.Message}";
+                }
+            }
+            return null;
+        }
+
+        private string RunExport(CommandFeedback feedback)
         {
             MyAPIGateway.Entities.GetEntities(null, x =>
             {
                 var grid = x as IMyCubeGrid;
                 if (grid != null)
-                    Process(grid);
+                    Process(feedback, grid);
                 return false;
             });
             return null;

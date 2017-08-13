@@ -71,18 +71,30 @@ namespace Equinox.ProceduralWorld.Buildings.Library
             return def != null ? Load(def) : null;
         }
 
-        public MyPartFromPrefab Load(MyPrefabDefinition def)
+        /// <summary>
+        /// Retrieves or loads the given prefab as a multi-block part.
+        /// </summary>
+        /// <param name="def">The prefab to construct the part from</param>
+        /// <param name="force">Force the part to be loaded immediately</param>
+        /// <returns></returns>
+        public MyPartFromPrefab Load(MyPrefabDefinition def, bool force = false)
         {
-            MyPartFromPrefab part;
-            if (m_parts.TryGetValue(def.Id, out part)) return part;
+            MyPartFromPrefab part = null;
+            if (!force && m_parts.TryGetValue(def.Id, out part)) return part;
             try
             {
                 var output = new MyPartFromPrefab(this, def);
+                if (force)
+                    output.InitFromPrefab();
                 // Can we actually use this with the current mods?
                 MyCubeBlockDefinition test;
                 foreach (var kv in output.BlockSetInfo.BlockCountByType)
                     if (!MyDefinitionManager.Static.TryGetCubeBlockDefinition(kv.Key, out test))
+                    {
+                        this.Info("Skipping prefab {0} since it uses block type {1} which is unknown",
+                            def.Id.SubtypeName, kv.Key);
                         output = null;
+                    }
 
                 part = m_parts[def.Id] = output;
                 if (output != null)

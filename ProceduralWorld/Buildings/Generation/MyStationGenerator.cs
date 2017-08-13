@@ -210,6 +210,8 @@ namespace Equinox.ProceduralWorld.Buildings.Generation
             }
         }
 
+        // [ThreadStatic]
+        private readonly HashSet<MyProceduralMountPoint> m_invokers = new HashSet<MyProceduralMountPoint>();
         private bool CollidesPredictive(MyProceduralRoom room, bool testMounts, bool testOptional)
         {
             // Buildable?
@@ -217,11 +219,18 @@ namespace Equinox.ProceduralWorld.Buildings.Generation
                 return true;
             if (!testMounts)
                 return false;
+
+            m_invokers.Clear();
             // Reject if this will block another mount point, or one of our mount points would be blocked.
+            // Quick test based on the mounting blocks themselves.
             foreach (var point in room.MountPoints)
-                if (point.AttachedToIn(m_construction) == null)
-                    if (point.MountLocations.Any(m_construction.CubeExists))
+            {
+                var mount = point.AttachedToIn(m_construction);
+                if (mount != null)
+                    m_invokers.Add(mount);
+                else if (point.MountLocations.Any(m_construction.CubeExists))
                         return true;
+            }
             foreach (var other in m_construction.Rooms)
                 if (other != room)
                     foreach (var point in other.MountPoints)
@@ -236,6 +245,35 @@ namespace Equinox.ProceduralWorld.Buildings.Generation
                                     return true;
                             }
                         }
+
+            // Reject if this will block another mount point, or one of our mount points would blocked.  Use expensive test.
+            foreach (var point in room.MountPoints)
+                if (point.AttachedToIn(m_construction) == null)
+                {
+                    var oppos = point.MountPoint.SmallestTerminalAttachment;
+                    if (oppos.Item1 == null) continue;
+                    var pos = MyUtilities.Multiply(oppos.Item2, room.Transform);
+                    MatrixI ipos;
+                    MatrixI.Invert(ref pos, out ipos);
+                    if (m_construction.Intersects(oppos.Item1, pos, ipos, testOptional, true, room))
+                        return true;
+                }
+            // Compare to all other unused mount points.
+            foreach (var other in m_construction.Rooms)
+                if (other != room)
+                    foreach (var point in other.MountPoints)
+                        if (!m_invokers.Contains(point) && point.AttachedTo == null)
+                        {
+                            // TODO we actually have this data pre-computed if we wanted to use that.
+                            var oppos = point.MountPoint.SmallestTerminalAttachment;
+                            if (oppos.Item1 == null) continue;
+                            var pos = MyUtilities.Multiply(oppos.Item2, other.Transform);
+                            MatrixI ipos;
+                            MatrixI.Invert(ref pos, out ipos);
+                            if (MyPartMetadata.Intersects(room.Part, room.Transform, room.InvTransform,
+                                other.Part, pos, ipos, testOptional, true))
+                                return true;
+                        }
             return false;
         }
 
@@ -249,6 +287,11 @@ namespace Equinox.ProceduralWorld.Buildings.Generation
             m_weightedChoice.Clear();
             var entrySeedError = m_construction.ComputeErrorAgainstSeed();
             m_manager.Debug("Target growth {0}", targetGrowth);
+
+            var boundingBox = BoundingBox.CreateInvalid();
+            foreach (var k in m_construction.Rooms)
+                boundingBox = boundingBox.Include(k.BoundingBoxBoth);
+
             foreach (var room in m_openRooms.Values)
             {
                 if (room.CollisionMask.HasFlag(collisionMask)) continue;
@@ -260,7 +303,7 @@ namespace Equinox.ProceduralWorld.Buildings.Generation
 
                 using (m_construction.RegisterRoomUsing(room.Room))
                 {
-                    var randomScore = 1e2 * m_construction.Seed.DeterministicNoise(room.Room.Part.Name.GetHashCode() ^ room.Room.Transform.GetHashCode());
+                    var randomScore = 1e1 * m_construction.Seed.DeterministicNoise(room.Room.Part.Name.GetHashCode() ^ room.Room.Transform.GetHashCode());
 
                     double growthScore = 0;
                     { // Based on the target growth and destruct rates
@@ -291,18 +334,23 @@ namespace Equinox.ProceduralWorld.Buildings.Generation
                             growthScore -= error * error * Math.Sqrt(1 + freeMountPointCount);
                     }
 
+                    var sizeScore = 1e6 * Vector3.DistanceSquared(boundingBox.Center, room.Room.BoundingBox.Center);
+                    var boundingBoxNew = BoundingBox.CreateMerged(boundingBox, room.Room.BoundingBox);
+                    sizeScore += 1e6 * boundingBoxNew.Extents.Dot(boundingBoxNew.Extents);
+
                     double roomError;
                     if (!m_errorByType.TryGetValue(room.Room.Part, out roomError))
                     {
                         var mySeedError = m_construction.ComputeErrorAgainstSeed();
                         roomError = m_errorByType[room.Room.Part] =
                             mySeedError - entrySeedError;
-                        //                        m_manager.Debug("    Type {0} has error {1}", room.Room.Part.Name, roomError);
+                        m_manager.Debug("    Type {0} has error {1}", room.Room.Part.Name, roomError);
                     }
 
                     double totalScore = 0;
                     totalScore += randomScore;
                     totalScore += growthScore;
+                    totalScore += sizeScore;
                     totalScore -= roomError;
 
                     m_weightedChoice.Add(room.Room, (float)totalScore);
@@ -317,8 +365,8 @@ namespace Equinox.ProceduralWorld.Buildings.Generation
             var bestRoom = m_weightedChoice.ChooseBest();
 
             // 50% chance to be in the top 1% of choices.
-             var room = m_weightedChoice.ChooseByQuantile(m_construction.Seed.DeterministicNoise(m_construction.Rooms.Count()), 0.99);
-//            var room = bestRoom;
+            var room = m_weightedChoice.ChooseByQuantile(m_construction.Seed.DeterministicNoise(m_construction.Rooms.Count()), 0.99);
+            //            var room = bestRoom;
             var originalRequirementError = m_construction.ComputeErrorAgainstSeed();
             CommitRoom(room);
             var newError = m_construction.ComputeErrorAgainstSeed();

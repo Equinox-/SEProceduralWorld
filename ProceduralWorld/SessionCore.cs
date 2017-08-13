@@ -29,40 +29,81 @@ namespace Equinox.ProceduralWorld
     [MySessionComponentDescriptor(MyUpdateOrder.BeforeSimulation | MyUpdateOrder.AfterSimulation)]
     public class SessionCore : MyModSessionVRageAdapter
     {
-        public static bool RELEASE = false;
+        public const bool RELEASE = true;
 
         public static MyObjectBuilder_SessionManager DefaultConfiguration()
         {
+            // ReSharper disable once UseObjectOrCollectionInitializer
             var res = new MyObjectBuilder_SessionManager();
+            // ReSharper disable once UseObjectOrCollectionInitializer
             res.SessionComponents = new List<MyObjectBuilder_ModSessionComponent>();
             res.SessionComponents.Add(new MyObjectBuilder_CustomLogger() { Filename = "ProceduralWorld.log", LogLevel = MyLogSeverity.Debug });
-            res.SessionComponents.Add(new MyObjectBuilder_CommandDispatch());
-            res.SessionComponents.Add(new MyObjectBuilder_Network());
-            res.SessionComponents.Add(new MyObjectBuilder_RPC());
-            res.SessionComponents.Add(new MyObjectBuilder_ProceduralWorldManager());
-            res.SessionComponents.Add(new MyObjectBuilder_PartManager());
-            res.SessionComponents.Add(new MyObjectBuilder_BuildingControlCommands());
-            res.SessionComponents.Add(new MyObjectBuilder_ProceduralFactions());
-            res.SessionComponents.Add(new MyObjectBuilder_StationGeneratorManager());
-            res.SessionComponents.Add(new MyObjectBuilder_CompositeNameGenerator()
+            if (!RELEASE)
             {
-                Generators = new List<MyObjectBuilder_CompositeNameGeneratorEntry>()
+                res.SessionComponents.Add(new MyObjectBuilder_CommandDispatch());
+                res.SessionComponents.Add(new MyObjectBuilder_Network());
+                res.SessionComponents.Add(new MyObjectBuilder_RPC());
+                res.SessionComponents.Add(new MyObjectBuilder_ProceduralWorldManager());
+                res.SessionComponents.Add(new MyObjectBuilder_PartManager());
+                res.SessionComponents.Add(new MyObjectBuilder_BuildingControlCommands());
+                res.SessionComponents.Add(new MyObjectBuilder_ProceduralFactions());
+                res.SessionComponents.Add(new MyObjectBuilder_StationGeneratorManager());
+                res.SessionComponents.Add(new MyObjectBuilder_CompositeNameGenerator()
                 {
-                    new MyObjectBuilder_CompositeNameGeneratorEntry(){Generator = new MyObjectBuilder_StatisticalNameGenerator(), Weight = 0.9f},
-                    new MyObjectBuilder_CompositeNameGeneratorEntry(){Generator = new MyObjectBuilder_ExoticNameGenerator(), Weight = 0.1f}
-                }
-            });
-            res.SessionComponents.Add(new MyObjectBuilder_DesignTools());
-
-            //                        res.SessionComponents.Add(new MyObjectBuilder_ProceduralStation());
+                    Generators = new List<MyObjectBuilder_CompositeNameGeneratorEntry>()
+                    {
+                        new MyObjectBuilder_CompositeNameGeneratorEntry()
+                        {
+                            Generator = new MyObjectBuilder_StatisticalNameGenerator(),
+                            Weight = 0.9f
+                        },
+                        new MyObjectBuilder_CompositeNameGeneratorEntry()
+                        {
+                            Generator = new MyObjectBuilder_ExoticNameGenerator(),
+                            Weight = 0.1f
+                        }
+                    }
+                });
+                res.SessionComponents.Add(new MyObjectBuilder_DesignTools());
+                // res.SessionComponents.Add(new MyObjectBuilder_ProceduralStation());
+            }
             return res;
         }
 
-        public MyPartManager PartManager => Manager.GetDependencyProvider<MyPartManager>();
         public Settings Settings { get; }
         public SessionCore()
         {
             Settings = new Settings();
+        }
+
+        private bool LoadConfigFromFile()
+        {
+            var success = false;
+            if (RELEASE)
+            {
+                try
+                {
+                    if (MyAPIGateway.Utilities.FileExistsInWorldStorage("session.xml", typeof(SessionCore)))
+                    {
+                        using (var reader =
+                            MyAPIGateway.Utilities.ReadFileInWorldStorage("session.xml",
+                                typeof(SessionCore)))
+                        {
+                            var value =
+                                MyAPIGateway.Utilities
+                                    .SerializeFromXML<MyObjectBuilder_SessionManager>(reader.ReadToEnd());
+                            Manager.AppendConfiguration(value);
+                            success = true;
+                        }
+                    }
+                }
+                catch (Exception e)
+                {
+                    Logger.Error("Failed to parse config:\n{0}", e.ToString());
+                    success = false;
+                }
+            }
+            return success;
         }
 
         private bool m_init = false;
@@ -75,27 +116,7 @@ namespace Equinox.ProceduralWorld
                     Manager.Register(new MySessionBootstrapper());
                     if (MyAPIGateway.Session.IsDecider())
                     {
-                        var success = false;
-                        if (RELEASE)
-                            try
-                            {
-                                if (MyAPIGateway.Utilities.FileExistsInWorldStorage("session.xml", typeof(SessionCore)))
-                                {
-                                    using (var reader =
-                                        MyAPIGateway.Utilities.ReadFileInWorldStorage("session.xml",
-                                            typeof(SessionCore)))
-                                    {
-                                        var value = MyAPIGateway.Utilities.SerializeFromXML<MyObjectBuilder_SessionManager>(reader.ReadToEnd());
-                                        Manager.AppendConfiguration(value);
-                                        success = true;
-                                    }
-                                }
-                            }
-                            catch (Exception e)
-                            {
-                                Logger.Error("Failed to parse config:\n{0}", e.ToString());
-                            }
-                        if (!success)
+                        if (!LoadConfigFromFile())
                             Manager.AppendConfiguration(DefaultConfiguration());
                     }
                 }
@@ -123,7 +144,7 @@ namespace Equinox.ProceduralWorld
         }
 
         private IMyLoggingBase Logger => Manager.FallbackLogger;
-        
+
         public override void Draw()
         {
             MyAPIGateway.Entities?.GetEntities(null, (x) =>

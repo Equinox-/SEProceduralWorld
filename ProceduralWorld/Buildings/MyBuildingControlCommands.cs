@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using Equinox.ProceduralWorld.Buildings.Creation;
 using Equinox.ProceduralWorld.Buildings.Exporter;
 using Equinox.ProceduralWorld.Buildings.Game;
@@ -38,7 +39,7 @@ namespace Equinox.ProceduralWorld.Buildings
             Create("part").Handler<string>(ProcessDebugPart);
         }
 
-        private string ClearStations()
+        private string ClearStations(CommandFeedback feedback)
         {
             var id = MyAPIGateway.Session.Player.IdentityId;
             foreach (var gps in MyAPIGateway.Session.GPS.GetGpsList(id))
@@ -50,7 +51,7 @@ namespace Equinox.ProceduralWorld.Buildings
             return null;
         }
 
-        private string ProcessStationLocations()
+        private string ProcessStationLocations(CommandFeedback feedback)
         {
             var stationModule = Manager.GetDependencyProvider<MyProceduralStationModule>();
             if (stationModule == null)
@@ -76,36 +77,42 @@ namespace Equinox.ProceduralWorld.Buildings
             return null;
         }
 
-        private string ProcessInfo(string partName)
+        private delegate void LogMux(MyLogSeverity level, string format, params object[] args);
+        private string ProcessInfo(CommandFeedback feedback, string partName)
         {
+            LogMux logger = (level, format, args) =>
+            {
+                this.Log(level, format, args);
+                feedback?.Invoke(format, args);
+            };
             var part = m_partManager.FirstOrDefault(test => test.Prefab.Id.SubtypeName.ToLower().Contains(partName.ToLower()));
             if (part == null)
                 return "Unable to find part with name \"" + partName + "\"";
             var info = part.BlockSetInfo;
-            Log(MyLogSeverity.Info, "Part info for {0}\nBlock type counts:", part.Name);
+            logger(MyLogSeverity.Info, "Part info for {0}\nBlock type counts:", part.Name);
             foreach (var kv in info.BlockCountByType)
-                Log(MyLogSeverity.Info, "{0}: {1}", kv.Key, kv.Value);
-            Log(MyLogSeverity.Info, "Total power consumption/storage: {0:e}:{1:e}  Groups:", info.TotalPowerNetConsumption, info.TotalPowerStorage);
+                logger(MyLogSeverity.Info, "{0}: {1}", kv.Key, kv.Value);
+            logger(MyLogSeverity.Info, "Total power consumption/storage: {0:e}:{1:e}  Groups:", info.TotalPowerNetConsumption, info.TotalPowerStorage);
             foreach (var kv in info.PowerConsumptionByGroup)
-                Log(MyLogSeverity.Info, "{0}: {1}", kv.Key, kv.Value);
-            Log(MyLogSeverity.Info, "Total inventory capacity: {0:e}", info.TotalInventoryCapacity);
-            Log(MyLogSeverity.Info, "Total component cost:");
+                logger(MyLogSeverity.Info, "{0}: {1}", kv.Key, kv.Value);
+            logger(MyLogSeverity.Info, "Total inventory capacity: {0:e}", info.TotalInventoryCapacity);
+            logger(MyLogSeverity.Info, "Total component cost:");
             foreach (var kv in info.ComponentCost)
-                Log(MyLogSeverity.Info, "{0}: {1}", kv.Key.Id.SubtypeName, kv.Value);
-            Log(MyLogSeverity.Info, "Production quotas:");
+                logger(MyLogSeverity.Info, "{0}: {1}", kv.Key.Id.SubtypeName, kv.Value);
+            logger(MyLogSeverity.Info, "Production quotas:");
             foreach (var pi in MyDefinitionManager.Static.GetPhysicalItemDefinitions())
-                Log(MyLogSeverity.Info, "{0}: {1}", pi.Id, info.TotalProduction(pi.Id));
+                logger(MyLogSeverity.Info, "{0}: {1}", pi.Id, info.TotalProduction(pi.Id));
             foreach (var pi in MyDefinitionManager.Static.GetDefinitionsOfType<MyComponentDefinition>())
-                Log(MyLogSeverity.Info, "{0}: {1}", pi.Id, info.TotalProduction(pi.Id));
+                logger(MyLogSeverity.Info, "{0}: {1}", pi.Id, info.TotalProduction(pi.Id));
             foreach (var gas in MyDefinitionManager.Static.GetDefinitionsOfType<MyGasProperties>())
-                Log(MyLogSeverity.Info, "{0}: {1}", gas.Id, info.TotalProduction(gas.Id));
-            Log(MyLogSeverity.Info, "Gas storage");
+                logger(MyLogSeverity.Info, "{0}: {1}", gas.Id, info.TotalProduction(gas.Id));
+            logger(MyLogSeverity.Info, "Gas storage");
             foreach (var gas in MyDefinitionManager.Static.GetDefinitionsOfType<MyGasProperties>())
-                Log(MyLogSeverity.Info, "{0}: {1}", gas.Id, info.TotalGasStorage(gas.Id));
+                logger(MyLogSeverity.Info, "{0}: {1}", gas.Id, info.TotalGasStorage(gas.Id));
             return null;
         }
 
-        private string ProcessDebugPart(string partName)
+        private string ProcessDebugPart(CommandFeedback feedback, string partName)
         {
             var part = m_partManager.FirstOrDefault(test => test.Prefab.Id.SubtypeName.ToLower().Contains(partName.ToLower()));
             if (part == null)
@@ -132,7 +139,7 @@ namespace Equinox.ProceduralWorld.Buildings
             return null;
         }
 
-        private string ProcessSpawn(Dictionary<string, object> kwargs)
+        private string ProcessSpawn(CommandFeedback feedback, Dictionary<string, object> kwargs)
         {
             var generatorModule = Manager.GetDependencyProvider<MyStationGeneratorManager>();
             if (generatorModule == null)
@@ -154,11 +161,13 @@ namespace Equinox.ProceduralWorld.Buildings
                 if (!generatorModule.GenerateFromSeedAndRemap(seed, ref construction, out grids, roomCount))
                 {
                     this.Error("Failed to generate");
+                    feedback.Invoke("Failed to generate");
                     return;
                 }
                 if (grids == null)
                 {
                     this.Error("Failed to generate: Output grids are null");
+                    feedback.Invoke("Failed to generate: Output grids are null");
                     return;
                 }
                 MyAPIGateway.Utilities.InvokeOnGameThread(() =>

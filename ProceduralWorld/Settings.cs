@@ -21,5 +21,7 @@ namespace Equinox.ProceduralWorld
         public const bool DebugGenerationResultsError = true;
         public const bool DebugGenerationStagesWeights = false;
         public const bool DebugRoomRemapProfiling = true;
+
+        public const bool AllowAuxillaryGrids = false;
     }
 }

@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using Equinox.ProceduralWorld.Buildings.Game;
@@ -108,11 +109,11 @@ namespace Equinox.ProceduralWorld.Buildings.Creation
                 if (removed && dirtyGrids.Count == 0)
                     MyAPIGateway.Utilities.InvokeOnGameThread(() =>
                     {
-//                        foreach (var grid in grids)
-//                        {
-//                            grid.PersistentFlags |= MyPersistentEntityFlags2.InScene;
-//                            grid.OnAddedToScene(grid);
-//                        }
+                        foreach (var grid in grids)
+                        {
+                            grid.PersistentFlags |= MyPersistentEntityFlags2.InScene;
+                            grid.OnAddedToScene(grid);
+                        }
                         foreach (var grid in grids)
                             grid.Components.Get<MyProceduralGridComponent>()?.UpdateReadyState();
                     });
@@ -126,21 +127,25 @@ namespace Equinox.ProceduralWorld.Buildings.Creation
             Logger.Debug("Added room {3} of {0} blocks with {1} aux grids in {2}", room.Part.PrimaryGrid.CubeBlocks.Count, room.Part.Prefab.CubeGrids.Length - 1, iwatch.Elapsed, room.Part.Name);
         }
 
+        private static IMyEntity CreateFromObjectBuilderShim(MyObjectBuilder_EntityBase ob, bool addToScene,
+            Action callback)
+        {
+            ob.PersistentFlags &= ~MyPersistentEntityFlags2.InScene;
+            return MyAPIGateway.Entities.CreateFromObjectBuilderParallel(ob, addToScene, callback);
+        }
+
         public MyProceduralGridComponent SpawnAsync()
         {
             var dirtyGrids = new HashSet<long>();
 
             var allGrids = new List<IMyCubeGrid>();
-            // TODO it's kind of sketchy to add all these physically interconnected grids on different ticks...
-            // However my old hack no longer works and I can't think of another
             // This ensures that dirtyGrids gets populated before the spawning callback runs.
             lock (dirtyGrids)
             {
                 var iwatch = new Stopwatch();
                 iwatch.Restart();
                 PrimaryGrid.IsStatic = true;
-//                PrimaryGrid.PersistentFlags &= ~MyPersistentEntityFlags2.InScene;
-                var primaryGrid = MyAPIGateway.Entities.CreateFromObjectBuilderParallel(PrimaryGrid, true, () => FlagIfReady(PrimaryGrid.EntityId, dirtyGrids, allGrids)) as IMyCubeGrid;
+                var primaryGrid = CreateFromObjectBuilderShim(PrimaryGrid, true, () => FlagIfReady(PrimaryGrid.EntityId, dirtyGrids, allGrids)) as IMyCubeGrid;
                 if (primaryGrid == null)
                 {
                     Logger.Error("Failed to remap primary entity.  Aborting spawn.");
@@ -149,22 +154,25 @@ namespace Equinox.ProceduralWorld.Buildings.Creation
                 dirtyGrids.Add(PrimaryGrid.EntityId);
                 allGrids.Add(primaryGrid);
                 Logger.Debug("Created entity for {0} room grid in {1}", Construction.Rooms.Count(), iwatch.Elapsed);
-                iwatch.Restart();
-                foreach (var aux in AuxGrids)
+                if (Settings.AllowAuxillaryGrids)
                 {
-//                    aux.PersistentFlags &= ~MyPersistentEntityFlags2.InScene;
-                    // ReSharper disable once ImplicitlyCapturedClosure
-                    var res = MyAPIGateway.Entities.CreateFromObjectBuilderParallel(aux, true, () => FlagIfReady(aux.EntityId, dirtyGrids, allGrids)) as IMyCubeGrid;
-                    if (res == null)
+                    iwatch.Restart();
+                    foreach (var aux in AuxGrids)
                     {
-                        Logger.Warning("Failed to remap secondary entity.  Skipping.");
-                        continue;
+                        // ReSharper disable once ImplicitlyCapturedClosure
+                        var res = CreateFromObjectBuilderShim(aux, true,
+                            () => FlagIfReady(aux.EntityId, dirtyGrids, allGrids)) as IMyCubeGrid;
+                        if (res == null)
+                        {
+                            Logger.Warning("Failed to remap secondary entity.  Skipping.");
+                            continue;
+                        }
+                        allGrids.Add(res);
+                        dirtyGrids.Add(aux.EntityId);
                     }
-                    allGrids.Add(res);
-                    dirtyGrids.Add(aux.EntityId);
+                    if (AuxGrids.Count > 0)
+                        Logger.Debug("Created {0} aux grids in {1}", AuxGrids.Count, iwatch.Elapsed);
                 }
-                if (AuxGrids.Count > 0)
-                    Logger.Debug("Created {0} aux grids in {1}", AuxGrids.Count, iwatch.Elapsed);
                 var component = new MyProceduralGridComponent(Construction, allGrids);
                 primaryGrid.Components.Add(component);
                 return component;
