@@ -7,12 +7,14 @@ using Equinox.ProceduralWorld.Manager;
 using Equinox.ProceduralWorld.Voxels.VoxelBuilder;
 using Equinox.Utils.Logging;
 using Equinox.Utils.Noise;
-using Equinox.Utils.Noise.VRage;
+using Equinox.Utils.Noise.Keen;
 using Equinox.Utils.Session;
 using ProtoBuf;
+using Sandbox.Game.Components;
 using VRage;
 using VRage.Collections;
 using VRage.Game;
+using VRage.Game.Components;
 using VRage.Utils;
 using VRageMath;
 

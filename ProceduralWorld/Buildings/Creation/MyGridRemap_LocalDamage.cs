@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using Equinox.Utils.Logging;
 using Equinox.Utils.Noise;
-using Equinox.Utils.Noise.VRage;
+using Equinox.Utils.Noise.Keen;
 using Sandbox.Definitions;
 using VRage.Game;
 using VRageMath;

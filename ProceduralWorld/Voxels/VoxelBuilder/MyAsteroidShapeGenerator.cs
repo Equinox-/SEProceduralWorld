@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using Equinox.Utils.Noise.VRage;
+using Equinox.Utils.Noise.Keen;
 using Sandbox.Definitions;
 using VRage.Library.Utils;
 using VRage.Utils;

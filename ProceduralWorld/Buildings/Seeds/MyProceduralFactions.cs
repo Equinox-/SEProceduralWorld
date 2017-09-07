@@ -4,7 +4,7 @@ using System.Linq;
 using Equinox.ProceduralWorld.Names;
 using Equinox.Utils;
 using Equinox.Utils.Noise;
-using Equinox.Utils.Noise.VRage;
+using Equinox.Utils.Noise.Keen;
 using Equinox.Utils.Session;
 using Sandbox.ModAPI;
 using VRage.Game;
