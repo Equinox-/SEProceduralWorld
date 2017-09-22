@@ -39,11 +39,11 @@ namespace Equinox.ProceduralWorld.Voxels.Asteroids
             private Vector3D WorldPosition { get; }
             private float Size { get; }
             private IMyVoxelMap VoxelMap { get; set; }
-            private int TrueSeed { get; }
+            private MyAsteroidLayer SeedSpecs { get; }
             private Quaternion Rotation { get; }
             private new MyAsteroidFieldModule Module => base.Module as MyAsteroidFieldModule;
 
-            public MyProceduralAsteroid(MyAsteroidFieldModule field, Vector4I seed, Vector3D worldPos, double size, int genSeed) : base(field)
+            public MyProceduralAsteroid(MyAsteroidFieldModule field, Vector4I seed, Vector3D worldPos, double size, MyAsteroidLayer layer) : base(field)
             {
                 Seed = seed;
                 WorldPosition = worldPos;
@@ -51,7 +51,7 @@ namespace Equinox.ProceduralWorld.Voxels.Asteroids
                 Rotation.Normalize();
                 Size = (float)size;
                 m_boundingBox = new BoundingBoxD(WorldPosition - Size, WorldPosition + Size);
-                TrueSeed = genSeed;
+                SeedSpecs = layer;
                 RaiseMoved();
                 base.OnRemoved += HandleRemove;
             }
@@ -101,7 +101,9 @@ namespace Equinox.ProceduralWorld.Voxels.Asteroids
                     {
                         var mat = MatrixD.CreateFromQuaternion(Rotation);
                         mat.Translation = WorldPosition;
-                        VoxelMap = MyVoxelUtility.SpawnAsteroid(new MyPositionAndOrientation(mat), MyVoxelUtility.CreateProceduralAsteroidProvider(TrueSeed, Size));
+                        var genSeed = WorldPosition.GetHashCode();
+                        genSeed = MyVoxelUtility.FindAsteroidSeed(genSeed, Size, SeedSpecs.ProhibitsOre, SeedSpecs.RequiresOre, 10);
+                        VoxelMap = MyVoxelUtility.SpawnAsteroid(new MyPositionAndOrientation(mat), MyVoxelUtility.CreateProceduralAsteroidProvider(genSeed, Size));
                         VoxelMap.OnPhysicsChanged += MarkForSave;
                     }
                     m_spawnQueued = false;

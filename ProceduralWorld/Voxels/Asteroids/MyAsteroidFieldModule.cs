@@ -98,9 +98,7 @@ namespace Equinox.ProceduralWorld.Voxels.Asteroids
                     if (!m_asteroids.TryGetValue(seed, out procAst))
                     {
                         var size = m_noise.GetValue(worldPos) * (layer.AsteroidMaxSize - layer.AsteroidMinSize) + layer.AsteroidMinSize;
-                        var genSeed = worldPos.GetHashCode();
-                        genSeed = MyVoxelUtility.FindAsteroidSeed(genSeed, (float)size, m_layers[i].ProhibitsOre, m_layers[i].RequiresOre, 10);
-                        m_asteroids[seed] = procAst = new MyProceduralAsteroid(this, seed, worldPos, size, genSeed);
+                        m_asteroids[seed] = procAst = new MyProceduralAsteroid(this, seed, worldPos, size, m_layers[i]);
                     }
                     procAst.SpawnIfNeeded((procAst.m_boundingBox.Center - include.Center).LengthSquared());
                     yield return procAst;
