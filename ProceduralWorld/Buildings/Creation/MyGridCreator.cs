@@ -130,8 +130,11 @@ namespace Equinox.ProceduralWorld.Buildings.Creation
         private static IMyEntity CreateFromObjectBuilderShim(MyObjectBuilder_EntityBase ob, bool addToScene,
             Action callback)
         {
-            ob.PersistentFlags &= ~MyPersistentEntityFlags2.InScene;
-            return MyAPIGateway.Entities.CreateFromObjectBuilderParallel(ob, addToScene, callback);
+//            ob.PersistentFlags &= ~MyPersistentEntityFlags2.InScene;
+//            return MyAPIGateway.Entities.CreateFromObjectBuilderParallel(ob, addToScene, callback);
+            var result = MyAPIGateway.Entities.CreateFromObjectBuilderAndAdd(ob);
+            callback.Invoke();
+            return result;
         }
 
         public MyProceduralGridComponent SpawnAsync()

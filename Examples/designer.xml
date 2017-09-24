@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-16"?>
+<MyObjectBuilder_SessionManager xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <CustomLogger>
+    <LogLevel>Debug</LogLevel>
+    <Filename>ProceduralWorld.log</Filename>
+  </CustomLogger>
+  <CommandDispatch />
+  <Network />
+  <RPC />
+  <ProceduralWorldManager />
+  <PartManager />
+  <BuildingControlCommands />
+  <ProceduralFactions>
+    <FactionDensity>500000</FactionDensity>
+    <FactionShiftBase>1</FactionShiftBase>
+  </ProceduralFactions>
+  <StationGeneratorManager />
+  <CompositeNameGenerator>
+    <Generator>
+      <Weight>0.9</Weight>
+      <Statistical>
+        <StatisticsDatabase>res:english</StatisticsDatabase>
+      </Statistical>
+    </Generator>
+    <Generator>
+      <Weight>0.100000024</Weight>
+      <Exotic />
+    </Generator>
+  </CompositeNameGenerator>
+  <DesignTools />
+  <TolerableLagSeconds>0.008</TolerableLagSeconds>
+</MyObjectBuilder_SessionManager>
