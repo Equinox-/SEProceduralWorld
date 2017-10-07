@@ -65,15 +65,16 @@ namespace Equinox.ProceduralWorld.Buildings
             var stationNoise = stationModule.StationNoise;
             var sphere = new BoundingSphereD(MyAPIGateway.Session.Camera.Position, MyAPIGateway.Session.SessionSettings.ViewDistance * 10);
             var id = MyAPIGateway.Session.Player.IdentityId;
-            foreach (var gps in MyAPIGateway.Session.GPS.GetGpsList(id))
-                if (gps.Name.StartsWith("Station - "))
-                    MyAPIGateway.Session.GPS.RemoveGps(id, gps);
             var aabb = new BoundingBoxD(sphere.Center - sphere.Radius, sphere.Center + sphere.Radius);
             foreach (var s in stationNoise.TryGetSpawnIn(aabb, sphere.Intersects))
             {
                 var position = new Vector3D(s.Item2.X, s.Item2.Y, s.Item2.Z);
                 var cseed = new MyProceduralConstructionSeed(factionModule.SeedAt(s.Item2.XYZ()), s.Item2, null, s.Item1.GetHashCode());
-                var gps = MyAPIGateway.Session.GPS.Create("[" + cseed.Faction.Tag + "] " + cseed.Name, "", position, true, true);
+                var name = "[" + cseed.Faction.Tag + "] " + cseed.Name;
+                foreach (var gps2 in MyAPIGateway.Session.GPS.GetGpsList(id))
+                    if (gps2.Name.Equals(name))
+                        MyAPIGateway.Session.GPS.RemoveGps(id, gps2);
+                var gps = MyAPIGateway.Session.GPS.Create(name, "", position, true, true);
                 gps.DiscardAt = MyAPIGateway.Session.ElapsedPlayTime + new TimeSpan(0, 5, 0);
                 MyAPIGateway.Session.GPS.AddGps(id, gps);
             }
