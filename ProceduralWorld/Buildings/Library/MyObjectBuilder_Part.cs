@@ -14,6 +14,11 @@ namespace Equinox.ProceduralWorld.Buildings.Library
     [Serializable, ProtoContract]
     public class MyObjectBuilder_Part
     {
+        public const int PartBuilderVersion = 1;
+
+        [ProtoMember]
+        public int BuilderVersion = 0;
+
         [ProtoMember]
         [XmlArrayItem("MyReservedSpace")]
         public MyObjectBuilder_ReservedSpace[] ReservedSpaces;

@@ -334,9 +334,10 @@ namespace Equinox.ProceduralWorld.Buildings.Generation
                             growthScore -= error * error * Math.Sqrt(1 + freeMountPointCount);
                     }
 
-                    var sizeScore = 1e6 * Vector3.DistanceSquared(boundingBox.Center, room.Room.BoundingBox.Center);
+                    var sizeError = Vector3.DistanceSquared(boundingBox.Center, room.Room.BoundingBox.Center);
                     var boundingBoxNew = BoundingBox.CreateMerged(boundingBox, room.Room.BoundingBox);
-                    sizeScore += 1e6 * boundingBoxNew.Extents.Dot(boundingBoxNew.Extents);
+                    sizeError += boundingBoxNew.Extents.Dot(boundingBoxNew.Extents);
+                    sizeError *= 1e3f;
 
                     double roomError;
                     if (!m_errorByType.TryGetValue(room.Room.Part, out roomError))
@@ -344,13 +345,13 @@ namespace Equinox.ProceduralWorld.Buildings.Generation
                         var mySeedError = m_construction.ComputeErrorAgainstSeed();
                         roomError = m_errorByType[room.Room.Part] =
                             mySeedError - entrySeedError;
-                        m_manager.Debug("    Type {0} has error {1}", room.Room.Part.Name, roomError);
+                        m_manager.Debug("    Type {0} has error {1:e}", room.Room.Part.Name, roomError);
                     }
 
                     double totalScore = 0;
                     totalScore += randomScore;
                     totalScore += growthScore;
-                    totalScore += sizeScore;
+                    totalScore -= sizeError;
                     totalScore -= roomError;
 
                     m_weightedChoice.Add(room.Room, (float)totalScore);

@@ -47,7 +47,7 @@ namespace Equinox.ProceduralWorld.Buildings.Storage
                 case MySupportedBlockTypes.ShipController:
                     return block is MyShipControllerDefinition;
                 case MySupportedBlockTypes.ShipConstruction:
-                    return block is MyShipGrinderDefinition || block is MyShipWelderDefinition;
+                    return block is MyShipGrinderDefinition || block is MyShipWelderDefinition || block is MyProjectorDefinition;
                 case MySupportedBlockTypes.Docking:
                     return block.Id.TypeId == typeof(MyObjectBuilder_ShipConnector);
                 case MySupportedBlockTypes.Communications:

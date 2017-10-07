@@ -10,8 +10,8 @@ namespace Equinox.ProceduralWorld.Names
 {
     public abstract class MyNameGeneratorBase : MyLoggingSessionComponent
     {
-        private static readonly Type[] SuppliesDep = { typeof(MyNameGeneratorBase) };
-        public override IEnumerable<Type> SuppliedComponents => SuppliesDep;
+        public static readonly Type[] SuppliedDeps = { typeof(MyNameGeneratorBase) };
+        public override IEnumerable<Type> SuppliedComponents => SuppliedDeps;
 
         public abstract string Generate(ulong seed);
     }

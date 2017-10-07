@@ -70,12 +70,18 @@ namespace Equinox.ProceduralWorld.Buildings.Game
 
             private bool Stage_Generate()
             {
-                Module.Debug("Generation stage for {0}", m_cell);
+                Module.Debug("Generation stage for {0}/{1}", m_cell, Seed.Seed);
                 m_construction = null;
-//                var success = MyGenerator.GenerateFully(Seed, ref m_construction);
-//                if (success && !IsMarkedForRemoval)
-//                    return true;
-//                if (!success) SessionCore.Log("Generation stage failed for {0}", m_cell);
+
+                var success = Module.Generator.GenerateFromSeed(Seed, ref m_construction);
+                if (success)
+                {
+                    Module.Debug("Generation stage success for {0}/{1}", m_cell, Seed.Seed);
+                    if (!IsMarkedForRemoval)
+                        return true;
+                }
+                else
+                    Module.Error("Generation stage failed for {0}/{1}", m_cell, Seed.Seed);
                 m_grids = null;
                 m_component = null;
                 return false;
@@ -83,19 +89,27 @@ namespace Equinox.ProceduralWorld.Buildings.Game
 
             private bool Stage_Build()
             {
-                Module.Debug("Build stage for {0}", m_cell);
+                Module.Debug("Build stage for {0}/{1}", m_cell, Seed.Seed);
                 m_grids = MyGridCreator.RemapAndBuild(m_construction);
-                if (m_grids == null) Module.Debug("Build stage failed for {0}", m_cell);
-                if (m_grids != null && !IsMarkedForRemoval) return true;
+                if (m_grids != null)
+                {
+                    Module.Debug("Build stage success for {0}/{1}", m_cell, Seed.Seed);
+                    if (!IsMarkedForRemoval)
+                        return true;
+                }
+                else
+                    Module.Warning("Build stage failed for {0}/{1}", m_cell, Seed.Seed);
                 m_component = null;
                 return false;
             }
             private void Stage_SpawnGrid()
             {
-                Module.Debug("Spawn stage for {0}", m_cell);
+                Module.Debug("Spawn stage for {0}/{1}", m_cell, Seed.Seed);
                 m_component = m_grids.SpawnAsync();
                 if (m_component == null)
-                    Module.Debug("Spawn stage failed for {0}", m_cell);
+                    Module.Warning("Spawn stage failed for {0}/{1}", m_cell, Seed.Seed);
+                else
+                    Module.Debug("Spawn stage success for {0}/{1}", m_cell, Seed.Seed);
 
                 using (m_creationQueueSemaphore.AcquireExclusiveUsing())
                     m_creationQueued = false;
@@ -115,33 +129,24 @@ namespace Equinox.ProceduralWorld.Buildings.Game
                 if (IsMarkedForRemoval) return;
                 if (m_construction == null)
                 {
-                    MyAPIGateway.Parallel.StartBackground(() =>
+                    MyAPIGateway.Parallel.StartBackground(MyParallelUtilities.WrapAction(() =>
                     {
                         if (!Stage_Generate()) return;
                         if (!Stage_Build()) return;
-                        MyAPIGateway.Utilities.InvokeOnGameThread(Stage_SpawnGrid);
-                    });
+                        MyAPIGateway.Utilities.InvokeOnGameThread(MyParallelUtilities.WrapAction(Stage_SpawnGrid, Module));
+                    }, Module));
                 }
                 else if (m_grids == null)
                 {
-                    MyAPIGateway.Parallel.StartBackground(() =>
+                    MyAPIGateway.Parallel.StartBackground(MyParallelUtilities.WrapAction(() =>
                     {
                         if (!Stage_Build()) return;
-                        MyAPIGateway.Utilities.InvokeOnGameThread(Stage_SpawnGrid);
-                    });
+                        MyAPIGateway.Utilities.InvokeOnGameThread(MyParallelUtilities.WrapAction(Stage_SpawnGrid, Module));
+                    }, Module));
                 }
                 else if (m_component == null)
                 {
-                    MyAPIGateway.Utilities.InvokeOnGameThread(Stage_SpawnGrid);
-                }
-                else if (m_component.IsConcealed)
-                {
-                    MyAPIGateway.Utilities.InvokeOnGameThread(() =>
-                    {
-                        m_component.IsConcealed = false;
-                        using (m_creationQueueSemaphore.AcquireExclusiveUsing())
-                            m_creationQueued = false;
-                    });
+                    MyAPIGateway.Utilities.InvokeOnGameThread(MyParallelUtilities.WrapAction(Stage_SpawnGrid, Module));
                 }
                 else
                     m_creationQueued = false;
@@ -156,8 +161,6 @@ namespace Equinox.ProceduralWorld.Buildings.Game
                     if (m_creationQueued)
                         return false;
                 var dt = DateTime.UtcNow - TimeRemoved;
-                if (dt > Module.ConfigReference.StationConcealPersistence && m_component != null && !m_component.IsConcealed)
-                    m_component.IsConcealed = true;
                 if (dt > Module.ConfigReference.StationEntityPersistence && m_component != null)
                 {
                     removedEntities++;

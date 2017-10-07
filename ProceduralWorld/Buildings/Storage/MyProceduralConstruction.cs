@@ -42,6 +42,11 @@ namespace Equinox.ProceduralWorld.Buildings.Storage
         public double ComputeErrorAgainstSeed(MyUtilities.LoggingCallback logger = null)
         {
             var error = 0.0;
+            {
+                var err = BlockSetInfo.TotalRawResources;
+                logger?.Invoke("Raw resources {0:e}.  Err {1:e}", BlockSetInfo.TotalRawResources, err);
+                error += err;
+            }
             // Block counts
             {
                 var countCopy = new Dictionary<MySupportedBlockTypes, int>(MySupportedBlockTypesEquality.Instance);
@@ -115,14 +120,34 @@ namespace Equinox.ProceduralWorld.Buildings.Storage
                 return multSurplus * error * error;
         }
 
-        // TODO cache recipes?
-        //        public void Init(MyObjectBuilder_ProceduralConstruction ob)
-        //        {
-        //            m_rooms.Clear();
-        //            m_roomsSafeOrder.Clear();
-        //            foreach (var room in ob.Room)
-        //                new MyProceduralRoom().Init(room, this);
-        //        }
+
+        public void Clear()
+        {
+            foreach (var copy in m_rooms.ToList())
+                RemoveRoom(copy.Value);
+        }
+
+        public bool Init(MyPartManager manager, MyObjectBuilder_ProceduralConstruction ob)
+        {
+            if (ob.Rooms.Any(x => manager.LoadNullable(x.PrefabID) == null))
+                return false;
+            Clear();
+            foreach (var room in ob.Rooms)
+            {
+                var data = new MyProceduralRoom();
+                data.Init(room.Transform, manager.LoadNullable(room.PrefabID));
+                AddRoom(data);
+            }
+            return true;
+        }
+
+        public MyObjectBuilder_ProceduralConstruction GetObjectBuilder()
+        {
+            return new MyObjectBuilder_ProceduralConstruction()
+            {
+                Rooms = m_rooms.Values.Select(x => x.GetObjectBuilder()).ToArray()
+            };
+        }
 
         private struct MyRoomRegisterToken : IDisposable
         {
@@ -221,12 +246,30 @@ namespace Equinox.ProceduralWorld.Buildings.Storage
 
         public bool Intersects(MyPartFromPrefab other, MatrixI otherTransform, MatrixI otherITransform, bool testOptional, bool testQuick = false, MyProceduralRoom ignore = null)
         {
-            return m_rooms.Values.Any(test => test != ignore && test.Intersects(other, otherTransform, otherITransform, testOptional, testQuick));
+            var bb = MyUtilities.TransformBoundingBox(other.BoundingBoxBoth, otherTransform);
+            var result = false;
+            m_roomTree.Query((x) =>
+            {
+                var test = m_roomTree.GetUserData<MyProceduralRoom>(x);
+                var res = test != ignore && test.Intersects(other, otherTransform, otherITransform, testOptional, testQuick);
+                result = res;
+                return !res;
+            }, ref bb);
+            return result;
         }
 
         public bool Intersects(MyProceduralRoom room, bool testOptional, bool testQuick = false)
         {
-            return m_rooms.Values.Any(test => test != room && test.Intersects(room, testOptional, testQuick));
+            var bb = room.BoundingBoxBoth;
+            var result = false;
+            m_roomTree.Query((x) =>
+            {
+                var test = m_roomTree.GetUserData<MyProceduralRoom>(x);
+                var res = test != room && test.Intersects(room, testOptional, testQuick);
+                result = res;
+                return !res;
+            }, ref bb);
+            return result;
         }
 
         public IEnumerable<MyProceduralRoom> Rooms => m_roomsSafeOrder;

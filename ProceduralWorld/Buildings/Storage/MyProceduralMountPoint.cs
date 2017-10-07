@@ -45,12 +45,6 @@ namespace Equinox.ProceduralWorld.Buildings.Storage
             TakeOwnership(parent);
         }
 
-        public void Init(MyObjectBuilder_ProceduralMountPoint ob, MyProceduralRoom parent)
-        {
-            MountPoint = parent.Part.MountPoint(ob.TypeID, ob.InstanceID);
-            TakeOwnership(parent);
-        }
-
         public IEnumerable<Vector3I> MountLocations => MountPoint.Blocks.Select(x => Owner.PrefabToGrid(x.MountLocation));
         public IEnumerable<Vector3I> AnchorLocations => MountPoint.Blocks.Select(x => Owner.PrefabToGrid(x.AnchorLocation));
 

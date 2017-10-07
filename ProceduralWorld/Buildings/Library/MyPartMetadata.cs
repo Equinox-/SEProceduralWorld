@@ -23,8 +23,19 @@ namespace Equinox.ProceduralWorld.Buildings.Library
         public MyBlockSetInfo BlockSetInfo { get; private set; }
         private readonly List<MyReservedSpace> m_reservedSpaces;
 
+        /// <summary>
+        /// Bounding box enclosing the primary grid
+        /// </summary>
         public BoundingBox BoundingBox { get; private set; }
+
+        /// <summary>
+        /// Bounding box enclosing all reserved spaces
+        /// </summary>
         public BoundingBox ReservedSpace { get; private set; }
+
+        /// <summary>
+        /// Part manager responsible for this part
+        /// </summary>
         public MyPartManager Manager { get; }
 
         protected IMyLogging Logger => Manager;
@@ -101,6 +112,7 @@ namespace Equinox.ProceduralWorld.Buildings.Library
             {
                 var res = new MyObjectBuilder_Part
                 {
+                    BuilderVersion = MyObjectBuilder_Part.PartBuilderVersion,
                     BlockCountByType = BlockSetInfo.BlockCountByType.Select(x => MySerializableTuple.Create((SerializableDefinitionId)x.Key, x.Value)).ToArray(),
                     ComponentCost = BlockSetInfo.ComponentCost.Select(x => MySerializableTuple.Create((SerializableDefinitionId)x.Key.Id, x.Value)).ToArray(),
                     OccupiedLocations = m_blocks.Keys.Select(x => (SerializableVector3I)x).ToArray(),
@@ -151,6 +163,9 @@ namespace Equinox.ProceduralWorld.Buildings.Library
         }
         #endregion
 
+        /// <summary>
+        /// Bounding box including both the grid and all reserved spaces
+        /// </summary>
         public BoundingBox BoundingBoxBoth
         {
             get
@@ -212,7 +227,7 @@ namespace Equinox.ProceduralWorld.Buildings.Library
                 {
                     if (!name.StartsWithICase(ReservedSpacePrefix)) continue;
                     var args = name.Substring(ReservedSpacePrefix.Length).Trim().Split(' ').Select(x => x.Trim()).Where(x => x.Length > 0).ToArray();
-                    var box = MyPartDummyUtils.ParseReservedSpace(MyDefinitionManager.Static.GetCubeSize(primaryGrid.GridSizeEnum), block, args, 
+                    var box = MyPartDummyUtils.ParseReservedSpace(MyDefinitionManager.Static.GetCubeSize(primaryGrid.GridSizeEnum), block, args,
                         Logger.Warning);
                     box.Box.Max += (Vector3I)block.Min;
                     box.Box.Min += (Vector3I)block.Min;

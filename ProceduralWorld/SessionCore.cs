@@ -77,6 +77,32 @@ namespace Equinox.ProceduralWorld
         public SessionCore()
         {
             Settings = new Settings();
+            Manager.RegisterFactory(MyLoggerBase.SuppliedDeps, () => new MyCustomLogger());
+            Manager.RegisterFactory(MyCommandDispatchComponent.SuppliedDeps, () => new MyCommandDispatchComponent());
+            Manager.RegisterFactory(MyNetworkComponent.SuppliedDeps, () => new MyNetworkComponent());
+            Manager.RegisterFactory(MyRPCComponent.SuppliedDeps, () => new MyRPCComponent());
+            Manager.RegisterFactory(MyProceduralWorldManager.SuppliedDeps, () => new MyProceduralWorldManager());
+            Manager.RegisterFactory(MyPartManager.SuppliedDeps, () => new MyPartManager());
+            Manager.RegisterFactory(MyProceduralFactions.SuppliedDeps, () => new MyProceduralFactions());
+            Manager.RegisterFactory(MyStationGeneratorManager.SuppliedDeps, () => new MyStationGeneratorManager());
+            Manager.RegisterFactory(MyBuildingDatabase.SuppliedDeps, () => new MyBuildingDatabase());
+            Manager.RegisterFactory(MyNameGeneratorBase.SuppliedDeps, () =>
+            {
+                var gen = new MyCompositeNameGenerator();
+                var config = new MyObjectBuilder_CompositeNameGenerator();
+                config.Generators.Add(new MyObjectBuilder_CompositeNameGeneratorEntry()
+                {
+                    Generator = new MyObjectBuilder_StatisticalNameGenerator() { StatisticsDatabase = "res:english" },
+                    Weight = 0.9f
+                });
+                config.Generators.Add(new MyObjectBuilder_CompositeNameGeneratorEntry()
+                {
+                    Generator = new MyObjectBuilder_ExoticNameGenerator(),
+                    Weight = 0.1f
+                });
+                gen.LoadConfiguration(config);
+                return gen;
+            });
         }
 
         private bool LoadConfigFromFile()
@@ -140,6 +166,13 @@ namespace Equinox.ProceduralWorld
         {
             if (!m_init)
             {
+                var plateA = MyDefinitionManager.Static.GetComponentDefinition(new MyDefinitionId(typeof(MyObjectBuilder_Component),
+                    "SteelPlate"));
+                var blockA =
+                    MyDefinitionManager.Static.GetCubeBlockDefinition(
+                        new MyDefinitionId(typeof(MyObjectBuilder_CubeBlock), "LargeBlockArmorBlock"));
+                MyLog.Default.WriteLine(
+                    $"From comp builder {plateA.GetHashCode()}, from block def {blockA.Components[0].Definition.GetHashCode()}");
                 try
                 {
                     Manager.Register(new MySessionBootstrapper());

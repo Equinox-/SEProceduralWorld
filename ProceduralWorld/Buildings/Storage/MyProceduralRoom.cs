@@ -65,24 +65,14 @@ namespace Equinox.ProceduralWorld.Buildings.Storage
                 }
         }
 
-// TODO cache recipes?
-//        public void Init(MyObjectBuilder_ProceduralRoom ob, MyProceduralConstruction parent)
-//        {
-//            RoomID = parent != null ? ob.RoomID : -1;
-//            m_part = SessionCore.Instance.PartManager.LoadNullable(ob.PrefabID);
-//            Transform = ob.Transform;
-//            m_mountPoints = new Dictionary<string, Dictionary<string, MyProceduralMountPoint>>();
-//            foreach (var mount in ob.MountPoints)
-//            {
-//                var point = new MyProceduralMountPoint();
-//                point.Init(mount, this);
-//                Dictionary<string, MyProceduralMountPoint> byName;
-//                if (!m_mountPoints.TryGetValue(point.MountPoint.MountType, out byName))
-//                    m_mountPoints[point.MountPoint.MountType] = byName = new Dictionary<string, MyProceduralMountPoint>();
-//                byName[point.MountPoint.MountName] = point;
-//            }
-//            parent?.AddRoom(this);
-//        }
+        public MyObjectBuilder_ProceduralRoom GetObjectBuilder()
+        {
+            return new MyObjectBuilder_ProceduralRoom()
+            {
+                PrefabID = Part.Prefab.Id,
+                Transform = Transform
+            };
+        }
 
         public MatrixI InvTransform => m_invTransform;
 

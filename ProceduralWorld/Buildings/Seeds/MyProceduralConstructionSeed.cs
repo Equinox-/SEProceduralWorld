@@ -1,14 +1,18 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Text;
+using System.Xml.Serialization;
 using Equinox.ProceduralWorld.Buildings.Storage;
 using Equinox.ProceduralWorld.Utils;
 using Equinox.Utils;
 using Sandbox.Definitions;
 using Sandbox.Game.EntityComponents;
+using VRage;
 using VRage.Game;
 using VRage.Game.ObjectBuilders.Definitions;
+using VRage.ObjectBuilders;
 using VRageMath;
 
 namespace Equinox.ProceduralWorld.Buildings.Seeds
@@ -166,33 +170,16 @@ namespace Equinox.ProceduralWorld.Buildings.Seeds
 
             m_localStorage = new Dictionary<MyDefinitionId, MyTradeRequirements>(MyDefinitionId.Comparer)
             {
-                // ~3MWH / person stored, ~1MW / person produced
-                [MyResourceDistributorComponent.ElectricityId] = new MyTradeRequirements(Population * 3 * tmpRandom.NextNormal(1, 0.1), Population * tmpRandom.NextNormal(1, 0.1), 10, 10),
-                // one large O2 tank / person stored (~18 days), 1 O2/sec/person produced
-                [MyResourceDistributorComponent.OxygenId] = new MyTradeRequirements(Population * 1e5 * tmpRandom.NextNormal(1, 0.1), Population * 1 * tmpRandom.NextNormal(1, 0.1), 10, 10),
+                // ~0.5MWH / person stored, ~1MW / person produced
+                [MyResourceDistributorComponent.ElectricityId] = new MyTradeRequirements(Population * 0.5 * tmpRandom.NextNormal(1, 0.1), Population * tmpRandom.NextNormal(1, 0.1), 10, 10),
+                // one large O2 tank / 10 person stored (~2 days), 1 O2/sec/person produced
+                [MyResourceDistributorComponent.OxygenId] = new MyTradeRequirements(Population * 1e4 * tmpRandom.NextNormal(1, 0.1), Population * 1 * tmpRandom.NextNormal(1, 0.1), 10, 10),
                 // I don't even know how I'd guess this
                 [MyResourceDistributorComponent.HydrogenId] = new MyTradeRequirements(Population * 1e4 * tmpRandom.NextExponential(), tmpRandom.NextExponential() * sqrtPopulation)
             };
 
             // Compute mass & volume of storage
-            var vol = Vector2D.Zero;
-            foreach (var kv in AllStorage)
-            {
-                MyDefinitionBase ob;
-                if (!MyDefinitionManager.Static.TryGetDefinition(kv.Key, out ob))
-                    continue;
-                var physItem = ob as MyPhysicalItemDefinition;
-                if (physItem != null)
-                    vol += kv.Value.Storage * new Vector2D(physItem.Volume, physItem.Mass);
-                var component = ob as MyComponentDefinition;
-                if (component != null)
-                    vol += kv.Value.Storage * new Vector2D(component.Volume, component.Mass);
-                var ammo = ob as MyAmmoMagazineDefinition;
-                if (ammo != null)
-                    vol += kv.Value.Storage * new Vector2D(ammo.Volume, ammo.Mass);
-            }
-            StorageVolume = vol.X;
-            StorageMass = vol.Y;
+            ComputeStorageVolumeMass(out StorageVolume, out StorageMass);
 
             // ReSharper disable once UseObjectOrCollectionInitializer
             m_blockCountRequirements = new Dictionary<MySupportedBlockTypes, MyBlockRequirement>(MySupportedBlockTypesEquality.Instance);
@@ -216,6 +203,95 @@ namespace Equinox.ProceduralWorld.Buildings.Seeds
                 Orientation = orientation.Value;
         }
 
+        private void ComputeStorageVolumeMass(out double volume, out double mass)
+        {
+            var vol = Vector2D.Zero;
+            foreach (var kv in AllStorage)
+            {
+                MyDefinitionBase ob;
+                if (!MyDefinitionManager.Static.TryGetDefinition(kv.Key, out ob))
+                    continue;
+                var physItem = ob as MyPhysicalItemDefinition;
+                if (physItem != null)
+                    vol += kv.Value.Storage * new Vector2D(physItem.Volume, physItem.Mass);
+                var component = ob as MyComponentDefinition;
+                if (component != null)
+                    vol += kv.Value.Storage * new Vector2D(component.Volume, component.Mass);
+                var ammo = ob as MyAmmoMagazineDefinition;
+                if (ammo != null)
+                    vol += kv.Value.Storage * new Vector2D(ammo.Volume, ammo.Mass);
+            }
+            volume = vol.X;
+            mass = vol.Y;
+        }
+
+        public MyProceduralConstructionSeed(MyProceduralFactionSeed faction, Vector3D location, MyObjectBuilder_ProceduralConstructionSeed ob)
+        {
+            Faction = faction;
+            Location = location;
+            Name = ob.Name;
+            Orientation = ob.Orientation;
+            Population = ob.Population;
+            Seed = ob.Seed;
+            Speciality = ob.Speciality;
+            SpecialityExport = ob.SpecialityExport;
+            m_blockCountRequirements = new Dictionary<MySupportedBlockTypes, MyBlockRequirement>();
+            foreach (var k in ob.BlockCountRequirements)
+                m_blockCountRequirements[k.Type] = new MyBlockRequirement(k.Count, k.ErrorMultiplier);
+            m_imports = TradeReqToDictionary(ob.Imports);
+            m_exports = TradeReqToDictionary(ob.Exports);
+            m_localStorage = TradeReqToDictionary(ob.Local);
+
+            ComputeStorageVolumeMass(out StorageVolume, out StorageMass);
+        }
+
+        public MyObjectBuilder_ProceduralConstructionSeed GetObjectBuilder()
+        {
+            return new MyObjectBuilder_ProceduralConstructionSeed()
+            {
+                BlockCountRequirements = m_blockCountRequirements
+                    .Select(
+                        x => new MyObjectBuilder_ProceduralConstructionSeed.MyObjectBuilder_BlockCountRequirement()
+                        {
+                            Type = x.Key,
+                            Count = x.Value.Count,
+                            ErrorMultiplier = x.Value.Multiplier
+                        }).ToList(),
+                Exports = TradeReqToList(m_exports),
+                Imports = TradeReqToList(m_imports),
+                Local = TradeReqToList(m_localStorage),
+                Name = Name,
+                Orientation =  Orientation,
+                Population = Population,
+                Seed = Seed,
+                Speciality = Speciality,
+                SpecialityExport = SpecialityExport,
+                FactionSeed = Faction.Seed
+            };
+        }
+
+        private static List<MyObjectBuilder_ProceduralConstructionSeed.MyObjectBuilder_TradeRequirement> TradeReqToList(
+            Dictionary<MyDefinitionId, MyTradeRequirements> d)
+        {
+            return d.Select(x => new MyObjectBuilder_ProceduralConstructionSeed.MyObjectBuilder_TradeRequirement()
+            {
+                Storage = x.Value.Storage,
+                StorageErrorMultiplier = x.Value.StorageErrorMultiplier,
+                Throughput = x.Value.Throughput,
+                ThroughputErrorMultiplier = x.Value.ThroughputErrorMultiplier,
+                Type = x.Key
+            }).ToList();
+        }
+
+        private static Dictionary<MyDefinitionId, MyTradeRequirements> TradeReqToDictionary(
+            IEnumerable<MyObjectBuilder_ProceduralConstructionSeed.MyObjectBuilder_TradeRequirement> list)
+        {
+            var res = new Dictionary<MyDefinitionId, MyTradeRequirements>(MyDefinitionId.Comparer);
+            foreach (var k in list)
+                res[k.Type] = new MyTradeRequirements(k.Storage, k.Throughput, k.StorageErrorMultiplier, k.ThroughputErrorMultiplier);
+            return res;
+        }
+
         // Uses (v) to compute some noise in the [0-1] range.
         public double DeterministicNoise(int v)
         {
@@ -236,6 +312,7 @@ namespace Equinox.ProceduralWorld.Buildings.Seeds
 
         public struct MyTradeRequirements
         {
+
             /// <summary>
             /// Hint used to determine the number of this item we want.
             /// </summary>
@@ -246,7 +323,8 @@ namespace Equinox.ProceduralWorld.Buildings.Seeds
             /// </summary>
             public readonly double Throughput;
 
-            public readonly double ThroughputErrorMultiplier, StorageErrorMultiplier;
+            public readonly double ThroughputErrorMultiplier;
+            public readonly double StorageErrorMultiplier;
 
             public MyTradeRequirements(double storage, double throughput, double storageErrMult = 1, double throughErrMult = 1)
             {
@@ -342,6 +420,89 @@ namespace Equinox.ProceduralWorld.Buildings.Seeds
             builder.AppendLine("\t]");
             builder.AppendLine("]");
             return builder.ToString();
+        }
+    }
+
+    public class MyObjectBuilder_ProceduralConstructionSeed
+    {
+        public string Name;
+        public int Population;
+        public long Seed;
+        public ulong FactionSeed;
+
+        [XmlElement("Speciality")]
+        public string SpecialitySerial
+        {
+            get { return Speciality?.Name; }
+            set { Speciality = MyProceduralStationSpeciality.ByName(value); }
+        }
+
+        [XmlIgnore]
+        public MyProceduralStationSpeciality Speciality;
+
+        [XmlIgnore]
+        public MyDefinitionId? SpecialityExport = null;
+
+        [XmlElement("SpecialityExport")]
+        private DefinitionIdWrapper SpecialityExportWrapper
+        {
+            get { return SpecialityExport.HasValue ? new DefinitionIdWrapper() { Data = SpecialityExport.Value } : null; }
+            set { SpecialityExport = value?.Data; }
+        }
+
+
+        public SerializableQuaternion Orientation;
+
+        [XmlElement("BlockCountRequirement")]
+        public List<MyObjectBuilder_BlockCountRequirement> BlockCountRequirements =
+            new List<MyObjectBuilder_BlockCountRequirement>();
+
+        [XmlElement("Export")]
+        public List<MyObjectBuilder_TradeRequirement> Exports = new List<MyObjectBuilder_TradeRequirement>();
+
+        [XmlElement("Import")]
+        public List<MyObjectBuilder_TradeRequirement> Imports = new List<MyObjectBuilder_TradeRequirement>();
+
+        [XmlElement("Local")]
+        public List<MyObjectBuilder_TradeRequirement> Local = new List<MyObjectBuilder_TradeRequirement>();
+
+        public class MyObjectBuilder_TradeRequirement
+        {
+            [XmlElement("Type")]
+            public SerializableDefinitionId Type;
+
+            [XmlElement("Storage")]
+            [DefaultValue(0)]
+            public double Storage = 0;
+            [XmlElement("Throughput")]
+            [DefaultValue(0)]
+            public double Throughput = 0;
+
+            [XmlElement("ThroughputErrorScale")]
+            [DefaultValue(1)]
+            public double ThroughputErrorMultiplier = 1;
+            [XmlElement("StorageErrorScale")]
+            [DefaultValue(1)]
+            public double StorageErrorMultiplier = 1;
+        }
+
+        public class MyObjectBuilder_BlockCountRequirement
+        {
+            [XmlAttribute("Type")]
+            public MySupportedBlockTypes Type;
+
+            [XmlAttribute("Count")]
+            public int Count;
+
+            [XmlAttribute("ErrorScale")]
+            [DefaultValue(1)]
+            public double ErrorMultiplier = 1;
+        }
+
+        private class DefinitionIdWrapper
+        {
+            [XmlElement("Id")]
+            public SerializableDefinitionId Data;
         }
     }
 }

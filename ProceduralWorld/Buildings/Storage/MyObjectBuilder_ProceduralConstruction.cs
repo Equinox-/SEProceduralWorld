@@ -1,37 +1,52 @@
 ﻿using System.ComponentModel;
+using System.Xml;
 using ProtoBuf;
 using VRage.ObjectBuilders;
 using VRageMath;
+using System.Xml.Serialization;
+using VRage;
 
 namespace Equinox.ProceduralWorld.Buildings.Storage
 {
     public class MyObjectBuilder_ProceduralConstruction
     {
         [ProtoMember]
-        public MyObjectBuilder_ProceduralRoom[] Room;
+        [XmlElement("Room")]
+        public MyObjectBuilder_ProceduralRoom[] Rooms;
     }
 
     public class MyObjectBuilder_ProceduralRoom
     {
-        [ProtoMember, DefaultValue(0)]
-        public int RoomID;
         [ProtoMember]
         public SerializableDefinitionId PrefabID;
         [ProtoMember]
-        public float Priority;
-        [ProtoMember]
-        public MatrixI Transform;
-        [ProtoMember]
-        public MyObjectBuilder_ProceduralMountPoint[] MountPoints;
-    }
 
-    public class MyObjectBuilder_ProceduralMountPoint
-    {
+        [XmlIgnore]
+        public MatrixI Transform = new MatrixI(Vector3I.Zero, Base6Directions.Direction.Forward, Base6Directions.Direction.Up);
+
         [ProtoMember]
-        public string TypeID;
+        public SerializableVector3I Position { get { return Transform.Translation; } set { Transform.Translation = value; } }
+
         [ProtoMember]
-        public string InstanceID;
+        public Base6Directions.Direction Forward
+        {
+            get { return Transform.Forward; }
+            set
+            {
+                Transform.Forward = value;
+                Transform.Right = Base6Directions.GetCross(Transform.Forward, Transform.Up);
+            }
+        }
+
         [ProtoMember]
-        public long? OtherRoomID;
+        public Base6Directions.Direction Up
+        {
+            get { return Transform.Up; }
+            set
+            {
+                Transform.Up = value;
+                Transform.Right = Base6Directions.GetCross(Transform.Forward, Transform.Up);
+            }
+        }
     }
 }

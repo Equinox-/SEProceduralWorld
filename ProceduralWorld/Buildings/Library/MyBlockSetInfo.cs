@@ -79,7 +79,19 @@ namespace Equinox.ProceduralWorld.Buildings.Library
                         }
                     }
             }
+
+            var reqResources = 0D;
+            foreach (var kv in BlockCountByType)
+            {
+                reqResources += MyBlueprintIndex.Instance.GetRawResourcesFor(kv.Key) * kv.Value;
+            }
+            TotalRawResources = reqResources;
         }
+
+        /// <summary>
+        /// Total required ore, in kg
+        /// </summary>
+        public double TotalRawResources { get; private set; }
 
         public float TotalPowerNetConsumption { get; private set; }
 
@@ -115,6 +127,7 @@ namespace Equinox.ProceduralWorld.Buildings.Library
                 m_gasStorageCache.AddValue(kv.Key, kv.Value);
             foreach (var kv in other.m_productionCache)
                 m_productionCache.AddValue(kv.Key, kv.Value);
+            TotalRawResources += other.TotalRawResources;
         }
 
         public void SubtractFromSelf(MyBlockSetInfo other)
@@ -134,6 +147,7 @@ namespace Equinox.ProceduralWorld.Buildings.Library
                 m_gasStorageCache.AddValue(kv.Key, -kv.Value);
             foreach (var kv in other.m_productionCache)
                 m_productionCache.AddValue(kv.Key, -kv.Value);
+            TotalRawResources -= other.TotalRawResources;
         }
 
         public static MyBlockSetInfo operator +(MyBlockSetInfo a, MyBlockSetInfo b)

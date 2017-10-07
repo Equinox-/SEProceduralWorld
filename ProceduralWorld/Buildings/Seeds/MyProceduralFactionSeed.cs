@@ -2,20 +2,23 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Xml.Serialization;
 using Equinox.ProceduralWorld.Buildings.Generation;
 using Equinox.ProceduralWorld.Utils;
 using Equinox.Utils;
 using Sandbox.ModAPI;
+using VRage.Game;
 using VRage.Game.ModAPI;
+using VRage.Game.VisualScripting;
 using VRageMath;
+using MyVisualScriptLogicProvider = Sandbox.Game.MyVisualScriptLogicProvider;
 
 namespace Equinox.ProceduralWorld.Buildings.Seeds
 {
-
     public class MyProceduralFactionSeed
     {
         public static readonly string[] FactionSuffixes = { "Inc.", "LLC.", "Co.", "Itpl.", "Total", "United" };
-        public static readonly string[] Adjectives = { "Dreamy", "Amazing", "World Famous", "General",  };
+        public static readonly string[] Adjectives = { "Dreamy", "Amazing", "World Famous", "General", };
 
         public readonly ulong Seed;
         public readonly string FounderName;
@@ -73,6 +76,32 @@ namespace Equinox.ProceduralWorld.Buildings.Seeds
             throw new Exception("Unable to find a tag for " + name);
         }
 
+        public MyProceduralFactionSeed(MyObjectBuilder_ProceduralFaction ob)
+        {
+            Seed = ob.Seed;
+            FounderName = ob.FounderName;
+            Name = ob.Name;
+            Tag = ob.Tag;
+            HueRotation = ob.ColorModifier.Hue;
+            SaturationModifier = ob.ColorModifier.Saturation;
+            ValueModifier = ob.ColorModifier.Value;
+            {
+                var best = MyProceduralFactionSpeciality.Mining;
+                var bestWeight = 0f;
+                m_attributeWeight = new Dictionary<MyProceduralFactionSpeciality, float>();
+                foreach (var speciality in ob.Specialities)
+                {
+                    m_attributeWeight[speciality.Speciality] = speciality.Weight;
+                    if (speciality.Weight > bestWeight)
+                    {
+                        best = speciality.Speciality;
+                        bestWeight = speciality.Weight;
+                    }
+                }
+                BestSpeciality = best;
+            }
+        }
+
         public MyProceduralFactionSeed(string founderName, ulong seed)
         {
             Seed = seed;
@@ -116,6 +145,25 @@ namespace Equinox.ProceduralWorld.Buildings.Seeds
             Tag = SelectTag(Name).ToUpper();
         }
 
+        public MyObjectBuilder_ProceduralFaction GetObjectBuilder()
+        {
+            return new MyObjectBuilder_ProceduralFaction()
+            {
+                Seed = Seed,
+                FounderName = FounderName,
+                Name = Name,
+                Tag = Tag,
+                ColorModifier = new MyObjectBuilder_ProceduralFaction.MyObjectBuilder_HsvModifier()
+                {
+                    Hue = HueRotation,
+                    Saturation = SaturationModifier,
+                    Value = ValueModifier
+                },
+                Specialities = m_attributeWeight.Select(x =>
+                    new MyObjectBuilder_ProceduralFaction.MyObjectBuilder_FactionSpeciality() { Speciality = x.Key, Weight = x.Value }).ToList()
+            };
+        }
+
         // 0 to 1
         public readonly float HueRotation;
         // -1 to 1
@@ -136,7 +184,7 @@ namespace Equinox.ProceduralWorld.Buildings.Seeds
 
         private bool m_creationFailed = false;
         private IMyFaction m_faction = null;
-        // This needs to be on the main thread maybe?  Or at least threadsafe.  TODO
+
         public IMyFaction GetOrCreateFaction()
         {
             if (m_faction != null) return m_faction;
@@ -145,8 +193,7 @@ namespace Equinox.ProceduralWorld.Buildings.Seeds
             {
                 m_faction = MyAPIGateway.Session.Factions.TryGetFactionByTag(Tag);
                 if (m_faction != null) return;
-                // Now we must create.
-                var founderID = MyAPIGateway.Session.Player?.IdentityId ?? 0;
+
                 var totalSpeciality = m_attributeWeight.Values.Sum();
                 var avgSpeciality = totalSpeciality / m_attributeWeight.Count;
                 var specializationString = new StringBuilder();
@@ -164,14 +211,7 @@ namespace Equinox.ProceduralWorld.Buildings.Seeds
                     specializationString.Append(specials[i].Key.Description);
                 }
                 specializationString.Append(".");
-//                SessionCore.Log("Making faction Tag={0}, Name={1}", Tag, Name);
-                MyAPIGateway.Session.Factions.CreateFaction(founderID, Tag, Name, "Your place for " + BestSpeciality.Description + ".  " + specializationString, "");
-                m_faction = MyAPIGateway.Session.Factions.TryGetFactionByTag(Tag);
-                if (m_faction == null)
-                {
-//                    SessionCore.Log("Failed to create faction Tag={0}, Name={1}", Tag, Name);
-                    m_creationFailed = true;
-                }
+                m_faction = CreateNpcFaction(Tag, Name, "Your place for " + BestSpeciality.Description + ".  " + specializationString, "");
             });
             return m_faction;
         }
@@ -180,7 +220,7 @@ namespace Equinox.ProceduralWorld.Buildings.Seeds
         {
             return GetOrCreateFaction().FounderId;
         }
-        
+
         public override string ToString()
         {
             var builder = new StringBuilder(512);
@@ -192,6 +232,84 @@ namespace Equinox.ProceduralWorld.Buildings.Seeds
             builder.Append("\tHSVDelta=[").Append(HueRotation).Append(", ").Append(SaturationModifier).Append(", ").Append(ValueModifier).AppendLine("]");
             builder.Append("]");
             return builder.ToString();
+        }
+
+        private static readonly HashSet<long> m_existingIds = new HashSet<long>();
+        private static readonly List<IMyIdentity> m_identities = new List<IMyIdentity>();
+
+        public static IMyFaction CreateNpcFaction(string tag, string name, string desc, string privateInfo)
+        {
+            var pirateIdentity = MyVisualScriptLogicProvider.GetPirateId();
+            var pirateFaction = MyAPIGateway.Session.Factions.TryGetPlayerFaction(pirateIdentity);
+            m_existingIds.Clear();
+            foreach (var member in pirateFaction.Members)
+                m_existingIds.Add(member.Key);
+            MyAPIGateway.Session.Factions.AddNewNPCToFaction(pirateFaction.FactionId);
+            
+            long npcId = 0;
+            m_identities.Clear();
+            MyAPIGateway.Players.GetAllIdentites(m_identities);
+            foreach (var x in m_identities)
+                if (!m_existingIds.Contains(x.IdentityId) &&
+                    MyAPIGateway.Session.Factions.TryGetPlayerFaction(x.IdentityId)?.FactionId ==
+                    pirateFaction.FactionId)
+                {
+                    npcId = x.IdentityId;
+                    break;
+                }
+            if (npcId != 0)
+            {
+#pragma warning disable 618
+                // I know it's obselete, but because AddPlayerToFactionInternal
+                // (used by AddNewNPCToFaction) doesn't update Faction.Members we can't use KickMember
+                MyAPIGateway.Session.Factions.KickPlayerFromFaction(npcId);
+#pragma warning restore 618
+                MyAPIGateway.Session.Factions.CreateFaction(npcId, tag, name, desc, privateInfo);
+            }
+            return MyAPIGateway.Session.Factions.TryGetFactionByTag(tag);
+        }
+    }
+
+    public class MyObjectBuilder_ProceduralFaction
+    {
+        public ulong Seed = 0;
+        public string Name = "Amazing Artificial Antelopes";
+        public string Tag = "AAA";
+        public string FounderName = "Antelope Andy";
+
+        [XmlElement("Speciality")]
+        public List<MyObjectBuilder_FactionSpeciality> Specialities = new List<MyObjectBuilder_FactionSpeciality>();
+
+        public MyObjectBuilder_HsvModifier ColorModifier = new MyObjectBuilder_HsvModifier();
+
+        public class MyObjectBuilder_FactionSpeciality
+        {
+            [XmlAttribute("Speciality")]
+            public string SpecialitySerial
+            {
+                get { return Speciality?.Name; }
+                set { Speciality = MyProceduralFactionSpeciality.ByName(value); }
+            }
+
+            [XmlIgnore]
+            public MyProceduralFactionSpeciality Speciality;
+            [XmlAttribute("Weight")]
+            public float Weight;
+        }
+
+        public class MyObjectBuilder_HsvModifier
+        {
+            // 0-1
+            [XmlAttribute("Hue")]
+            public float Hue;
+
+            // -1 to 1
+            [XmlAttribute("Saturation")]
+            public float Saturation;
+
+            // -1 to 1
+            [XmlAttribute("Value")]
+            public float Value;
         }
     }
 }

@@ -133,11 +133,11 @@
     <Compile Include="ProceduralWorld\Buildings\Generation\MyStationGenerator.cs" />
     <Compile Include="ProceduralWorld\Buildings\Generation\MyStationGeneratorManager.cs" />
     <Compile Include="ProceduralWorld\Buildings\MyBuildingControlCommands.cs" />
+    <Compile Include="ProceduralWorld\Buildings\MyBuildingDatabase.cs" />
     <Compile Include="ProceduralWorld\Buildings\Seeds\MyProceduralSpeciality.cs" />
     <Compile Include="ProceduralWorld\Buildings\Storage\MyProceduralMountPoint.cs" />
     <Compile Include="ProceduralWorld\Buildings\Storage\MyProceduralRoom.cs" />
     <Compile Include="ProceduralWorld\Manager\MyProceduralModule.cs" />
-    <Compile Include="ProceduralWorld\Manager\MyConcealmentManager.cs" />
     <Compile Include="ProceduralWorld\Manager\MyProceduralObject.cs" />
     <Compile Include="ProceduralWorld\Manager\MyProceduralWorldManager.cs" />
     <Compile Include="ProceduralWorld\Names\MyCompositeNameGenerator.cs" />

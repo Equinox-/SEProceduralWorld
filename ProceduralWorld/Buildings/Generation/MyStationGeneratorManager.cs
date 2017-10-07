@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
@@ -11,6 +12,7 @@ using Equinox.ProceduralWorld.Buildings.Storage;
 using Equinox.Utils.Logging;
 using Equinox.Utils.Session;
 using Sandbox.ModAPI;
+using VRage.Game;
 using VRage.Utils;
 using VRageMath;
 
@@ -19,18 +21,39 @@ namespace Equinox.ProceduralWorld.Buildings.Generation
     public class MyStationGeneratorManager : MyLoggingSessionComponent
     {
         public MyPartManager PartManager { get; private set; }
+        private MyBuildingDatabase m_database;
         public MyStationGeneratorManager()
         {
             DependsOn<MyPartManager>(x => { PartManager = x; });
+            DependsOn<MyBuildingDatabase>(x => { m_database = x; });
         }
 
-        private static readonly Type[] SuppliesDep = { typeof(MyStationGeneratorManager) };
-        public override IEnumerable<Type> SuppliedComponents => SuppliesDep;
+        public static readonly Type[] SuppliedDeps = { typeof(MyStationGeneratorManager) };
+        public override IEnumerable<Type> SuppliedComponents => SuppliedDeps;
 
 
 
         public bool GenerateFromSeed(MyProceduralConstructionSeed seed, ref MyProceduralConstruction construction, int? roomCount = null)
         {
+            MyObjectBuilder_ProceduralConstructionSeed dbSeed;
+            MyObjectBuilder_ProceduralConstruction dbBlueprint;
+            MyObjectBuilder_ProceduralFaction dbFaction;
+            if (m_database.TryGetBuildingBlueprint(seed.Seed, out dbSeed, out dbBlueprint)
+                && dbSeed != null &&
+                m_database.TryGetFaction(dbSeed.FactionSeed, out dbFaction) && dbFaction != null)
+            {
+                seed = new MyProceduralConstructionSeed(new MyProceduralFactionSeed(dbFaction), seed.Location, dbSeed);
+                if (construction == null)
+                    construction = new MyProceduralConstruction(RootLogger, seed);
+                if (dbBlueprint != null)
+                {
+                    this.Debug("Cache hit for {0}", seed.Seed);
+                    if (construction.Init(PartManager, dbBlueprint))
+                        return true;
+                    this.Debug("Cache invalidated for {0}.  Could not find: {1}", seed.Seed, string.Join(", ", dbBlueprint.Rooms.Where(x => PartManager.LoadNullable(x.PrefabID) == null)));
+                    construction.Clear();
+                }
+            }
             try
             {
                 var watch = new Stopwatch();
@@ -60,8 +83,8 @@ namespace Equinox.ProceduralWorld.Buildings.Generation
                 {
                     var currentRoomCount = construction.Rooms.Count();
                     if (roomCount.HasValue && currentRoomCount >= roomCount.Value) break;
-                    if (!roomCount.HasValue && scoreStableTries > 5) break;
-                    if (construction.BlockSetInfo.BlockCountByType.Sum(x => x.Value) >= MyAPIGateway.Session.SessionSettings.MaxGridSize * 0.75)
+                    if (!roomCount.HasValue && scoreStableTries > 3) break;
+                    if (BlockLimit > 0 && construction.BlockSetInfo.BlockCountByType.Sum(x => x.Value) >= BlockLimit)
                     {
                         Log(MyLogSeverity.Warning, "Quit because we exceeded the block limit");
                         break;
@@ -121,6 +144,7 @@ namespace Equinox.ProceduralWorld.Buildings.Generation
 
                 var msg = $"Added {construction.Rooms.Count()} rooms; generated in {watch.Elapsed}";
                 Log(MyLogSeverity.Debug, msg);
+                m_database.StoreBuildingBlueprint(construction);
                 return true;
             }
             catch (ArgumentException e)
@@ -152,6 +176,13 @@ namespace Equinox.ProceduralWorld.Buildings.Generation
                 return false;
             }
         }
+
+        /// <summary>
+        /// Stations are encouraged to be this many blocks at most.
+        /// If this value is non-positive no limit is assumed.
+        /// </summary>
+        public double BlockLimit { get; private set; } = 0;
+
         public override void LoadConfiguration(MyObjectBuilder_ModSessionComponent configOriginal)
         {
             var config = configOriginal as MyObjectBuilder_StationGeneratorManager;
@@ -161,15 +192,19 @@ namespace Equinox.ProceduralWorld.Buildings.Generation
                     GetType());
                 return;
             }
+            BlockLimit = config.BlockLimitMultiplier;
         }
 
         public override MyObjectBuilder_ModSessionComponent SaveConfiguration()
         {
-            return new MyObjectBuilder_StationGeneratorManager();
+            return new MyObjectBuilder_StationGeneratorManager() { BlockLimitMultiplier = BlockLimit };
         }
     }
 
     public class MyObjectBuilder_StationGeneratorManager : MyObjectBuilder_ModSessionComponent
     {
+        /// <inheritdoc cref="MyStationGeneratorManager.BlockLimit"/>
+        [DefaultValue(0.0)]
+        public double BlockLimitMultiplier = 0.0;
     }
 }

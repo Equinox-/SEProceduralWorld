@@ -36,7 +36,7 @@ namespace Equinox.ProceduralWorld.Buildings.Library
         }
 
 
-        private static readonly Type[] SuppliedDeps = new[] { typeof(MyPartManager) };
+        public static readonly Type[] SuppliedDeps = new[] { typeof(MyPartManager) };
         public override IEnumerable<Type> SuppliedComponents => SuppliedDeps;
 
         protected override void Attach()

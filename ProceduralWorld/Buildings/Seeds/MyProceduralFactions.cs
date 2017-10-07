@@ -25,28 +25,35 @@ namespace Equinox.ProceduralWorld.Buildings.Seeds
         }
 
         private MyNameGeneratorBase m_names;
+        private MyBuildingDatabase m_database;
         public MyProceduralFactions()
         {
             RebuildNoiseModule();
             DependsOn<MyNameGeneratorBase>(x => { m_names = x; });
+            DependsOn<MyBuildingDatabase>(x => { m_database = x; });
         }
 
-        private static readonly Type[] SuppliesDep = { typeof(MyProceduralFactions) };
-        public override IEnumerable<Type> SuppliedComponents => SuppliesDep;
+        public static readonly Type[] SuppliedDeps = { typeof(MyProceduralFactions) };
+        public override IEnumerable<Type> SuppliedComponents => SuppliedDeps;
 
         public MyProceduralFactionSeed SeedAt(Vector3D pos)
         {
             ulong noise = 0;
             for (var i = 0; i < 60 / m_factionShiftBase; i++)
             {
-                var noiseSegment = (long) (m_factionNoise.GetValue(pos) * (1L << m_factionShiftBase));
+                var noiseSegment = (long)(m_factionNoise.GetValue(pos) * (1L << m_factionShiftBase));
                 if (noiseSegment < 0) noiseSegment = 0;
                 if (noiseSegment >= (1L << m_factionShiftBase))
                     noiseSegment = (1L << m_factionShiftBase) - 1;
-                noise |= (ulong) noiseSegment << (i * m_factionShiftBase);
+                noise |= (ulong)noiseSegment << (i * m_factionShiftBase);
                 pos /= 2.035;
             }
-            return new MyProceduralFactionSeed(m_names.Generate(noise), noise);
+            MyObjectBuilder_ProceduralFaction recipe;
+            if (m_database.TryGetFaction(noise, out recipe))
+                return new MyProceduralFactionSeed(recipe);
+            var result = new MyProceduralFactionSeed(m_names.Generate(noise), noise);
+            m_database.StoreFactionBlueprint(result);
+            return result;
         }
 
         public override void LoadConfiguration(MyObjectBuilder_ModSessionComponent configOriginal)

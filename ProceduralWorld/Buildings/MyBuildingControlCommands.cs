@@ -14,6 +14,7 @@ using Equinox.Utils.Command;
 using Equinox.Utils.Logging;
 using Equinox.Utils.Session;
 using Sandbox.Definitions;
+using Sandbox.Game;
 using Sandbox.ModAPI;
 using VRage;
 using VRage.Game;

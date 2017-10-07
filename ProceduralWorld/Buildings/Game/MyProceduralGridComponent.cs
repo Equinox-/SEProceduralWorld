@@ -20,17 +20,7 @@ namespace Equinox.ProceduralWorld.Buildings.Game
         public override string ComponentTypeDebugString => "ProceduralGridComponent";
         private readonly List<IMyCubeGrid> m_grids;
         public IEnumerable<IMyCubeGrid> GridsInGroup => m_grids;
-        private bool m_isPersistent;
-        public bool IsPersistent
-        {
-            get { return m_isPersistent; }
-            private set
-            {
-                if (value && m_isConcealed)
-                    IsConcealed = false;
-                m_isPersistent = value;
-            }
-        }
+        public bool IsPersistent { get; private set; }
 
         public readonly IMyLogging Logger;
         public MyProceduralGridComponent(MyProceduralConstruction cc, IEnumerable<IMyCubeGrid> gridsInGroup)
@@ -52,25 +42,7 @@ namespace Equinox.ProceduralWorld.Buildings.Game
                 grid.Save = false;
         }
         public bool IsReady { get; private set; }
-
-        private bool m_isConcealed = false;
-        // This is super messy.
-        public bool IsConcealed
-        {
-            get
-            {
-                return IsPersistent || m_isConcealed;
-            }
-            set
-            {
-                if (IsPersistent) return;
-                if (value == m_isConcealed) return;
-                foreach (var g in m_grids)
-                    g.SetConcealed(value);
-                m_isConcealed = value;
-            }
-        }
-
+        
         #region SaveOnChange
         private void OnBlockRemoved(IMySlimBlock mySlimBlock)
         {
@@ -147,7 +119,6 @@ namespace Equinox.ProceduralWorld.Buildings.Game
 
         public override void OnAddedToScene()
         {
-            m_isConcealed = false;
         }
 
         public override void OnAddedToContainer()

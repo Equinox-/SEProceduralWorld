@@ -26,8 +26,8 @@ namespace Equinox.ProceduralWorld.Manager
     {
         public static readonly TimeSpan TolerableLag = TimeSpan.FromSeconds(MyEngineConstants.UPDATE_STEP_SIZE_IN_SECONDS);
 
-        private static readonly Type[] SupplyComponents = { typeof(MyProceduralWorldManager) };
-        public override IEnumerable<Type> SuppliedComponents => SupplyComponents;
+        public static readonly Type[] SuppliedDeps = { typeof(MyProceduralWorldManager) };
+        public override IEnumerable<Type> SuppliedComponents => SuppliedDeps;
 
         private readonly HashSet<MyProceduralModule> m_modules = new HashSet<MyProceduralModule>();
         private readonly HashSet<MyProceduralModule> m_modulesToAdd = new HashSet<MyProceduralModule>();

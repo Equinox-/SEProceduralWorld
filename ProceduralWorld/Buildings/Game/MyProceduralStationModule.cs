@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Xml.Serialization;
 using Equinox.ProceduralWorld.Buildings.Generation;
 using Equinox.ProceduralWorld.Buildings.Seeds;
+using Equinox.ProceduralWorld.Buildings.Storage;
 using Equinox.ProceduralWorld.Manager;
 using Equinox.Utils;
 using Equinox.Utils.Noise;
@@ -21,6 +22,10 @@ namespace Equinox.ProceduralWorld.Buildings.Game
 
         public MyProceduralFactions Factions { get; private set; }
         public MyStationGeneratorManager Generator { get; private set; }
+        private MyBuildingDatabase m_database;
+
+        public static Type[] SuppliedDeps = {typeof(MyProceduralStationModule)};
+        public override IEnumerable<Type> SuppliedComponents => SuppliedDeps;
 
         private void RebuildNoiseModules()
         {
@@ -32,6 +37,7 @@ namespace Equinox.ProceduralWorld.Buildings.Game
         {
             DependsOn<MyProceduralFactions>(x => { Factions = x; });
             DependsOn<MyStationGeneratorManager>(x => { Generator = x; });
+            DependsOn<MyBuildingDatabase>(x => { m_database = x; });
             LoadConfiguration(new MyObjectBuilder_ProceduralStation());
         }
 
@@ -58,8 +64,24 @@ namespace Equinox.ProceduralWorld.Buildings.Game
                 MyLoadingConstruction instance;
                 if (!m_instances.TryGetValue(cell.Item1, out instance))
                 {
+                    var numSeed = cell.Item1.GetHashCode();
+                    MyObjectBuilder_ProceduralConstructionSeed dbSeed;
+                    MyObjectBuilder_ProceduralConstruction dbBlueprint;
+                    MyObjectBuilder_ProceduralFaction dbFaction;
+
+                    MyProceduralConstructionSeed seed;
+                    if (m_database.TryGetBuildingBlueprint(numSeed, out dbSeed, out dbBlueprint) && dbSeed != null &&
+                        m_database.TryGetFaction(dbSeed.FactionSeed, out dbFaction) && dbFaction != null)
+                    {
+                        seed = new MyProceduralConstructionSeed(new MyProceduralFactionSeed(dbFaction), cell.Item2.XYZ(), dbSeed);
+                    }
+                    else
+                    {
+                        seed = new MyProceduralConstructionSeed(Factions.SeedAt(cell.Item2.XYZ()), cell.Item2, null,
+                            numSeed);
+                    }
                     instance = m_instances[cell.Item1] = new MyLoadingConstruction(this, cell.Item1,
-                        new MyProceduralConstructionSeed(Factions.SeedAt(cell.Item2.XYZ()), cell.Item2, null, cell.Item1.GetHashCode()));
+                        seed);
                 }
                 else if (!instance.IsMarkedForRemoval)
                     continue; // Already loaded + not marked for removal -- already in the tree.
@@ -96,17 +118,24 @@ namespace Equinox.ProceduralWorld.Buildings.Game
                     configBase.GetType(), GetType());
                 return;
             }
+            ConfigReference = config.Clone();
             RebuildNoiseModules();
         }
 
         public override MyObjectBuilder_ModSessionComponent SaveConfiguration()
         {
-            return (MyObjectBuilder_ModSessionComponent) ConfigReference.Clone();
+            return ConfigReference.Clone();
         }
     }
 
     public class MyObjectBuilder_ProceduralStation : MyObjectBuilder_ModSessionComponent
     {
+        internal new MyObjectBuilder_ProceduralStation Clone()
+        {
+            return MyAPIGateway.Utilities.SerializeFromXML<MyObjectBuilder_ProceduralStation>(MyAPIGateway.Utilities
+                .SerializeToXML(this));
+        }
+
         // This is (within */2) of the minimum distance stations encounters are apart.  Keep high for performance reasons.
         // For context, 250e3 for Earth-Moon, 2300e3 for Earth-Mars, 6000e3 for Earth-Alien
         [ProtoMember]
@@ -117,19 +146,6 @@ namespace Equinox.ProceduralWorld.Buildings.Game
         public double StationMaxSpacing = 1000e3;
 
         // Procedural Station Management
-        /// <summary>
-        /// Time to keep a procedural station inside the scene graph after it's no longer visible.
-        /// </summary>
-        [XmlIgnore]
-        public TimeSpan StationConcealPersistence = TimeSpan.FromSeconds(30);
-
-        [ProtoMember]
-        public double StationConcealPersistenceSeconds
-        {
-            get { return StationConcealPersistence.TotalSeconds; }
-            set { StationConcealPersistence = TimeSpan.FromSeconds(value); }
-        }
-
         /// <summary>
         /// Time to keep a procedural station entity allocated after it's no longer visible.
         /// </summary>

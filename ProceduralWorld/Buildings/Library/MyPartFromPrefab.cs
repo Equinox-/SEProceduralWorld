@@ -27,7 +27,7 @@ namespace Equinox.ProceduralWorld.Buildings.Library
                     {
                         var xml = reader.ReadToEnd();
                         var ob = MyAPIGateway.Utilities.SerializeFromXML<MyObjectBuilder_Part>(xml);
-                        if (ob != null)
+                        if (ob != null && ob.BuilderVersion == MyObjectBuilder_Part.PartBuilderVersion)
                         {
                             Logger.Info("Loading {0} from cache", Name);
                             Init(ob);
@@ -80,7 +80,7 @@ namespace Equinox.ProceduralWorld.Buildings.Library
             var obs = GetObjectBuilder();
             var nhash = obs.ComputeHash();
             if (nhash == chash) return;
-            MyAPIGateway.Parallel.StartBackground(() =>
+            MyAPIGateway.Parallel.StartBackground(MyParallelUtilities.WrapAction(() =>
             {
                 try
                 {
@@ -95,7 +95,7 @@ namespace Equinox.ProceduralWorld.Buildings.Library
                 {
                     Logger.Error("Write failed.\n{0}", e);
                 }
-            });
+            }, Manager));
         }
 
         private string CacheName => $"cache_{Prefab.Id.SubtypeName}.xml";

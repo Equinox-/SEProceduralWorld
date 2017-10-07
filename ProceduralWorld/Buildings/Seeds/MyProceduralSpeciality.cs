@@ -28,8 +28,17 @@ namespace Equinox.ProceduralWorld.Buildings.Seeds
 
         public string Name { get; }
 
+        private static readonly Dictionary<string, MyProceduralStationSpeciality> m_lookupTable =
+            new Dictionary<string, MyProceduralStationSpeciality>();
+
+        public static MyProceduralStationSpeciality ByName(string name)
+        {
+            return m_lookupTable.GetValueOrDefault(name, null);
+        }
+
         private MyProceduralStationSpeciality(string name, MyDefinitionTester exports, double prependSingleItem, string[] generalizedPrefixes, string[] suffixes, MyDefinitionTester imports = null)
         {
+            m_lookupTable[name] = this;
             Name = name;
             m_exports = exports;
             m_imports = imports;
@@ -56,27 +65,27 @@ namespace Equinox.ProceduralWorld.Buildings.Seeds
         private static readonly MyDefinitionTester BuildingEquipment = new MyDefinitionFilter().OrType(typeof(MyObjectBuilder_Welder), typeof(MyObjectBuilder_AngleGrinder), typeof(MyObjectBuilder_Component));
 
         // Mining asteroids
-        public static readonly MyProceduralStationSpeciality MiningAbundant = new MyProceduralStationSpeciality("MiningAbundant", new MyDefinitionFilter().OrTypeTester(typeof(MyObjectBuilder_Ore), x => MyOreUtilities.GetRarity(x.Id) <= 0.75), new[] { "Ores", "Minerals", "Resources", "Materials" });
-        public static readonly MyProceduralStationSpeciality MiningRares = new MyProceduralStationSpeciality("MiningRares", new MyDefinitionFilter().OrTypeTester(typeof(MyObjectBuilder_Ore), x => MyOreUtilities.GetRarity(x.Id) >= 0.65), new[] { "Rare Ores", "Rare Minerals" });
+        public static readonly MyProceduralStationSpeciality MiningAbundant = new MyProceduralStationSpeciality(nameof(MiningAbundant), new MyDefinitionFilter().OrTypeTester(typeof(MyObjectBuilder_Ore), x => MyOreUtilities.GetRarity(x.Id) <= 0.75), new[] { "Ores", "Minerals", "Resources", "Materials" });
+        public static readonly MyProceduralStationSpeciality MiningRares = new MyProceduralStationSpeciality(nameof(MiningRares), new MyDefinitionFilter().OrTypeTester(typeof(MyObjectBuilder_Ore), x => MyOreUtilities.GetRarity(x.Id) >= 0.65), new[] { "Rare Ores", "Rare Minerals" });
         // Gas production
-        public static readonly MyProceduralStationSpeciality HydrogenFuelStation = new MyProceduralStationSpeciality("HydrogenFuelStation", new MyDefinitionFilter().OrTypeSubtype(typeof(MyObjectBuilder_GasProperties), "Hydrogen"), new[] { "Hydrogen Station", "Fuel Depot", "Fuel Station" });
-        public static readonly MyProceduralStationSpeciality UraniumFuelStation = new MyProceduralStationSpeciality("UraniumFuelStation", new MyDefinitionFilter().OrTypeSubtype(typeof(MyObjectBuilder_Ingot), "Uranium"), new[] { "Uranium Depot", "Fuel Depot", "Fuel Station" });
-        public static readonly MyProceduralStationSpeciality OxygenStation = new MyProceduralStationSpeciality("OxygenStation", new MyDefinitionFilter().OrTypeSubtype(typeof(MyObjectBuilder_GasProperties), "Oxygen"), new[] { "Oxygen Station", "Life Support" });
+        public static readonly MyProceduralStationSpeciality HydrogenFuelStation = new MyProceduralStationSpeciality(nameof(HydrogenFuelStation), new MyDefinitionFilter().OrTypeSubtype(typeof(MyObjectBuilder_GasProperties), "Hydrogen"), new[] { "Hydrogen Station", "Fuel Depot", "Fuel Station" });
+        public static readonly MyProceduralStationSpeciality UraniumFuelStation = new MyProceduralStationSpeciality(nameof(UraniumFuelStation), new MyDefinitionFilter().OrTypeSubtype(typeof(MyObjectBuilder_Ingot), "Uranium"), new[] { "Uranium Depot", "Fuel Depot", "Fuel Station" });
+        public static readonly MyProceduralStationSpeciality OxygenStation = new MyProceduralStationSpeciality(nameof(OxygenStation), new MyDefinitionFilter().OrTypeSubtype(typeof(MyObjectBuilder_GasProperties), "Oxygen"), new[] { "Oxygen Station", "Life Support" });
         // Ore refinery
-        public static readonly MyProceduralStationSpeciality Refinery = new MyProceduralStationSpeciality("Refinery", new MyDefinitionFilter().OrType(typeof(MyObjectBuilder_Ingot)), 0.5, new[] { "" }, new[] { "Refinery", "Smeltery", "Forge" });
+        public static readonly MyProceduralStationSpeciality Refinery = new MyProceduralStationSpeciality(nameof(Refinery), new MyDefinitionFilter().OrType(typeof(MyObjectBuilder_Ingot)), 0.5, new[] { "" }, new[] { "Refinery", "Smeltery", "Forge" });
         // Assembly
-        public static readonly MyProceduralStationSpeciality AssemblyWeaponsAmmo = new MyProceduralStationSpeciality("AssemblyWeaponsAmmo", WeaponryFilter, 0.1, new[] { "Weapon", "Ammo", "Military", "Munitions" }, ShopSuffixes);
-        public static readonly MyProceduralStationSpeciality AssemblyTools = new MyProceduralStationSpeciality("AssemblyTools", new MyDefinitionFilter().OrType(typeof(MyObjectBuilder_Welder), typeof(MyObjectBuilder_AngleGrinder), typeof(MyObjectBuilder_HandDrill), typeof(MyObjectBuilder_GasContainerObject), typeof(MyObjectBuilder_OxygenContainerObject)), 0.1, new[] { "Tool" }, ShopSuffixes);
-        public static readonly MyProceduralStationSpeciality AssemblyComponents = new MyProceduralStationSpeciality("AssemblyComponents", new MyDefinitionFilter().OrType(typeof(MyObjectBuilder_Component)), 0.2, new[] { "Component", "Part" }, ShopSuffixes);
+        public static readonly MyProceduralStationSpeciality AssemblyWeaponsAmmo = new MyProceduralStationSpeciality(nameof(AssemblyWeaponsAmmo), WeaponryFilter, 0.1, new[] { "Weapon", "Ammo", "Military", "Munitions" }, ShopSuffixes);
+        public static readonly MyProceduralStationSpeciality AssemblyTools = new MyProceduralStationSpeciality(nameof(AssemblyTools), new MyDefinitionFilter().OrType(typeof(MyObjectBuilder_Welder), typeof(MyObjectBuilder_AngleGrinder), typeof(MyObjectBuilder_HandDrill), typeof(MyObjectBuilder_GasContainerObject), typeof(MyObjectBuilder_OxygenContainerObject)), 0.1, new[] { "Tool" }, ShopSuffixes);
+        public static readonly MyProceduralStationSpeciality AssemblyComponents = new MyProceduralStationSpeciality(nameof(AssemblyComponents), new MyDefinitionFilter().OrType(typeof(MyObjectBuilder_Component)), 0.2, new[] { "Component", "Part" }, ShopSuffixes);
         // Repair
-        public static readonly MyProceduralStationSpeciality ShipRepair = new MyProceduralStationSpeciality("ShipRepair", BuildingEquipment, new[] { "Repair Yard", "Repair Shop", "Junk Yard" });
-        public static readonly MyProceduralStationSpeciality ShipConstruction = new MyProceduralStationSpeciality("ShipConstruction", BuildingEquipment, new[] { "Shipyard", "Construction Outpost", "Builder Shop" });
+        public static readonly MyProceduralStationSpeciality ShipRepair = new MyProceduralStationSpeciality(nameof(ShipRepair), BuildingEquipment, new[] { "Repair Yard", "Repair Shop", "Junk Yard" });
+        public static readonly MyProceduralStationSpeciality ShipConstruction = new MyProceduralStationSpeciality(nameof(ShipConstruction), BuildingEquipment, new[] { "Shipyard", "Construction Outpost", "Builder Shop" });
         // Military
-        public static readonly MyProceduralStationSpeciality DefenseStation = new MyProceduralStationSpeciality("DefenseStation", NothingFilter, new[] { "Military Outpost", "Defense Outpost" }, imports: new MyDefinitionFilter().Append(OxygenAndFuelFilter).Append(WeaponryFilter));
+        public static readonly MyProceduralStationSpeciality DefenseStation = new MyProceduralStationSpeciality(nameof(DefenseStation), NothingFilter, new[] { "Military Outpost", "Defense Outpost" }, imports: new MyDefinitionFilter().Append(OxygenAndFuelFilter).Append(WeaponryFilter));
         // Housing
-        public static readonly MyProceduralStationSpeciality Housing = new MyProceduralStationSpeciality("Housing", new MyDefinitionFilter().OrType(typeof(MyObjectBuilder_OxygenContainerObject)), new[] { "Hovels", "Shacks", "Apartments" }, imports: OxygenAndFuelFilter);
-        public static readonly MyProceduralStationSpeciality LuxuryHousing = new MyProceduralStationSpeciality("LuxuryHousing", new MyDefinitionFilter().OrType(typeof(MyObjectBuilder_OxygenContainerObject)), new[] { "Condo", "Villa", "Luxury Hotel" }, imports: OxygenAndFuelFilter);
-        public static readonly MyProceduralStationSpeciality Trading = new MyProceduralStationSpeciality("Trading", AcceptFilter, new[] { "Trading Outpost", "Exchange", "Junk Emporium" }, imports: AcceptFilter);
+        public static readonly MyProceduralStationSpeciality Housing = new MyProceduralStationSpeciality(nameof(Housing), new MyDefinitionFilter().OrType(typeof(MyObjectBuilder_OxygenContainerObject)), new[] { "Hovels", "Shacks", "Apartments" }, imports: OxygenAndFuelFilter);
+        public static readonly MyProceduralStationSpeciality LuxuryHousing = new MyProceduralStationSpeciality(nameof(LuxuryHousing), new MyDefinitionFilter().OrType(typeof(MyObjectBuilder_OxygenContainerObject)), new[] { "Condo", "Villa", "Luxury Hotel" }, imports: OxygenAndFuelFilter);
+        public static readonly MyProceduralStationSpeciality Trading = new MyProceduralStationSpeciality(nameof(Trading), AcceptFilter, new[] { "Trading Outpost", "Exchange", "Junk Emporium" }, imports: AcceptFilter);
 
         public override string ToString()
         {
@@ -88,12 +97,21 @@ namespace Equinox.ProceduralWorld.Buildings.Seeds
     {
         public string Description { get; }
         public string[] FactionTags { get; }
-        public readonly int Ordinal;
+        public string Name { get; }
         public List<KeyValuePair<MyProceduralStationSpeciality, float>> StationSpecialities { get; }
-        private MyProceduralFactionSpeciality(int ordinal, string desc, string[] factionTags)
+        private static readonly Dictionary<string, MyProceduralFactionSpeciality> m_lookupTable =
+            new Dictionary<string, MyProceduralFactionSpeciality>();
+
+        public static IEnumerable<MyProceduralFactionSpeciality> Values => m_lookupTable.Values;
+
+        public static MyProceduralFactionSpeciality ByName(string name)
         {
-            Values[ordinal] = this;
-            Ordinal = ordinal;
+            return m_lookupTable.GetValueOrDefault(name, null);
+        }
+        private MyProceduralFactionSpeciality(string name, string desc, string[] factionTags)
+        {
+            m_lookupTable[name] = this;
+            Name = name;
             Description = desc;
             FactionTags = factionTags;
             StationSpecialities = new List<KeyValuePair<MyProceduralStationSpeciality, float>>();
@@ -104,22 +122,20 @@ namespace Equinox.ProceduralWorld.Buildings.Seeds
             StationSpecialities.Add(new KeyValuePair<MyProceduralStationSpeciality, float>(s, w));
             return this;
         }
-
-        // Must be first.
-        public static readonly MyProceduralFactionSpeciality[] Values = new MyProceduralFactionSpeciality[7];
-        public static readonly MyProceduralFactionSpeciality Military = new MyProceduralFactionSpeciality(0, "military operations", new[] { "Military Endeavours", "Mercenaries", "Defenses" }).
+        
+        public static readonly MyProceduralFactionSpeciality Military = new MyProceduralFactionSpeciality(nameof(Military), "military operations", new[] { "Military Endeavours", "Mercenaries", "Defenses" }).
             Add(MyProceduralStationSpeciality.AssemblyWeaponsAmmo, 0.25f).Add(MyProceduralStationSpeciality.DefenseStation, 0.75f);
-        public static readonly MyProceduralFactionSpeciality Repair = new MyProceduralFactionSpeciality(1, "repairing and constructing ships", new[] { "Repair Shops", "Shipyards", "Constructors", "Maintenance" }).
+        public static readonly MyProceduralFactionSpeciality Repair = new MyProceduralFactionSpeciality(nameof(Repair), "repairing and constructing ships", new[] { "Repair Shops", "Shipyards", "Constructors", "Maintenance" }).
             Add(MyProceduralStationSpeciality.ShipConstruction, 0.1f).Add(MyProceduralStationSpeciality.ShipRepair, 0.9f);
-        public static readonly MyProceduralFactionSpeciality Refining = new MyProceduralFactionSpeciality(2, "refining ores", new[] { "Refinement", "Processing" }).
+        public static readonly MyProceduralFactionSpeciality Refining = new MyProceduralFactionSpeciality(nameof(Refining), "refining ores", new[] { "Refinement", "Processing" }).
             Add(MyProceduralStationSpeciality.HydrogenFuelStation, .1f).Add(MyProceduralStationSpeciality.OxygenStation, .05f).Add(MyProceduralStationSpeciality.Refinery, .85f);
-        public static readonly MyProceduralFactionSpeciality Assembling = new MyProceduralFactionSpeciality(3, "assembling parts", new[] { "Parts", "Assembly" }).
+        public static readonly MyProceduralFactionSpeciality Assembling = new MyProceduralFactionSpeciality(nameof(Assembling), "assembling parts", new[] { "Parts", "Assembly" }).
             Add(MyProceduralStationSpeciality.AssemblyComponents, .85f).Add(MyProceduralStationSpeciality.AssemblyTools, .1f).Add(MyProceduralStationSpeciality.AssemblyWeaponsAmmo, .05f);
-        public static readonly MyProceduralFactionSpeciality Housing = new MyProceduralFactionSpeciality(4, "housing", new[] { "Hotels", "Condos", "Housing" }).
+        public static readonly MyProceduralFactionSpeciality Housing = new MyProceduralFactionSpeciality(nameof(Housing), "housing", new[] { "Hotels", "Condos", "Housing" }).
             Add(MyProceduralStationSpeciality.Housing, .99f).Add(MyProceduralStationSpeciality.LuxuryHousing, .01f);
-        public static readonly MyProceduralFactionSpeciality Trading = new MyProceduralFactionSpeciality(5, "trading", new[] { "Trading", "Exchange" }).
+        public static readonly MyProceduralFactionSpeciality Trading = new MyProceduralFactionSpeciality(nameof(Trading), "trading", new[] { "Trading", "Exchange" }).
             Add(MyProceduralStationSpeciality.Trading, 1);
-        public static readonly MyProceduralFactionSpeciality Mining = new MyProceduralFactionSpeciality(6, "mining", new[] { "Ores", "mining" }).
+        public static readonly MyProceduralFactionSpeciality Mining = new MyProceduralFactionSpeciality(nameof(Mining), "mining", new[] { "Ores", "mining" }).
             Add(MyProceduralStationSpeciality.MiningRares, .1f).Add(MyProceduralStationSpeciality.MiningAbundant, .9f);
     }
 }
