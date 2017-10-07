@@ -26,6 +26,7 @@ namespace Equinox.ProceduralWorld.Buildings.Creation
         public readonly List<MyObjectBuilder_CubeGrid> AuxGrids;
         public readonly IMyLogging Logger;
         private readonly MyRoomRemapper m_remapper;
+        public BoundingBoxD BoundingBox;
 
         public MyConstructionCopy(MyProceduralRoom room, MyRoomRemapper remapper = null)
         {
@@ -44,6 +45,7 @@ namespace Equinox.ProceduralWorld.Buildings.Creation
                 PersistentFlags = MyPersistentEntityFlags2.Enabled | MyPersistentEntityFlags2.InScene | MyPersistentEntityFlags2.CastShadows,
                 PositionAndOrientation = new MyPositionAndOrientation(MyGridCreator.WorldTransformFor(room.Owner))
             };
+            BoundingBox = BoundingBoxD.CreateInvalid();
 
             Construction = room.Owner;
             PrimaryGrid = o;
@@ -135,6 +137,11 @@ namespace Equinox.ProceduralWorld.Buildings.Creation
             var result = MyAPIGateway.Entities.CreateFromObjectBuilderAndAdd(ob);
             callback.Invoke();
             return result;
+        }
+
+        public bool IsRegionEmpty()
+        {
+            return !MyAPIGateway.Entities.GetEntitiesInAABB(ref BoundingBox).Any();
         }
 
         public MyProceduralGridComponent SpawnAsync()

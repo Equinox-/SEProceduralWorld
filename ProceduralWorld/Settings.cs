@@ -24,6 +24,6 @@ namespace Equinox.ProceduralWorld
 
         public const bool AllowAuxillaryGrids = false;
         public const bool ParallelTracing = false;
-        public const bool ParallelCatchErrors = false;
+        public const bool ParallelCatchErrors = true;
     }
 }

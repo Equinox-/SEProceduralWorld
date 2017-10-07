@@ -105,12 +105,18 @@ namespace Equinox.ProceduralWorld.Buildings.Game
             private void Stage_SpawnGrid()
             {
                 Module.Debug("Spawn stage for {0}/{1}", m_cell, Seed.Seed);
-                m_component = m_grids.SpawnAsync();
-                if (m_component == null)
-                    Module.Warning("Spawn stage failed for {0}/{1}", m_cell, Seed.Seed);
+                if (m_grids.IsRegionEmpty())
+                {
+                    m_component = m_grids.SpawnAsync();
+                    if (m_component == null)
+                        Module.Warning("Spawn stage failed for {0}/{1}", m_cell, Seed.Seed);
+                    else
+                        Module.Debug("Spawn stage success for {0}/{1}", m_cell, Seed.Seed);
+                }
                 else
-                    Module.Debug("Spawn stage success for {0}/{1}", m_cell, Seed.Seed);
-
+                {
+                    Module.Debug("Spawn stage ignored for {0}/{1}; entities in box", m_cell, Seed.Seed);
+                }
                 using (m_creationQueueSemaphore.AcquireExclusiveUsing())
                     m_creationQueued = false;
             }

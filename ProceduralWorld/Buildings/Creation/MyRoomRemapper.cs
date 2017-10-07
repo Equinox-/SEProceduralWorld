@@ -100,8 +100,8 @@ namespace Equinox.ProceduralWorld.Buildings.Creation
                 ownership.UpgradeShareModeOnly = true;
             }
 
+            var worldTransform = Remap<MyGridRemap_WorldTransform>();
             {
-                var worldTransform = Remap<MyGridRemap_WorldTransform>();
 
                 var roomTransformScaled = room.Transform.GetFloatMatrix();
                 roomTransformScaled.Translation *= MyDefinitionManager.Static.GetCubeSize(dest.PrimaryGrid.GridSizeEnum);
@@ -159,6 +159,8 @@ namespace Equinox.ProceduralWorld.Buildings.Creation
 
             // Add aux grids
             dest.AuxGrids.AddRange(otherGrids);
+
+            dest.BoundingBox = BoundingBoxD.CreateMerged(dest.BoundingBox, MyUtilities.TransformBoundingBox((BoundingBoxD) room.BoundingBoxBoth, worldTransform.WorldTransform));
         }
     }
 }
