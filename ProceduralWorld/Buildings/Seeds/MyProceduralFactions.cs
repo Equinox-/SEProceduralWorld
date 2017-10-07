@@ -52,7 +52,10 @@ namespace Equinox.ProceduralWorld.Buildings.Seeds
             MyObjectBuilder_ProceduralFaction recipe;
             if (m_database.TryGetFaction(noise, out recipe))
                 return new MyProceduralFactionSeed(recipe);
-            var result = new MyProceduralFactionSeed(m_names.Generate(noise), noise);
+            var rand = new Random((int) noise);
+            var nameSeed = (ulong) rand.NextLong();
+            var stationSeed = (ulong) rand.NextLong();
+            var result = new MyProceduralFactionSeed(m_names.Generate(nameSeed), stationSeed);
             m_database.StoreFactionBlueprint(result);
             return result;
         }

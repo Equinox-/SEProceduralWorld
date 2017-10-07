@@ -18,7 +18,7 @@ namespace Equinox.ProceduralWorld.Names
         public override string Generate(ulong seed)
         {
             if (m_generators == null || m_generators.Count == 0) return "{no generators}";
-            var nf = (seed * 9187UL) / ulong.MaxValue;
+            var nf = (seed * (ulong.MaxValue - 9189123987UL)) / ulong.MaxValue;
             // binary search generator list.
             var left = 0;
             var right = m_generators.Count - 1;
