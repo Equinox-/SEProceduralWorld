@@ -54,6 +54,8 @@ namespace Equinox.ProceduralWorld.Buildings
 
         private string ProcessStationLocations(CommandFeedback feedback)
         {
+            if (!MyAPIGateway.Session.HasCreativeRights)
+                return "You must have creative rights to use the station location command";
             var stationModule = Manager.GetDependencyProvider<MyProceduralStationModule>();
             if (stationModule == null)
                 return "No station module means no stations";
