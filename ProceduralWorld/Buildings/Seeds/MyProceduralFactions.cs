@@ -18,10 +18,11 @@ namespace Equinox.ProceduralWorld.Buildings.Seeds
         private IMyModule m_factionNoise;
         private double m_factionDensity = 5e5;
         private int m_factionShiftBase = 1;
+        private long m_seed = 1;
 
         private void RebuildNoiseModule()
         {
-            m_factionNoise = new MySimplex(MyAPIGateway.Session.SessionSettings.ProceduralSeed, 1.0 / m_factionDensity);
+            m_factionNoise = new MySimplex((int)m_seed, 1.0 / m_factionDensity);
         }
 
         private MyNameGeneratorBase m_names;
@@ -67,17 +68,19 @@ namespace Equinox.ProceduralWorld.Buildings.Seeds
             }
             m_factionShiftBase = config.FactionShiftBase;
             m_factionDensity = config.FactionDensity;
+            m_seed = config.Seed;
             RebuildNoiseModule();
         }
 
         public override MyObjectBuilder_ModSessionComponent SaveConfiguration()
         {
-            return new MyObjectBuilder_ProceduralFactions() { FactionDensity = m_factionDensity, FactionShiftBase = m_factionShiftBase };
+            return new MyObjectBuilder_ProceduralFactions() { Seed = m_seed, FactionDensity = m_factionDensity, FactionShiftBase = m_factionShiftBase };
         }
     }
 
     public class MyObjectBuilder_ProceduralFactions : MyObjectBuilder_ModSessionComponent
     {
+        public long Seed = 12378123;
         // (500 km)^3 cells.
         // For context, 250e3 for Earth-Moon, 2300e3 for Earth-Mars, 6000e3 for Earth-Alien
         public double FactionDensity = 5e5;

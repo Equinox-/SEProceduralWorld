@@ -29,8 +29,7 @@ namespace Equinox.ProceduralWorld.Buildings.Game
 
         private void RebuildNoiseModules()
         {
-            var seed = MyAPIGateway.Session.SessionSettings.ProceduralSeed;
-            StationNoise = new MyOctreeNoise(seed * 2383188091L, ConfigReference.StationMaxSpacing, ConfigReference.StationMinSpacing, null);
+            StationNoise = new MyOctreeNoise(ConfigReference.Seed, ConfigReference.StationMaxSpacing, ConfigReference.StationMinSpacing, null);
         }
 
         public MyProceduralStationModule()
@@ -135,6 +134,9 @@ namespace Equinox.ProceduralWorld.Buildings.Game
             return MyAPIGateway.Utilities.SerializeFromXML<MyObjectBuilder_ProceduralStation>(MyAPIGateway.Utilities
                 .SerializeToXML(this));
         }
+
+        [ProtoMember]
+        public long Seed = 1238721397L;
 
         // This is (within */2) of the minimum distance stations encounters are apart.  Keep high for performance reasons.
         // For context, 250e3 for Earth-Moon, 2300e3 for Earth-Mars, 6000e3 for Earth-Alien
