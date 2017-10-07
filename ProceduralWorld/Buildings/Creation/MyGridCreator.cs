@@ -132,8 +132,8 @@ namespace Equinox.ProceduralWorld.Buildings.Creation
         private static IMyEntity CreateFromObjectBuilderShim(MyObjectBuilder_EntityBase ob, bool addToScene,
             Action callback)
         {
-//            ob.PersistentFlags &= ~MyPersistentEntityFlags2.InScene;
-//            return MyAPIGateway.Entities.CreateFromObjectBuilderParallel(ob, addToScene, callback);
+            //            ob.PersistentFlags &= ~MyPersistentEntityFlags2.InScene;
+            //            return MyAPIGateway.Entities.CreateFromObjectBuilderParallel(ob, addToScene, callback);
             var result = MyAPIGateway.Entities.CreateFromObjectBuilderAndAdd(ob);
             callback.Invoke();
             return result;
@@ -141,7 +141,7 @@ namespace Equinox.ProceduralWorld.Buildings.Creation
 
         public bool IsRegionEmpty()
         {
-            return !MyAPIGateway.Entities.GetEntitiesInAABB(ref BoundingBox).Any();
+            return !MyAPIGateway.Entities.GetTopMostEntitiesInBox(ref BoundingBox).Any(x => x is IMyCubeGrid || x is IMyVoxelBase);
         }
 
         public MyProceduralGridComponent SpawnAsync()
