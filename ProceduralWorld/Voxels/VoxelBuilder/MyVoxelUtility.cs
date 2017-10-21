@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Equinox.Utils;
+using ProtoBuf;
 using Sandbox.Definitions;
 using Sandbox.Engine.Voxels;
 using Sandbox.Game.Entities;
@@ -69,6 +70,103 @@ namespace Equinox.ProceduralWorld.Voxels.VoxelBuilder
             res = (TR)o;
         }
 
+        [ProtoContract]
+        public struct MyAtmosphereSettings
+        {
+            [ProtoMember(9)]
+            public Vector3 RayleighScattering;
+
+            [ProtoMember(11)]
+            public float MieScattering;
+
+            [ProtoMember(13)]
+            public Vector3 MieColorScattering;
+
+            [ProtoMember(16)]
+            public float RayleighHeight;
+
+            [ProtoMember(18)]
+            public float RayleighHeightSpace;
+
+            [ProtoMember(20)]
+            public float RayleighTransitionModifier;
+
+            [ProtoMember(22)]
+            public float MieHeight;
+
+            [ProtoMember(24)]
+            public float MieG;
+
+            [ProtoMember(26)]
+            public float Intensity;
+
+            [ProtoMember(28)]
+            public float FogIntensity;
+
+            [ProtoMember(30)]
+            public float SeaLevelModifier;
+
+            [ProtoMember(32)]
+            public float AtmosphereTopModifier;
+
+            [ProtoMember(35)]
+            public float Scale;
+
+            public static MyAtmosphereSettings Defaults()
+            {
+                MyAtmosphereSettings result;
+                result.RayleighScattering = new Vector3(20f, 7.5f, 10f);
+                result.MieScattering = 50f;
+                result.MieColorScattering = new Vector3(50f, 50f, 50f);
+                result.RayleighHeight = 10f;
+                result.RayleighHeightSpace = 10f;
+                result.RayleighTransitionModifier = 1f;
+                result.MieHeight = 50f;
+                result.MieG = 0.9998f;
+                result.Intensity = 1f;
+                result.FogIntensity = 0f;
+                result.SeaLevelModifier = 1f;
+                result.AtmosphereTopModifier = 1f;
+                result.Scale = 0.5f;
+                return result;
+            }
+
+            public static MyAtmosphereSettings FromKeen<TR>(TR o)
+            {
+                var data = MyAPIGateway.Utilities.SerializeToBinary(o);
+                return MyAPIGateway.Utilities.SerializeFromBinary<MyAtmosphereSettings>(data);
+            }
+
+            public TR ToKeen<TR>()
+            {
+                var data = MyAPIGateway.Utilities.SerializeToBinary(this);
+                return MyAPIGateway.Utilities.SerializeFromBinary<TR>(data);
+            }
+        }
+
+        private static readonly byte[] _defaultAtmosphereSettings =
+                Convert.FromBase64String(
+                    "ShLFAgAAoEHtAgAA8ECVAwAAIEFdAABIQmoSxQIAAEhC7QIAAEhClQMAAEhChQEAACBBlQEAACBBpQEAAIA/tQEAAEhCxQHl8n8/1QEAAIA/9QEAAIA/hQIAAIA/nQIAAAA/")
+            ;
+
+        private static void MoveAtmosphereSettings<TR>(TR? o, out TR res) where TR : struct
+        {
+            res = o ?? MyAPIGateway.Utilities.SerializeFromBinary<TR>(_defaultAtmosphereSettings);
+        }
+
+        private static float AtmosphereRadius<TR>(TR? data) where TR:struct
+        {
+            if (data.HasValue)
+            {
+                var scale = MyAtmosphereSettings.FromKeen(data.Value).Scale;
+                if (scale > 1f)
+                {
+                    return 1 + scale;
+                }
+            }
+            return 1.75f;
+        }
+
         public static MyPlanet SpawnPlanet(Vector3D pos, MyPlanetGeneratorDefinition generatorDef, long seed, float size)
         {
             var provider = new MyPlanetStorageProviderBuilder();
@@ -84,10 +182,8 @@ namespace Equinox.ProceduralWorld.Voxels.VoxelBuilder
 
             var outerRadius = averagePlanetRadius + maxHillSize;
             var innerRadius = averagePlanetRadius + minHillSize;
-
-            //            var atmosphereRadius = generatorDef.AtmosphereSettings.HasValue &&
-            //                generatorDef.AtmosphereSettings.Value.Scale > 1f ? 1 + generatorDef.AtmosphereSettings.Value.Scale : 1.75f;
-            var atmosphereRadius = 1.75f;
+            
+            var atmosphereRadius = AtmosphereRadius(generatorDef.AtmosphereSettings);
             atmosphereRadius *= (float)provider.Radius;
 
             var random = new Random((int)seed);
@@ -117,7 +213,7 @@ namespace Equinox.ProceduralWorld.Voxels.VoxelBuilder
             planetInitArguments.AtmosphereWavelengths = atmosphereWavelengths;
             planetInitArguments.GravityFalloff = generatorDef.GravityFalloffPower;
             planetInitArguments.MarkAreaEmpty = true;
-            //            planetInitArguments.AtmosphereSettings = generatorDef.AtmosphereSettings.HasValue ? generatorDef.AtmosphereSettings.Value : MyAtmosphereSettings.Defaults();
+            MoveAtmosphereSettings(generatorDef.AtmosphereSettings, out planetInitArguments.AtmosphereSettings);
             planetInitArguments.SurfaceGravity = generatorDef.SurfaceGravity;
             planetInitArguments.AddGps = false;
             planetInitArguments.SpherizeWithDistance = true;
@@ -153,8 +249,8 @@ namespace Equinox.ProceduralWorld.Voxels.VoxelBuilder
                     }
                 seed *= 982451653;
             }
-//            if (!success)
-//                SessionCore.Log("Failed to create asteroid with constraints: Prohibit=[{0}], Require=[{1}]", string.Join(", ", prohibitsOre), string.Join(", ", requiresOre));
+            //            if (!success)
+            //                SessionCore.Log("Failed to create asteroid with constraints: Prohibit=[{0}], Require=[{1}]", string.Join(", ", prohibitsOre), string.Join(", ", requiresOre));
             return seed;
         }
     }

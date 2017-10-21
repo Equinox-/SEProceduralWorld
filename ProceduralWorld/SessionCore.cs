@@ -12,6 +12,7 @@ using Equinox.ProceduralWorld.Manager;
 using Equinox.ProceduralWorld.Names;
 using Equinox.ProceduralWorld.Voxels;
 using Equinox.ProceduralWorld.Voxels.Asteroids;
+using Equinox.ProceduralWorld.Voxels.VoxelBuilder;
 using Equinox.Utils;
 using Equinox.Utils.Command;
 using Equinox.Utils.Logging;
@@ -166,13 +167,6 @@ namespace Equinox.ProceduralWorld
         {
             if (!m_init)
             {
-                var plateA = MyDefinitionManager.Static.GetComponentDefinition(new MyDefinitionId(typeof(MyObjectBuilder_Component),
-                    "SteelPlate"));
-                var blockA =
-                    MyDefinitionManager.Static.GetCubeBlockDefinition(
-                        new MyDefinitionId(typeof(MyObjectBuilder_CubeBlock), "LargeBlockArmorBlock"));
-                MyLog.Default.WriteLine(
-                    $"From comp builder {plateA.GetHashCode()}, from block def {blockA.Components[0].Definition.GetHashCode()}");
                 try
                 {
                     Manager.Register(new MySessionBootstrapper());
