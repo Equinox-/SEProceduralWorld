@@ -12,6 +12,7 @@ using Equinox.ProceduralWorld.Manager;
 using Equinox.ProceduralWorld.Names;
 using Equinox.ProceduralWorld.Voxels;
 using Equinox.ProceduralWorld.Voxels.Asteroids;
+using Equinox.ProceduralWorld.Voxels.Planets;
 using Equinox.ProceduralWorld.Voxels.VoxelBuilder;
 using Equinox.Utils;
 using Equinox.Utils.Command;
@@ -24,6 +25,7 @@ using Sandbox.ModAPI;
 using VRage;
 using VRage.Game;
 using VRage.Game.Components;
+using VRage.Library.Collections;
 using VRage.ObjectBuilders;
 using VRage.Utils;
 using VRageMath;
@@ -70,6 +72,71 @@ namespace Equinox.ProceduralWorld
                 });
                 res.SessionComponents.Add(new MyObjectBuilder_DesignTools());
                 // res.SessionComponents.Add(new MyObjectBuilder_ProceduralStation());
+                res.SessionComponents.Add(new MyObjectBuilder_InfinitePlanets()
+                {
+                    SystemProbability = 0.5,
+                    Systems = new List<MyObjectBuilder_InfinitePlanets_SystemDesc>()
+                    {
+                        new MyObjectBuilder_InfinitePlanets_SystemDesc()
+                        {
+                            MinDistanceFromOrigin = 0,
+                            PlanetTypes = new List<MyObjectBuilder_InfinitePlanets_PlanetDesc>()
+                            {
+                                new MyObjectBuilder_InfinitePlanets_PlanetDesc()
+                                {
+                                    Generator = new SerializableDefinitionId(typeof(MyObjectBuilder_PlanetGeneratorDefinition), "EarthLike"),
+                                    BodyRadius = new MyObjectBuilder_InfinitePlanets_Range(){Min=100e3, Max=120e3},
+                                    OrbitRadius = new MyObjectBuilder_InfinitePlanets_Range(){Min=500e3, Max=1000e3},
+                                    Probability =  2,
+                                    MoonCount = new MyObjectBuilder_InfinitePlanets_Range(){Min=1, Max=1},
+                                    MoonTypes = new List<MyObjectBuilder_InfinitePlanets_MoonDesc>()
+                                    {
+                                        new MyObjectBuilder_InfinitePlanets_MoonDesc()
+                                        {
+                                            Generator = new SerializableDefinitionId(typeof(MyObjectBuilder_PlanetGeneratorDefinition), "Moon"),
+                                            BodyRadius = new MyObjectBuilder_InfinitePlanets_Range(){Min=40e3, Max=60e3},
+                                            Probability = 1
+                                        }
+                                    }
+                                },
+                                new MyObjectBuilder_InfinitePlanets_PlanetDesc()
+                                {
+                                    Generator = new SerializableDefinitionId(typeof(MyObjectBuilder_PlanetGeneratorDefinition), "Mars"),
+                                    BodyRadius = new MyObjectBuilder_InfinitePlanets_Range(){Min=100e3, Max=120e3},
+                                    OrbitRadius = new MyObjectBuilder_InfinitePlanets_Range(){Min=1500e3, Max=2500e3},
+                                    MoonCount = new MyObjectBuilder_InfinitePlanets_Range(){Min=0, Max=0},
+                                    Probability = 2,
+                                    MoonTypes = new List<MyObjectBuilder_InfinitePlanets_MoonDesc>()
+                                    {
+                                    }
+                                },
+                                new MyObjectBuilder_InfinitePlanets_PlanetDesc()
+                                {
+                                    Generator = new SerializableDefinitionId(typeof(MyObjectBuilder_PlanetGeneratorDefinition), "Alien"),
+                                    BodyRadius = new MyObjectBuilder_InfinitePlanets_Range(){Min=150e3, Max=250e3},
+                                    OrbitRadius = new MyObjectBuilder_InfinitePlanets_Range(){Min=3000e3, Max=6000e3},
+                                    Probability =  1,
+                                    MoonCount = new MyObjectBuilder_InfinitePlanets_Range(){Min=3, Max=6},
+                                    MoonTypes = new List<MyObjectBuilder_InfinitePlanets_MoonDesc>()
+                                    {
+                                        new MyObjectBuilder_InfinitePlanets_MoonDesc()
+                                        {
+                                            Generator = new SerializableDefinitionId(typeof(MyObjectBuilder_PlanetGeneratorDefinition), "Europa"),
+                                            BodyRadius = new MyObjectBuilder_InfinitePlanets_Range(){Min=30e3, Max=50e3},
+                                            Probability = 1
+                                        },
+                                        new MyObjectBuilder_InfinitePlanets_MoonDesc()
+                                        {
+                                            Generator = new SerializableDefinitionId(typeof(MyObjectBuilder_PlanetGeneratorDefinition), "Titan"),
+                                            BodyRadius = new MyObjectBuilder_InfinitePlanets_Range(){Min=75e3, Max=100e3},
+                                            Probability = 1
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
             }
             return res;
         }

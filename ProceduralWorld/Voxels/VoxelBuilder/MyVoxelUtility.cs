@@ -167,7 +167,7 @@ namespace Equinox.ProceduralWorld.Voxels.VoxelBuilder
             return 1.75f;
         }
 
-        public static MyPlanet SpawnPlanet(Vector3D pos, MyPlanetGeneratorDefinition generatorDef, long seed, float size)
+        public static MyPlanet SpawnPlanet(Vector3D pos, MyPlanetGeneratorDefinition generatorDef, long seed, float size, string storageName)
         {
             var provider = new MyPlanetStorageProviderBuilder();
             provider.Init(seed, generatorDef, size / 2f);
@@ -197,9 +197,12 @@ namespace Equinox.ProceduralWorld.Voxels.VoxelBuilder
             atmosphereWavelengths.Y = MathHelper.Clamp(atmosphereWavelengths.Y, 0.1f, 1.0f);
             atmosphereWavelengths.Z = MathHelper.Clamp(atmosphereWavelengths.Z, 0.1f, 1.0f);
 
-            var storageName = $"proc_planet_{provider.Seed}_{(int)provider.Radius}_{(long)pos.X}_{(long)pos.Y}_{(long)pos.Z}";
+            var entityId = GetPlanetEntityId($"proc_planet_{provider.Seed}_{(int)provider.Radius}_{(long)pos.X}_{(long)pos.Y}_{(long)pos.Z}");
+            var result = MyAPIGateway.Entities.GetEntityById(entityId);
+            if (result != null)
+                return result as MyPlanet;
             var planet = new MyPlanet();
-            planet.EntityId = GetPlanetEntityId(storageName);
+            planet.EntityId = entityId;
             MyPlanetInitArguments planetInitArguments = new MyPlanetInitArguments();
             planetInitArguments.StorageName = storageName;
             CastProhibit(storage, out planetInitArguments.Storage);

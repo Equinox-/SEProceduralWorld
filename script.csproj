@@ -162,6 +162,8 @@
     <Compile Include="ProceduralWorld\Buildings\Seeds\MyProceduralFactionSeed.cs" />
     <Compile Include="ProceduralWorld\Buildings\Storage\MySupportedBlockTypes.cs" />
     <Compile Include="ProceduralWorld\Voxels\Asteroids\MyAutomaticAsteroidFieldsComponent.cs" />
+    <Compile Include="ProceduralWorld\Voxels\Planets\MyInfinitePlanetsModule.cs" />
+    <Compile Include="ProceduralWorld\Voxels\Planets\MyObjectBuilder_InfinitePlanets.cs" />
     <Compile Include="Utils\Command\MyCommand.cs" />
     <Compile Include="Utils\Command\MyCommandDispatchComponent.cs" />
     <Compile Include="Utils\Command\MyCommandProviderComponent.cs" />
