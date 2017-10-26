@@ -1,6 +1,5 @@
 ﻿using System.Collections.Generic;
 using System.Diagnostics;
-using BuffPanel.Logging;
 using Equinox.Utils.Logging;
 using VRage.Game;
 
