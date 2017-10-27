@@ -102,14 +102,19 @@ namespace Equinox.ProceduralWorld.Buildings.Creation
 
             var worldTransform = Remap<MyGridRemap_WorldTransform>();
             {
-
                 var roomTransformScaled = room.Transform.GetFloatMatrix();
                 roomTransformScaled.Translation *= MyDefinitionManager.Static.GetCubeSize(dest.PrimaryGrid.GridSizeEnum);
 
-                var prefabToWorld = MatrixD.Multiply(MatrixD.Invert(room.Part.PrimaryGrid.PositionAndOrientation?.AsMatrixD() ?? MatrixD.Identity), roomTransformScaled);
-                prefabToWorld = MatrixD.Multiply(prefabToWorld, dest.PrimaryGrid.PositionAndOrientation?.GetMatrix() ?? MatrixD.Identity);
+                var prefabPrimaryGridNewWorldMatrix = Matrix.Multiply(roomTransformScaled,
+                    dest.PrimaryGrid.PositionAndOrientation?.GetMatrix() ?? MatrixD.Identity);
+                var prefabPrimaryGridOldWorldMatrix = room.Part.PrimaryGrid.PositionAndOrientation?.GetMatrix() ??
+                                                      MatrixD.Identity;
 
-                worldTransform.WorldTransform = prefabToWorld;
+
+                var prefabOldToNew = Matrix.Multiply(Matrix.Invert(prefabPrimaryGridOldWorldMatrix),
+                    prefabPrimaryGridNewWorldMatrix);
+
+                worldTransform.WorldTransform = prefabOldToNew;
                 worldTransform.WorldLinearVelocity = dest.PrimaryGrid.LinearVelocity;
             }
 

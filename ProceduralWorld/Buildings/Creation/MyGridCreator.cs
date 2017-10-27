@@ -8,6 +8,7 @@ using Equinox.Utils.Logging;
 using Sandbox.Definitions;
 using Sandbox.Game;
 using Sandbox.Game.Entities;
+using Sandbox.Game.Entities.Blocks;
 using Sandbox.Game.Multiplayer;
 using Sandbox.Game.World;
 using Sandbox.Graphics.GUI;
@@ -116,11 +117,6 @@ namespace Equinox.ProceduralWorld.Buildings.Creation
                     MyAPIGateway.Utilities.InvokeOnGameThread(() =>
                     {
                         foreach (var grid in grids)
-                        {
-                            grid.PersistentFlags |= MyPersistentEntityFlags2.InScene;
-                            grid.OnAddedToScene(grid);
-                        }
-                        foreach (var grid in grids)
                             grid.Components.Get<MyProceduralGridComponent>()?.UpdateReadyState();
                     });
             }
@@ -136,11 +132,8 @@ namespace Equinox.ProceduralWorld.Buildings.Creation
         private static IMyEntity CreateFromObjectBuilderShim(MyObjectBuilder_EntityBase ob, bool addToScene,
             Action callback)
         {
-            //            ob.PersistentFlags &= ~MyPersistentEntityFlags2.InScene;
-            //            return MyAPIGateway.Entities.CreateFromObjectBuilderParallel(ob, addToScene, callback);
-            var result = MyAPIGateway.Entities.CreateFromObjectBuilderAndAdd(ob);
-            callback.Invoke();
-            return result;
+            ob.PersistentFlags |= MyPersistentEntityFlags2.InScene;
+            return MyAPIGateway.Entities.CreateFromObjectBuilderParallel(ob, addToScene, callback);
         }
 
         public bool IsRegionEmpty()
