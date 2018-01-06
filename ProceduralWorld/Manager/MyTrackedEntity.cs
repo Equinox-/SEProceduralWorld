@@ -11,10 +11,7 @@ namespace Equinox.ProceduralWorld.Manager
 
         public double Tolerance
         {
-            get
-            {
-                return m_tolerance;
-            }
+            get { return m_tolerance; }
             private set
             {
                 m_tolerance = value;
@@ -34,13 +31,15 @@ namespace Equinox.ProceduralWorld.Manager
 
         public bool ShouldGenerate()
         {
-            return !Entity.Closed && Entity.Save && (CurrentPosition - PreviousPosition).LengthSquared() > m_toleranceSquared;
+            return !Entity.Closed && Entity.Save &&
+                   (CurrentPosition - PreviousPosition).LengthSquared() > m_toleranceSquared;
         }
 
         private BoundingSphereD m_previousView, m_currentView;
         public Vector3D PreviousPosition => m_previousView.Center;
         public BoundingSphereD PreviousView => m_previousView;
         public Vector3D CurrentPosition => Entity.GetPosition();
+
         public BoundingSphereD CurrentView
         {
             get

@@ -24,18 +24,23 @@ namespace Equinox.ProceduralWorld.Manager
 {
     public class MyProceduralWorldManager : MyLoggingSessionComponent
     {
-        public static readonly TimeSpan TolerableLag = TimeSpan.FromSeconds(MyEngineConstants.UPDATE_STEP_SIZE_IN_SECONDS);
+        public static readonly TimeSpan TolerableLag =
+            TimeSpan.FromSeconds(MyEngineConstants.UPDATE_STEP_SIZE_IN_SECONDS);
 
-        public static readonly Type[] SuppliedDeps = { typeof(MyProceduralWorldManager) };
+        public static readonly Type[] SuppliedDeps = {typeof(MyProceduralWorldManager)};
         public override IEnumerable<Type> SuppliedComponents => SuppliedDeps;
 
         private readonly HashSet<MyProceduralModule> m_modules = new HashSet<MyProceduralModule>();
         private readonly HashSet<MyProceduralModule> m_modulesToAdd = new HashSet<MyProceduralModule>();
 
-        private readonly CachingDictionary<IMyEntity, MyTrackedEntity> m_trackedEntities = new CachingDictionary<IMyEntity, MyTrackedEntity>();
+        private readonly CachingDictionary<IMyEntity, MyTrackedEntity> m_trackedEntities =
+            new CachingDictionary<IMyEntity, MyTrackedEntity>();
+
         private readonly MyQueue<BoundingSphereD> m_dirtyVolumes = new MyQueue<BoundingSphereD>(64);
         private readonly MyDynamicAABBTreeD m_tree = new MyDynamicAABBTreeD(new Vector3D(10));
-        private readonly MyConcurrentPool<List<MyProceduralObject>> m_objectListPool = new MyConcurrentPool<List<MyProceduralObject>>(2, true);
+
+        private readonly MyConcurrentPool<List<MyProceduralObject>> m_objectListPool =
+            new MyConcurrentPool<List<MyProceduralObject>>(2, true);
 
         private void ObjectMoved(MyProceduralObject item)
         {
@@ -114,6 +119,7 @@ namespace Equinox.ProceduralWorld.Manager
         }
 
         private readonly Stopwatch m_stopwatch = new Stopwatch();
+
         public override void UpdateBeforeSimulation()
         {
             {
@@ -130,17 +136,21 @@ namespace Equinox.ProceduralWorld.Manager
                     foreach (var entity in m_trackedEntities.Values)
                     {
                         if (!entity.ShouldGenerate()) continue;
-                        foreach (var result in module.Generate(entity.CurrentView, needsFullUpdate ? null : (BoundingSphereD?)entity.PreviousView))
+                        foreach (var result in module.Generate(entity.CurrentView,
+                            needsFullUpdate ? null : (BoundingSphereD?) entity.PreviousView))
                             AddToTree(result);
                     }
+
                     var elapsed = m_stopwatch.Elapsed;
                     if (elapsed > TolerableLag)
                         Log(MyLogSeverity.Warning, "Module {0} took {1} to generate", module.GetType().Name, elapsed);
                 }
+
                 foreach (var entity in m_trackedEntities.Values)
                 {
                     m_dirtyVolumes.Enqueue(entity.PreviousView);
-                    entity.UpdatePrevious();
+                    if (entity.ShouldGenerate())
+                        entity.UpdatePrevious();
                 }
             }
 
@@ -158,8 +168,20 @@ namespace Equinox.ProceduralWorld.Manager
 
                 // Remove those not included by another entity
                 foreach (var t in dirtyObjectList)
-                    if (!m_trackedEntities.Values.Any(entity => t.m_boundingBox.Intersects(entity.CurrentView)))
+                {
+                    bool any = false;
+                    foreach (MyTrackedEntity entity in m_trackedEntities.Values)
+                    {
+                        if (t.m_boundingBox.Intersects(entity.CurrentView))
+                        {
+                            any = true;
+                            break;
+                        }
+                    }
+
+                    if (!any)
                         t.RaiseRemoved();
+                }
             }
             finally
             {
@@ -218,7 +240,8 @@ namespace Equinox.ProceduralWorld.Manager
 
         private void TrackEntity(IMyEntity entity, double distance)
         {
-            Log(MyLogSeverity.Debug, "Track entity {0} ({2}) at {1} distance", entity, distance, entity.GetFriendlyName());
+            Log(MyLogSeverity.Debug, "Track entity {0} ({2}) at {1} distance", entity, distance,
+                entity.GetFriendlyName());
             MyTrackedEntity tracker;
             if (m_trackedEntities.TryGetValue(entity, out tracker))
                 tracker.Radius = distance;
@@ -234,7 +257,8 @@ namespace Equinox.ProceduralWorld.Manager
         {
             if (config == null) return;
             if (config is MyObjectBuilder_ProceduralWorldManager) return;
-            Log(MyLogSeverity.Critical, "Configuration type {0} doesn't match component type {1}", config.GetType(), GetType());
+            Log(MyLogSeverity.Critical, "Configuration type {0} doesn't match component type {1}", config.GetType(),
+                GetType());
         }
 
         public override MyObjectBuilder_ModSessionComponent SaveConfiguration()
