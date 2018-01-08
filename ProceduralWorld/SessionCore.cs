@@ -33,102 +33,102 @@ using VRageMath;
 namespace Equinox.ProceduralWorld
 {
     [MySessionComponentDescriptor(MyUpdateOrder.BeforeSimulation | MyUpdateOrder.AfterSimulation)]
-    public class SessionCore : MyModSessionVRageAdapter
+    public class SessionCore : ModSessionVRageAdapter
     {
         public const bool RELEASE = true;
 
-        public static MyObjectBuilder_SessionManager DefaultConfiguration()
+        public static Ob_SessionManager DefaultConfiguration()
         {
             // ReSharper disable once UseObjectOrCollectionInitializer
-            var res = new MyObjectBuilder_SessionManager();
+            var res = new Ob_SessionManager();
             // ReSharper disable once UseObjectOrCollectionInitializer
-            res.SessionComponents = new List<MyObjectBuilder_ModSessionComponent>();
-            res.SessionComponents.Add(new MyObjectBuilder_CustomLogger() { Filename = "ProceduralWorld.log", LogLevel = MyLogSeverity.Debug });
+            res.SessionComponents = new List<Ob_ModSessionComponent>();
+            res.SessionComponents.Add(new Ob_CustomLogger() { Filename = "ProceduralWorld.log", LogLevel = MyLogSeverity.Debug });
             if (!RELEASE)
             {
-                res.SessionComponents.Add(new MyObjectBuilder_CommandDispatch());
-                res.SessionComponents.Add(new MyObjectBuilder_Network());
-                res.SessionComponents.Add(new MyObjectBuilder_RPC());
-                res.SessionComponents.Add(new MyObjectBuilder_ProceduralWorldManager());
-                res.SessionComponents.Add(new MyObjectBuilder_PartManager());
-                res.SessionComponents.Add(new MyObjectBuilder_BuildingControlCommands());
-                res.SessionComponents.Add(new MyObjectBuilder_ProceduralFactions());
-                res.SessionComponents.Add(new MyObjectBuilder_StationGeneratorManager());
-                res.SessionComponents.Add(new MyObjectBuilder_CompositeNameGenerator()
+                res.SessionComponents.Add(new Ob_CommandDispatch());
+                res.SessionComponents.Add(new Ob_Network());
+                res.SessionComponents.Add(new Ob_RPC());
+                res.SessionComponents.Add(new Ob_ProceduralWorldManager());
+                res.SessionComponents.Add(new Ob_PartManager());
+                res.SessionComponents.Add(new Ob_BuildingControlCommands());
+                res.SessionComponents.Add(new Ob_ProceduralFactions());
+                res.SessionComponents.Add(new Ob_StationGeneratorManager());
+                res.SessionComponents.Add(new Ob_CompositeNameGenerator()
                 {
-                    Generators = new List<MyObjectBuilder_CompositeNameGeneratorEntry>()
+                    Generators = new List<Ob_CompositeNameGeneratorEntry>()
                     {
-                        new MyObjectBuilder_CompositeNameGeneratorEntry()
+                        new Ob_CompositeNameGeneratorEntry()
                         {
-                            Generator = new MyObjectBuilder_StatisticalNameGenerator(),
+                            Generator = new Ob_StatisticalNameGenerator(),
                             Weight = 0.9f
                         },
-                        new MyObjectBuilder_CompositeNameGeneratorEntry()
+                        new Ob_CompositeNameGeneratorEntry()
                         {
-                            Generator = new MyObjectBuilder_ExoticNameGenerator(),
+                            Generator = new Ob_ExoticNameGenerator(),
                             Weight = 0.1f
                         }
                     }
                 });
-                res.SessionComponents.Add(new MyObjectBuilder_DesignTools());
-                // res.SessionComponents.Add(new MyObjectBuilder_ProceduralStation());
-                res.SessionComponents.Add(new MyObjectBuilder_InfinitePlanets()
+                res.SessionComponents.Add(new Ob_DesignTools());
+                // res.SessionComponents.Add(new Ob_ProceduralStation());
+                res.SessionComponents.Add(new Ob_InfinitePlanets()
                 {
                     SystemProbability = 0.5,
-                    Systems = new List<MyObjectBuilder_InfinitePlanets_SystemDesc>()
+                    Systems = new List<Ob_InfinitePlanets_SystemDesc>()
                     {
-                        new MyObjectBuilder_InfinitePlanets_SystemDesc()
+                        new Ob_InfinitePlanets_SystemDesc()
                         {
                             MinDistanceFromOrigin = 0,
-                            PlanetTypes = new List<MyObjectBuilder_InfinitePlanets_PlanetDesc>()
+                            PlanetTypes = new List<Ob_InfinitePlanets_PlanetDesc>()
                             {
-                                new MyObjectBuilder_InfinitePlanets_PlanetDesc()
+                                new Ob_InfinitePlanets_PlanetDesc()
                                 {
                                     Generator = new SerializableDefinitionId(typeof(MyObjectBuilder_PlanetGeneratorDefinition), "EarthLike"),
-                                    BodyRadius = new MyObjectBuilder_InfinitePlanets_Range(){Min=100e3, Max=120e3},
-                                    OrbitRadius = new MyObjectBuilder_InfinitePlanets_Range(){Min=500e3, Max=1000e3},
+                                    BodyRadius = new Ob_InfinitePlanets_Range(){Min=100e3, Max=120e3},
+                                    OrbitRadius = new Ob_InfinitePlanets_Range(){Min=500e3, Max=1000e3},
                                     Probability =  2,
-                                    MoonCount = new MyObjectBuilder_InfinitePlanets_Range(){Min=1, Max=1},
-                                    MoonTypes = new List<MyObjectBuilder_InfinitePlanets_MoonDesc>()
+                                    MoonCount = new Ob_InfinitePlanets_Range(){Min=1, Max=1},
+                                    MoonTypes = new List<Ob_InfinitePlanets_MoonDesc>()
                                     {
-                                        new MyObjectBuilder_InfinitePlanets_MoonDesc()
+                                        new Ob_InfinitePlanets_MoonDesc()
                                         {
                                             Generator = new SerializableDefinitionId(typeof(MyObjectBuilder_PlanetGeneratorDefinition), "Moon"),
-                                            BodyRadius = new MyObjectBuilder_InfinitePlanets_Range(){Min=40e3, Max=60e3},
+                                            BodyRadius = new Ob_InfinitePlanets_Range(){Min=40e3, Max=60e3},
                                             Probability = 1
                                         }
                                     }
                                 },
-                                new MyObjectBuilder_InfinitePlanets_PlanetDesc()
+                                new Ob_InfinitePlanets_PlanetDesc()
                                 {
                                     Generator = new SerializableDefinitionId(typeof(MyObjectBuilder_PlanetGeneratorDefinition), "Mars"),
-                                    BodyRadius = new MyObjectBuilder_InfinitePlanets_Range(){Min=100e3, Max=120e3},
-                                    OrbitRadius = new MyObjectBuilder_InfinitePlanets_Range(){Min=1500e3, Max=2500e3},
-                                    MoonCount = new MyObjectBuilder_InfinitePlanets_Range(){Min=0, Max=0},
+                                    BodyRadius = new Ob_InfinitePlanets_Range(){Min=100e3, Max=120e3},
+                                    OrbitRadius = new Ob_InfinitePlanets_Range(){Min=1500e3, Max=2500e3},
+                                    MoonCount = new Ob_InfinitePlanets_Range(){Min=0, Max=0},
                                     Probability = 2,
-                                    MoonTypes = new List<MyObjectBuilder_InfinitePlanets_MoonDesc>()
+                                    MoonTypes = new List<Ob_InfinitePlanets_MoonDesc>()
                                     {
                                     }
                                 },
-                                new MyObjectBuilder_InfinitePlanets_PlanetDesc()
+                                new Ob_InfinitePlanets_PlanetDesc()
                                 {
                                     Generator = new SerializableDefinitionId(typeof(MyObjectBuilder_PlanetGeneratorDefinition), "Alien"),
-                                    BodyRadius = new MyObjectBuilder_InfinitePlanets_Range(){Min=150e3, Max=250e3},
-                                    OrbitRadius = new MyObjectBuilder_InfinitePlanets_Range(){Min=3000e3, Max=6000e3},
+                                    BodyRadius = new Ob_InfinitePlanets_Range(){Min=150e3, Max=250e3},
+                                    OrbitRadius = new Ob_InfinitePlanets_Range(){Min=3000e3, Max=6000e3},
                                     Probability =  1,
-                                    MoonCount = new MyObjectBuilder_InfinitePlanets_Range(){Min=3, Max=6},
-                                    MoonTypes = new List<MyObjectBuilder_InfinitePlanets_MoonDesc>()
+                                    MoonCount = new Ob_InfinitePlanets_Range(){Min=3, Max=6},
+                                    MoonTypes = new List<Ob_InfinitePlanets_MoonDesc>()
                                     {
-                                        new MyObjectBuilder_InfinitePlanets_MoonDesc()
+                                        new Ob_InfinitePlanets_MoonDesc()
                                         {
                                             Generator = new SerializableDefinitionId(typeof(MyObjectBuilder_PlanetGeneratorDefinition), "Europa"),
-                                            BodyRadius = new MyObjectBuilder_InfinitePlanets_Range(){Min=30e3, Max=50e3},
+                                            BodyRadius = new Ob_InfinitePlanets_Range(){Min=30e3, Max=50e3},
                                             Probability = 1
                                         },
-                                        new MyObjectBuilder_InfinitePlanets_MoonDesc()
+                                        new Ob_InfinitePlanets_MoonDesc()
                                         {
                                             Generator = new SerializableDefinitionId(typeof(MyObjectBuilder_PlanetGeneratorDefinition), "Titan"),
-                                            BodyRadius = new MyObjectBuilder_InfinitePlanets_Range(){Min=75e3, Max=100e3},
+                                            BodyRadius = new Ob_InfinitePlanets_Range(){Min=75e3, Max=100e3},
                                             Probability = 1
                                         }
                                     }
@@ -145,27 +145,27 @@ namespace Equinox.ProceduralWorld
         public SessionCore()
         {
             Settings = new Settings();
-            Manager.RegisterFactory(MyLoggerBase.SuppliedDeps, () => new MyCustomLogger());
-            Manager.RegisterFactory(MyCommandDispatchComponent.SuppliedDeps, () => new MyCommandDispatchComponent());
-            Manager.RegisterFactory(MyNetworkComponent.SuppliedDeps, () => new MyNetworkComponent());
-            Manager.RegisterFactory(MyRPCComponent.SuppliedDeps, () => new MyRPCComponent());
-            Manager.RegisterFactory(MyProceduralWorldManager.SuppliedDeps, () => new MyProceduralWorldManager());
-            Manager.RegisterFactory(MyPartManager.SuppliedDeps, () => new MyPartManager());
-            Manager.RegisterFactory(MyProceduralFactions.SuppliedDeps, () => new MyProceduralFactions());
-            Manager.RegisterFactory(MyStationGeneratorManager.SuppliedDeps, () => new MyStationGeneratorManager());
-            Manager.RegisterFactory(MyBuildingDatabase.SuppliedDeps, () => new MyBuildingDatabase());
-            Manager.RegisterFactory(MyNameGeneratorBase.SuppliedDeps, () =>
+            Manager.RegisterFactory(LoggerBase.SuppliedDeps, () => new CustomLogger());
+            Manager.RegisterFactory(CommandDispatchComponent.SuppliedDeps, () => new CommandDispatchComponent());
+            Manager.RegisterFactory(NetworkComponent.SuppliedDeps, () => new NetworkComponent());
+            Manager.RegisterFactory(RPCComponent.SuppliedDeps, () => new RPCComponent());
+            Manager.RegisterFactory(ProceduralWorldManager.SuppliedDeps, () => new ProceduralWorldManager());
+            Manager.RegisterFactory(PartManager.SuppliedDeps, () => new PartManager());
+            Manager.RegisterFactory(ProceduralFactions.SuppliedDeps, () => new ProceduralFactions());
+            Manager.RegisterFactory(StationGeneratorManager.SuppliedDeps, () => new StationGeneratorManager());
+            Manager.RegisterFactory(BuildingDatabase.SuppliedDeps, () => new BuildingDatabase());
+            Manager.RegisterFactory(NameGeneratorBase.SuppliedDeps, () =>
             {
-                var gen = new MyCompositeNameGenerator();
-                var config = new MyObjectBuilder_CompositeNameGenerator();
-                config.Generators.Add(new MyObjectBuilder_CompositeNameGeneratorEntry()
+                var gen = new CompositeNameGenerator();
+                var config = new Ob_CompositeNameGenerator();
+                config.Generators.Add(new Ob_CompositeNameGeneratorEntry()
                 {
-                    Generator = new MyObjectBuilder_StatisticalNameGenerator() { StatisticsDatabase = "res:english" },
+                    Generator = new Ob_StatisticalNameGenerator() { StatisticsDatabase = "res:english" },
                     Weight = 0.9f
                 });
-                config.Generators.Add(new MyObjectBuilder_CompositeNameGeneratorEntry()
+                config.Generators.Add(new Ob_CompositeNameGeneratorEntry()
                 {
-                    Generator = new MyObjectBuilder_ExoticNameGenerator(),
+                    Generator = new Ob_ExoticNameGenerator(),
                     Weight = 0.1f
                 });
                 gen.LoadConfiguration(config);
@@ -185,7 +185,7 @@ namespace Equinox.ProceduralWorld
                     {
                         var value =
                             MyAPIGateway.Utilities
-                                .SerializeFromXML<MyObjectBuilder_SessionManager>(reader.ReadToEnd());
+                                .SerializeFromXML<Ob_SessionManager>(reader.ReadToEnd());
                         Manager.AppendConfiguration(value);
                         return true;
                     }
@@ -215,7 +215,7 @@ namespace Equinox.ProceduralWorld
                         var data = Encoding.UTF8.GetString(Convert.FromBase64String(content));
                         var value =
                             MyAPIGateway.Utilities
-                                .SerializeFromXML<MyObjectBuilder_SessionManager>(data);
+                                .SerializeFromXML<Ob_SessionManager>(data);
                         Manager.AppendConfiguration(value);
                         return true;
                     }
@@ -236,7 +236,7 @@ namespace Equinox.ProceduralWorld
             {
                 try
                 {
-                    Manager.Register(new MySessionBootstrapper());
+                    Manager.Register(new SessionBootstrapper());
                     if (MyAPIGateway.Session.IsDecider())
                     {
                         if (!RELEASE || (!LoadConfigFromFile() && !LoadConfigFromModpack()))
@@ -268,13 +268,13 @@ namespace Equinox.ProceduralWorld
             }
         }
 
-        private IMyLoggingBase Logger => Manager.FallbackLogger;
+        private ILoggingBase Logger => Manager.FallbackLogger;
 
         public override void Draw()
         {
             MyAPIGateway.Entities?.GetEntities(null, (x) =>
             {
-                var component = x?.Components?.Get<MyProceduralGridComponent>();
+                var component = x?.Components?.Get<ProceduralGridComponent>();
                 component?.DebugDraw();
                 return false;
             });

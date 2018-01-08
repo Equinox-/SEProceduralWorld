@@ -117,113 +117,113 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="ProceduralWorld\Buildings\Creation\IMyGridRemap.cs" />
-    <Compile Include="ProceduralWorld\Buildings\Creation\MyGridCreator.cs" />
-    <Compile Include="ProceduralWorld\Buildings\Creation\MyGridMeteorShower.cs" />
-    <Compile Include="ProceduralWorld\Buildings\Creation\MyGridRemap_LocalDamage.cs" />
-    <Compile Include="ProceduralWorld\Buildings\Creation\MyGridRemap_Ownership.cs" />
-    <Compile Include="ProceduralWorld\Buildings\Creation\MyRoomRemapper.cs" />
-    <Compile Include="ProceduralWorld\Buildings\Creation\MyGridRemap_Coloring.cs" />
-    <Compile Include="ProceduralWorld\Buildings\Creation\MyGridRemap_LocalTransform.cs" />
-    <Compile Include="ProceduralWorld\Buildings\Creation\MyGridRemap_Names.cs" />
-    <Compile Include="ProceduralWorld\Buildings\Creation\MyGridRemap_WorldTransform.cs" />
-    <Compile Include="ProceduralWorld\Buildings\Game\MyLoadingConstruction.cs" />
-    <Compile Include="ProceduralWorld\Buildings\Game\MyProceduralGridComponent.cs" />
-    <Compile Include="ProceduralWorld\Buildings\Game\MyProceduralStationModule.cs" />
-    <Compile Include="ProceduralWorld\Buildings\Generation\MyStationGenerator.cs" />
-    <Compile Include="ProceduralWorld\Buildings\Generation\MyStationGeneratorManager.cs" />
-    <Compile Include="ProceduralWorld\Buildings\MyBuildingControlCommands.cs" />
-    <Compile Include="ProceduralWorld\Buildings\MyBuildingDatabase.cs" />
-    <Compile Include="ProceduralWorld\Buildings\Seeds\MyProceduralSpeciality.cs" />
-    <Compile Include="ProceduralWorld\Buildings\Storage\MyProceduralMountPoint.cs" />
-    <Compile Include="ProceduralWorld\Buildings\Storage\MyProceduralRoom.cs" />
-    <Compile Include="ProceduralWorld\Manager\MyProceduralModule.cs" />
-    <Compile Include="ProceduralWorld\Manager\MyProceduralObject.cs" />
-    <Compile Include="ProceduralWorld\Manager\MyProceduralWorldManager.cs" />
-    <Compile Include="ProceduralWorld\Names\MyCompositeNameGenerator.cs" />
-    <Compile Include="ProceduralWorld\Names\MyStatisticalNameGenerator.cs" />
-    <Compile Include="ProceduralWorld\Names\MyExoticNameGenerator.cs" />
-    <Compile Include="ProceduralWorld\Buildings\Generation\MyStationNameGenerator.cs" />
-    <Compile Include="ProceduralWorld\Buildings\Library\MyAdjacencyRule.cs" />
-    <Compile Include="ProceduralWorld\Buildings\Library\MyObjectBuilder_Part.cs" />
-    <Compile Include="ProceduralWorld\Buildings\Library\MyPartDummyUtils.cs" />
-    <Compile Include="ProceduralWorld\Buildings\Library\MyPartMount.cs" />
-    <Compile Include="ProceduralWorld\Buildings\Library\MyPartMountPointBlock.cs" />
-    <Compile Include="ProceduralWorld\Buildings\Library\MyPartMetadata.cs" />
-    <Compile Include="ProceduralWorld\Buildings\Library\MyPartStorage_Intersect.cs" />
-    <Compile Include="ProceduralWorld\Buildings\Library\MyReservedSpace.cs" />
-    <Compile Include="ProceduralWorld\Buildings\Seeds\MyProceduralFactions.cs" />
-    <Compile Include="ProceduralWorld\Manager\MyTrackedEntity.cs" />
-    <Compile Include="ProceduralWorld\Names\MyNameGeneratorBase.cs" />
+    <Compile Include="ProceduralWorld\Buildings\Creation\Remap\IGridRemap.cs" />
+    <Compile Include="ProceduralWorld\Buildings\Creation\GridCreator.cs" />
+    <Compile Include="ProceduralWorld\Buildings\Creation\GridMeteorShower.cs" />
+    <Compile Include="ProceduralWorld\Buildings\Creation\Remap\LocalDamage.cs" />
+    <Compile Include="ProceduralWorld\Buildings\Creation\Remap\Ownership.cs" />
+    <Compile Include="ProceduralWorld\Buildings\Creation\RoomRemapper.cs" />
+    <Compile Include="ProceduralWorld\Buildings\Creation\Remap\Coloring.cs" />
+    <Compile Include="ProceduralWorld\Buildings\Creation\Remap\LocalTransform.cs" />
+    <Compile Include="ProceduralWorld\Buildings\Creation\Remap\Names.cs" />
+    <Compile Include="ProceduralWorld\Buildings\Creation\Remap\WorldTransform.cs" />
+    <Compile Include="ProceduralWorld\Buildings\Game\LoadingConstruction.cs" />
+    <Compile Include="ProceduralWorld\Buildings\Game\ProceduralGridComponent.cs" />
+    <Compile Include="ProceduralWorld\Buildings\Game\ProceduralStationModule.cs" />
+    <Compile Include="ProceduralWorld\Buildings\Generation\StationGenerator.cs" />
+    <Compile Include="ProceduralWorld\Buildings\Generation\StationGeneratorManager.cs" />
+    <Compile Include="ProceduralWorld\Buildings\BuildingControlCommands.cs" />
+    <Compile Include="ProceduralWorld\Buildings\BuildingDatabase.cs" />
+    <Compile Include="ProceduralWorld\Buildings\Seeds\ProceduralSpeciality.cs" />
+    <Compile Include="ProceduralWorld\Buildings\Storage\ProceduralMountPoint.cs" />
+    <Compile Include="ProceduralWorld\Buildings\Storage\ProceduralRoom.cs" />
+    <Compile Include="ProceduralWorld\Manager\ProceduralModule.cs" />
+    <Compile Include="ProceduralWorld\Manager\ProceduralObject.cs" />
+    <Compile Include="ProceduralWorld\Manager\ProceduralWorldManager.cs" />
+    <Compile Include="ProceduralWorld\Names\CompositeNameGenerator.cs" />
+    <Compile Include="ProceduralWorld\Names\StatisticalNameGenerator.cs" />
+    <Compile Include="ProceduralWorld\Names\ExoticNameGenerator.cs" />
+    <Compile Include="ProceduralWorld\Buildings\Generation\StationNameGenerator.cs" />
+    <Compile Include="ProceduralWorld\Buildings\Library\AdjacencyRule.cs" />
+    <Compile Include="ProceduralWorld\Buildings\Library\Ob_Part.cs" />
+    <Compile Include="ProceduralWorld\Buildings\Library\PartDummyUtils.cs" />
+    <Compile Include="ProceduralWorld\Buildings\Library\PartMount.cs" />
+    <Compile Include="ProceduralWorld\Buildings\Library\PartMountPointBlock.cs" />
+    <Compile Include="ProceduralWorld\Buildings\Library\PartMetadata.cs" />
+    <Compile Include="ProceduralWorld\Buildings\Library\PartStorage_Intersect.cs" />
+    <Compile Include="ProceduralWorld\Buildings\Library\ReservedSpace.cs" />
+    <Compile Include="ProceduralWorld\Buildings\Seeds\ProceduralFactions.cs" />
+    <Compile Include="ProceduralWorld\Manager\TrackedEntity.cs" />
+    <Compile Include="ProceduralWorld\Names\NameGeneratorBase.cs" />
     <Compile Include="ProceduralWorld\Settings.cs" />
-    <Compile Include="ProceduralWorld\Buildings\Storage\MyObjectBuilder_ProceduralConstruction.cs" />
-    <Compile Include="ProceduralWorld\Buildings\Storage\MyProceduralConstruction.cs" />
-    <Compile Include="ProceduralWorld\Buildings\Seeds\MyProceduralConstructionSeed.cs" />
-    <Compile Include="ProceduralWorld\Buildings\Seeds\MyProceduralFactionSeed.cs" />
-    <Compile Include="ProceduralWorld\Buildings\Storage\MySupportedBlockTypes.cs" />
-    <Compile Include="ProceduralWorld\Voxels\Asteroids\MyAutomaticAsteroidFieldsComponent.cs" />
-    <Compile Include="ProceduralWorld\Voxels\Planets\MyInfinitePlanetsModule.cs" />
-    <Compile Include="ProceduralWorld\Voxels\Planets\MyObjectBuilder_InfinitePlanets.cs" />
-    <Compile Include="Utils\Command\MyCommand.cs" />
-    <Compile Include="Utils\Command\MyCommandDispatchComponent.cs" />
-    <Compile Include="Utils\Command\MyCommandProviderComponent.cs" />
-    <Compile Include="Utils\Collections\MyMovingAverage.cs" />
-    <Compile Include="Utils\Collections\MyMultiDictionary.cs" />
-    <Compile Include="Utils\Logging\MyLoggingProxy.cs" />
-    <Compile Include="Utils\MyVectorSwizzling.cs" />
-    <Compile Include="Utils\Network\MyRPCRegistry.cs">
+    <Compile Include="ProceduralWorld\Buildings\Storage\Ob_ProceduralConstruction.cs" />
+    <Compile Include="ProceduralWorld\Buildings\Storage\ProceduralConstruction.cs" />
+    <Compile Include="ProceduralWorld\Buildings\Seeds\ProceduralConstructionSeed.cs" />
+    <Compile Include="ProceduralWorld\Buildings\Seeds\ProceduralFactionSeed.cs" />
+    <Compile Include="ProceduralWorld\Buildings\Storage\SupportedBlockTypes.cs" />
+    <Compile Include="ProceduralWorld\Voxels\Asteroids\AutomaticAsteroidFieldsComponent.cs" />
+    <Compile Include="ProceduralWorld\Voxels\Planets\InfinitePlanetsModule.cs" />
+    <Compile Include="ProceduralWorld\Voxels\Planets\Ob_InfinitePlanets.cs" />
+    <Compile Include="Utils\Command\Command.cs" />
+    <Compile Include="Utils\Command\CommandDispatchComponent.cs" />
+    <Compile Include="Utils\Command\CommandProviderComponent.cs" />
+    <Compile Include="Utils\Collections\MovingAverage.cs" />
+    <Compile Include="Utils\Collections\MultiDictionary.cs" />
+    <Compile Include="Utils\Logging\LoggingProxy.cs" />
+    <Compile Include="Utils\VectorSwizzling.cs" />
+    <Compile Include="Utils\Network\RPCRegistry.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
-      <DependentUpon>MyRPCRegistry.tt</DependentUpon>
+      <DependentUpon>RPCRegistry.tt</DependentUpon>
     </Compile>
-    <Compile Include="Utils\Network\MySyncComponent.cs" />
-    <Compile Include="Utils\Network\MySyncObject.cs" />
-    <Compile Include="Utils\Network\MySyncObjectFactory.cs" />
-    <Compile Include="Utils\Network\MySyncObjectGen.cs">
+    <Compile Include="Utils\Network\SyncComponent.cs" />
+    <Compile Include="Utils\Network\SyncObject.cs" />
+    <Compile Include="Utils\Network\SyncObjectFactory.cs" />
+    <Compile Include="Utils\Network\SyncObjectGen.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
-      <DependentUpon>MySyncObjectGen.tt</DependentUpon>
+      <DependentUpon>SyncObjectGen.tt</DependentUpon>
     </Compile>
     <Compile Include="Utils\Logging\MyFallbackLogger.cs" />
-    <Compile Include="Utils\Session\MySessionBootstrapper.cs" />
-    <Compile Include="Utils\Session\MyModSessionComponentRegistry.cs" />
-    <Compile Include="Utils\Session\MyModSessionComponentRegistryGen.cs">
+    <Compile Include="Utils\Session\SessionBootstrapper.cs" />
+    <Compile Include="Utils\Session\ModSessionComponentRegistry.cs" />
+    <Compile Include="Utils\Session\ModSessionComponentRegistryGen.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
-      <DependentUpon>MyModSessionComponentRegistryGen.tt</DependentUpon>
+      <DependentUpon>ModSessionComponentRegistryGen.tt</DependentUpon>
     </Compile>
-    <Compile Include="Utils\Session\MyObjectBuilder_ModSessionComponent.cs" />
-    <Compile Include="Utils\Stream\MySerializer.cs" />
-    <Compile Include="Utils\Stream\MyMemoryStream.cs" />
-    <Compile Include="Utils\Cache\MyCacheBase.cs" />
-    <Compile Include="Utils\Logging\IMyLogging.cs" />
+    <Compile Include="Utils\Session\Ob_ModSessionComponent.cs" />
+    <Compile Include="Utils\Stream\Serializer.cs" />
+    <Compile Include="Utils\Stream\MemoryStream.cs" />
+    <Compile Include="Utils\Cache\CacheBase.cs" />
+    <Compile Include="Utils\Logging\ILogging.cs" />
     <Compile Include="Utils\Logging\MyCustomLogger.cs" />
-    <Compile Include="ProceduralWorld\Buildings\Library\MyBlockSetInfo.cs" />
+    <Compile Include="ProceduralWorld\Buildings\Library\BlockSetInfo.cs" />
     <Compile Include="Utils\Logging\MyLoggerBase.cs" />
     <Compile Include="Utils\Logging\MyVRageLogger.cs" />
-    <Compile Include="Utils\Definitions\MyBlueprintIndex.cs" />
-    <Compile Include="Utils\MyCloneUtilities.cs" />
-    <Compile Include="Utils\Definitions\MyDefinitionFilter.cs" />
-    <Compile Include="Utils\Cache\MyLRUCache.cs" />
-    <Compile Include="ProceduralWorld\Buildings\Library\MyPartFromPrefab.cs" />
-    <Compile Include="ProceduralWorld\Buildings\Library\MyPartManager.cs" />
+    <Compile Include="Utils\Definitions\BlueprintIndex.cs" />
+    <Compile Include="Utils\CloneUtilities.cs" />
+    <Compile Include="Utils\Definitions\DefinitionFilter.cs" />
+    <Compile Include="Utils\Cache\LRUCache.cs" />
+    <Compile Include="ProceduralWorld\Buildings\Library\PartFromPrefab.cs" />
+    <Compile Include="ProceduralWorld\Buildings\Library\PartManager.cs" />
     <Compile Include="Utils\BlockTransformations.cs" />
-    <Compile Include="ProceduralWorld\Buildings\Exporter\MyDesignTools.cs" />
-    <Compile Include="Utils\Definitions\MyInventoryUtility.cs" />
-    <Compile Include="Utils\Definitions\MyOreUtilities.cs" />
-    <Compile Include="Utils\MyParallelUtilities.cs" />
-    <Compile Include="Utils\Random\MyRandomGenExtensions.cs" />
-    <Compile Include="Utils\MySerializableTuple.cs" />
-    <Compile Include="Utils\MySessionType.cs" />
-    <Compile Include="Utils\MyTupleEquality.cs" />
-    <Compile Include="Utils\MyUtilities.cs" />
+    <Compile Include="ProceduralWorld\Buildings\Exporter\DesignTools.cs" />
+    <Compile Include="Utils\Definitions\InventoryUtility.cs" />
+    <Compile Include="Utils\Definitions\OreUtilities.cs" />
+    <Compile Include="Utils\ParallelUtilities.cs" />
+    <Compile Include="Utils\Random\RandomGenExtensions.cs" />
+    <Compile Include="Utils\SerializableTuple.cs" />
+    <Compile Include="Utils\SessionType.cs" />
+    <Compile Include="Utils\TupleEquality.cs" />
+    <Compile Include="Utils\Utilities.cs" />
     <Compile Include="ProceduralWorld\SessionCore.cs" />
-    <Compile Include="Utils\MyConstantEntityRemap.cs" />
-    <Compile Include="Utils\Network\MyNetworkComponent.cs" />
-    <Compile Include="Utils\Network\MyPacket.cs" />
-    <Compile Include="Utils\Network\MyRPCComponent.cs" />
-    <Compile Include="Utils\Noise\MyOctreeNoise.cs" />
-    <Compile Include="Utils\Random\MyWeightedChoice.cs" />
+    <Compile Include="Utils\ConstantEntityRemap.cs" />
+    <Compile Include="Utils\Network\NetworkComponent.cs" />
+    <Compile Include="Utils\Network\Packet.cs" />
+    <Compile Include="Utils\Network\RPCComponent.cs" />
+    <Compile Include="Utils\Noise\OctreeNoise.cs" />
+    <Compile Include="Utils\Random\WeightedChoice.cs" />
     <Compile Include="Utils\Noise\VRageNoiseExtensions.cs" />
     <Compile Include="Utils\Noise\Keen\Combiners\MyAdd.cs" />
     <Compile Include="Utils\Noise\Keen\Combiners\MyBlend.cs" />
@@ -263,32 +263,32 @@
     <Compile Include="Utils\Noise\Keen\Patterns\MyRing.cs" />
     <Compile Include="Utils\Noise\Keen\Patterns\MySpherePattern.cs" />
     <Compile Include="Utils\Noise\Keen\Patterns\MySpheres.cs" />
-    <Compile Include="Utils\Pool\IMyBufferPoolBase.cs" />
-    <Compile Include="Utils\Pool\MyBufferPool.cs" />
-    <Compile Include="Utils\Pool\MyExactBufferPool.cs" />
-    <Compile Include="Utils\Pool\MyTypedObjectPool.cs" />
-    <Compile Include="Utils\Definitions\MyPowerUtilities.cs" />
-    <Compile Include="Utils\Session\MyLoggingSessionComponent.cs" />
-    <Compile Include="Utils\Session\MyModSessionVRageAdapter.cs" />
-    <Compile Include="Utils\Session\MyModSessionComponent.cs" />
-    <Compile Include="Utils\Session\MyModSessionManager.cs" />
-    <Compile Include="ProceduralWorld\Voxels\Asteroids\MyAsteroidFieldModule.cs" />
-    <Compile Include="ProceduralWorld\Voxels\Asteroids\MyAsteroidFieldShape.cs" />
-    <Compile Include="ProceduralWorld\Voxels\Asteroids\MyObjectBuilder_AsteroidField.cs" />
-    <Compile Include="ProceduralWorld\Voxels\Asteroids\MyProceduralAsteroid.cs" />
-    <Compile Include="ProceduralWorld\Voxels\VoxelBuilder\IMyStorageDataProviderBuilder.cs" />
-    <Compile Include="ProceduralWorld\Voxels\VoxelBuilder\MyAsteroidShapeGenerator.cs" />
-    <Compile Include="ProceduralWorld\Voxels\VoxelBuilder\MyCompositeShapeProviderBuilder.cs" />
-    <Compile Include="ProceduralWorld\Voxels\VoxelBuilder\MyOctreeStorageBuilder.cs" />
-    <Compile Include="ProceduralWorld\Voxels\VoxelBuilder\MyOctreeStorageBuilder.Serialization.cs" />
-    <Compile Include="ProceduralWorld\Voxels\VoxelBuilder\MyPlanetStorageProviderBuilder.cs" />
-    <Compile Include="ProceduralWorld\Voxels\VoxelBuilder\MyVoxelUtility.cs" />
-    <Compile Include="Utils\Stream\MySerializerGen.cs">
+    <Compile Include="Utils\Pool\IBufferPoolBase.cs" />
+    <Compile Include="Utils\Pool\BufferPool.cs" />
+    <Compile Include="Utils\Pool\ExactBufferPool.cs" />
+    <Compile Include="Utils\Pool\TypedObjectPool.cs" />
+    <Compile Include="Utils\Definitions\PowerUtilities.cs" />
+    <Compile Include="Utils\Session\LoggingSessionComponent.cs" />
+    <Compile Include="Utils\Session\ModSessionVRageAdapter.cs" />
+    <Compile Include="Utils\Session\ModSessionComponent.cs" />
+    <Compile Include="Utils\Session\ModSessionManager.cs" />
+    <Compile Include="ProceduralWorld\Voxels\Asteroids\AsteroidFieldModule.cs" />
+    <Compile Include="ProceduralWorld\Voxels\Asteroids\AsteroidFieldShape.cs" />
+    <Compile Include="ProceduralWorld\Voxels\Asteroids\Ob_AsteroidField.cs" />
+    <Compile Include="ProceduralWorld\Voxels\Asteroids\ProceduralAsteroid.cs" />
+    <Compile Include="ProceduralWorld\Voxels\VoxelBuilder\IStorageDataProviderBuilder.cs" />
+    <Compile Include="ProceduralWorld\Voxels\VoxelBuilder\AsteroidShapeGenerator.cs" />
+    <Compile Include="ProceduralWorld\Voxels\VoxelBuilder\CompositeShapeProviderBuilder.cs" />
+    <Compile Include="ProceduralWorld\Voxels\VoxelBuilder\OctreeStorageBuilder.cs" />
+    <Compile Include="ProceduralWorld\Voxels\VoxelBuilder\OctreeStorageBuilder.Serialization.cs" />
+    <Compile Include="ProceduralWorld\Voxels\VoxelBuilder\PlanetStorageProviderBuilder.cs" />
+    <Compile Include="ProceduralWorld\Voxels\VoxelBuilder\VoxelUtility.cs" />
+    <Compile Include="Utils\Stream\SerializerGen.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
-      <DependentUpon>MySerializerGen.tt</DependentUpon>
+      <DependentUpon>SerializerGen.tt</DependentUpon>
     </Compile>
-    <Compile Include="Utils\Stream\MySerializerRegistry.cs" />
+    <Compile Include="Utils\Stream\SerializerRegistry.cs" />
   </ItemGroup>
   <ItemGroup>
     <Analyzer Include="E:\Users\westin\Programming\SpaceEngineers\SEWhitelistDiagnostic\SEWhitelistChecker\SEWhitelistChecker.Vsix\bin\Debug\SEWhitelistChecker.dll" />
@@ -297,21 +297,21 @@
     <None Include="script.ruleset" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Utils\Network\MyRPCRegistry.tt">
+    <Content Include="Utils\Network\RPCRegistry.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
-      <LastGenOutput>MyRPCRegistry.cs</LastGenOutput>
+      <LastGenOutput>RPCRegistry.cs</LastGenOutput>
     </Content>
-    <Content Include="Utils\Network\MySyncObjectGen.tt">
+    <Content Include="Utils\Network\SyncObjectGen.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
-      <LastGenOutput>MySyncObjectGen.cs</LastGenOutput>
+      <LastGenOutput>SyncObjectGen.cs</LastGenOutput>
     </Content>
-    <Content Include="Utils\Session\MyModSessionComponentRegistryGen.tt">
+    <Content Include="Utils\Session\ModSessionComponentRegistryGen.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
-      <LastGenOutput>MyModSessionComponentRegistryGen.cs</LastGenOutput>
+      <LastGenOutput>ModSessionComponentRegistryGen.cs</LastGenOutput>
     </Content>
-    <Content Include="Utils\Stream\MySerializerGen.tt">
+    <Content Include="Utils\Stream\SerializerGen.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
-      <LastGenOutput>MySerializerGen.cs</LastGenOutput>
+      <LastGenOutput>SerializerGen.cs</LastGenOutput>
     </Content>
   </ItemGroup>
   <ItemGroup>
