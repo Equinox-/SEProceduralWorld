@@ -18,7 +18,13 @@ namespace Equinox.ProceduralWorld.Voxels.Asteroids
     public class AsteroidLayer
     {
         [ProtoMember]
+        [DefaultValue(false)]
+        [XmlElement]
+        public bool ExcludeInvalid = false;
+        
+        [ProtoMember]
         public double AsteroidMinSize;
+        
         [ProtoMember]
         public double AsteroidMaxSize;
 
@@ -93,6 +99,7 @@ namespace Equinox.ProceduralWorld.Voxels.Asteroids
     {
         [ProtoMember]
         [DefaultValue(null)]
+        [XmlArrayItem("MyAsteroidLayer")]
         public AsteroidLayer[] Layers;
 
         [XmlIgnore]

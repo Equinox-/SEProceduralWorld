@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Equinox.Utils.Noise.Keen;
 using Sandbox.Definitions;
+using VRage.Game;
 using VRage.Library.Utils;
 using VRage.Utils;
 using VRageMath;

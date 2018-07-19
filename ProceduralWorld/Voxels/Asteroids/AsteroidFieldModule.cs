@@ -23,6 +23,7 @@ namespace Equinox.ProceduralWorld.Voxels.Asteroids
     public partial class AsteroidFieldModule : ProceduralModule
     {
         public IAsteroidFieldShape Shape { get; private set; }
+
         public MatrixD Transform
         {
             get { return m_transform; }
@@ -32,6 +33,7 @@ namespace Equinox.ProceduralWorld.Voxels.Asteroids
                 MatrixD.Invert(ref m_transform, out m_invTransform);
             }
         }
+
         private MatrixD m_transform, m_invTransform;
         private AsteroidLayer[] m_layers;
         private IMyModule m_noise = new MySimplexFast(1, 10);
@@ -49,12 +51,15 @@ namespace Equinox.ProceduralWorld.Voxels.Asteroids
             }
         }
 
-        private readonly Dictionary<Vector4I, ProceduralAsteroid> m_asteroids = new Dictionary<Vector4I, ProceduralAsteroid>(Vector4I.Comparer);
+        private readonly Dictionary<Vector4I, ProceduralAsteroid> m_asteroids =
+            new Dictionary<Vector4I, ProceduralAsteroid>(Vector4I.Comparer);
 
         public override IEnumerable<ProceduralObject> Generate(BoundingSphereD include, BoundingSphereD? exclude)
         {
             var root = Vector3D.Transform(include.Center, m_invTransform);
-            var excludeRoot = exclude.HasValue ? Vector3D.Transform(exclude.Value.Center, m_invTransform) : default(Vector3D);
+            var excludeRoot = exclude.HasValue
+                ? Vector3D.Transform(exclude.Value.Center, m_invTransform)
+                : default(Vector3D);
 
             var minLocal = root - include.Radius;
             var maxLocal = root + include.Radius;
@@ -73,7 +78,7 @@ namespace Equinox.ProceduralWorld.Voxels.Asteroids
                 for (var itr = new Vector3I_RangeIterator(ref minPos, ref maxPos); itr.IsValid(); itr.MoveNext())
                 {
                     var seed = new Vector4I(itr.Current.X, itr.Current.Y, itr.Current.Z, i);
-                    var localPos = ((Vector3D)itr.Current + 0.5) * layer.AsteroidSpacing;
+                    var localPos = ((Vector3D) itr.Current + 0.5) * layer.AsteroidSpacing;
 
                     // Very quick, include/exclude.
                     if (Vector3D.DistanceSquared(root, localPos) > includePaddedSquared) continue;
@@ -97,9 +102,11 @@ namespace Equinox.ProceduralWorld.Voxels.Asteroids
                     ProceduralAsteroid procAst;
                     if (!m_asteroids.TryGetValue(seed, out procAst))
                     {
-                        var size = m_noise.GetValue(worldPos) * (layer.AsteroidMaxSize - layer.AsteroidMinSize) + layer.AsteroidMinSize;
+                        var size = m_noise.GetValue(worldPos) * (layer.AsteroidMaxSize - layer.AsteroidMinSize) +
+                                   layer.AsteroidMinSize;
                         m_asteroids[seed] = procAst = new ProceduralAsteroid(this, seed, worldPos, size, m_layers[i]);
                     }
+
                     procAst.SpawnIfNeeded((procAst.m_boundingBox.Center - include.Center).LengthSquared());
                     yield return procAst;
                 }
@@ -109,7 +116,9 @@ namespace Equinox.ProceduralWorld.Voxels.Asteroids
         public override bool RunOnClients => true;
 
 
-        private readonly MyBinaryStructHeap<SpawnRequest, SpawnRequest> m_asteroidsToAdd = new MyBinaryStructHeap<SpawnRequest, SpawnRequest>(128, SpawnRequestComparer.Instance);
+        private readonly MyBinaryStructHeap<SpawnRequest, SpawnRequest> m_asteroidsToAdd =
+            new MyBinaryStructHeap<SpawnRequest, SpawnRequest>(128, SpawnRequestComparer.Instance);
+
         private readonly MyQueue<ProceduralAsteroid> m_asteroidsToRemove = new MyQueue<ProceduralAsteroid>(128);
 
         public override bool TickBeforeSimulationRoundRobin()
@@ -142,7 +151,8 @@ namespace Equinox.ProceduralWorld.Voxels.Asteroids
             var ob = config as Ob_AsteroidField;
             if (ob == null)
             {
-                Log(MyLogSeverity.Critical, "Configuration type {0} doesn't match component type {1}", config.GetType(), GetType());
+                Log(MyLogSeverity.Critical, "Configuration type {0} doesn't match component type {1}", config.GetType(),
+                    GetType());
                 return;
             }
 
@@ -155,21 +165,31 @@ namespace Equinox.ProceduralWorld.Voxels.Asteroids
                 if (ob.ShapeSphere != null)
                 {
                     Shape = new AsteroidSphereShape(ob.ShapeSphere);
-                    Log(MyLogSeverity.Debug, "Shape is a sphere.  Radius is {0}m, thickness is {1}m", (ob.ShapeSphere.InnerRadius + ob.ShapeSphere.OuterRadius) / 2, ob.ShapeSphere.OuterRadius - ob.ShapeSphere.InnerRadius);
-                    Log(MyLogSeverity.Debug, "Viewable at {0}", Vector3D.Transform(new Vector3D((ob.ShapeRing.OuterRadius + ob.ShapeRing.InnerRadius) / 2, 0, 0), Transform));
+                    Log(MyLogSeverity.Debug, "Shape is a sphere.  Radius is {0}m, thickness is {1}m",
+                        (ob.ShapeSphere.InnerRadius + ob.ShapeSphere.OuterRadius) / 2,
+                        ob.ShapeSphere.OuterRadius - ob.ShapeSphere.InnerRadius);
+                    Log(MyLogSeverity.Debug, "Viewable at {0}",
+                        Vector3D.Transform(
+                            new Vector3D((ob.ShapeSphere.OuterRadius + ob.ShapeSphere.InnerRadius) / 2, 0, 0),
+                            Transform));
                 }
                 else if (ob.ShapeRing != null)
                 {
                     Shape = new AsteroidRingShape(ob.ShapeRing);
-                    Log(MyLogSeverity.Debug, "Shape is a ring.  Radius is {0}m, width is {1}m, height is {2}m", (ob.ShapeRing.InnerRadius + ob.ShapeRing.OuterRadius) / 2, ob.ShapeRing.OuterRadius - ob.ShapeRing.InnerRadius,
+                    Log(MyLogSeverity.Debug, "Shape is a ring.  Radius is {0}m, width is {1}m, height is {2}m",
+                        (ob.ShapeRing.InnerRadius + ob.ShapeRing.OuterRadius) / 2,
+                        ob.ShapeRing.OuterRadius - ob.ShapeRing.InnerRadius,
                         (ob.ShapeRing.OuterRadius - ob.ShapeRing.InnerRadius) * ob.ShapeRing.VerticalScaleMult);
-                    Log(MyLogSeverity.Debug, "Viewable at {0}", Vector3D.Transform(new Vector3D((ob.ShapeRing.OuterRadius + ob.ShapeRing.InnerRadius) / 2, 0, 0), Transform));
+                    Log(MyLogSeverity.Debug, "Viewable at {0}",
+                        Vector3D.Transform(
+                            new Vector3D((ob.ShapeRing.OuterRadius + ob.ShapeRing.InnerRadius) / 2, 0, 0), Transform));
                 }
                 else
                 {
                     Log(MyLogSeverity.Debug, "Shape is unknown");
                     throw new ArgumentException();
                 }
+
                 Log(MyLogSeverity.Debug, "Seed is {0}", ob.Seed);
                 m_layers = ob.Layers ?? new AsteroidLayer[0];
                 for (var i = 0; i < m_layers.Length; i++)
@@ -179,13 +199,15 @@ namespace Equinox.ProceduralWorld.Voxels.Asteroids
                     using (this.IndentUsing())
                     {
                         Log(MyLogSeverity.Debug, "Density = {0}", layer.AsteroidDensity);
-                        Log(MyLogSeverity.Debug, "Asteroid size = {0} - {1}", layer.AsteroidMinSize, layer.AsteroidMaxSize);
+                        Log(MyLogSeverity.Debug, "Asteroid size = {0} - {1}", layer.AsteroidMinSize,
+                            layer.AsteroidMaxSize);
                         Log(MyLogSeverity.Debug, "Spacing {0}", layer.AsteroidSpacing);
                         Log(MyLogSeverity.Debug, "Usable space {0}", layer.UsableRegion);
                         Log(MyLogSeverity.Debug, "Prohibited ores {0}", string.Join(", ", layer.ProhibitsOre));
                         Log(MyLogSeverity.Debug, "Required ores {0}", string.Join(", ", layer.RequiresOre));
                     }
                 }
+
                 Seed = ob.Seed;
             }
         }
@@ -213,6 +235,7 @@ namespace Equinox.ProceduralWorld.Voxels.Asteroids
                     OuterRadius = sphere.OuterRadius
                 };
             }
+
             field.Layers = m_layers;
             field.Seed = Seed;
             return field;

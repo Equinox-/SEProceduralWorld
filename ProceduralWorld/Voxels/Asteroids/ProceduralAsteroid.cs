@@ -21,6 +21,7 @@ namespace Equinox.ProceduralWorld.Voxels.Asteroids
         public class SpawnRequestComparer : IComparer<SpawnRequest>
         {
             public static readonly SpawnRequestComparer Instance = new SpawnRequestComparer();
+
             public int Compare(SpawnRequest x, SpawnRequest y)
             {
                 if (x.Distance > y.Distance + 1)
@@ -47,9 +48,9 @@ namespace Equinox.ProceduralWorld.Voxels.Asteroids
             {
                 Seed = seed;
                 WorldPosition = worldPos;
-                Rotation = new Quaternion((float)(worldPos.X % 1), (float)(worldPos.Y % 1), (float)(worldPos.Z % 1), 1);
+                Rotation = new Quaternion((float) (worldPos.X % 1), (float) (worldPos.Y % 1), (float) (worldPos.Z % 1), 1);
                 Rotation.Normalize();
-                Size = (float)size;
+                Size = (float) size;
                 m_boundingBox = new BoundingBoxD(WorldPosition - Size, WorldPosition + Size);
                 SeedSpecs = layer;
                 RaiseMoved();
@@ -69,9 +70,10 @@ namespace Equinox.ProceduralWorld.Voxels.Asteroids
                 {
                     if (!m_spawnQueued)
                     {
-                        var item = new SpawnRequest() { Asteroid = this, Distance = observedDistance };
+                        var item = new SpawnRequest() {Asteroid = this, Distance = observedDistance};
                         Module.m_asteroidsToAdd.Insert(item, item);
                     }
+
                     m_removeQueued = false;
                     m_spawnQueued = true;
                 }
@@ -102,10 +104,14 @@ namespace Equinox.ProceduralWorld.Voxels.Asteroids
                         var mat = MatrixD.CreateFromQuaternion(Rotation);
                         mat.Translation = WorldPosition;
                         var genSeed = WorldPosition.GetHashCode();
-                        genSeed = VoxelUtility.FindAsteroidSeed(genSeed, Size, SeedSpecs.ProhibitsOre, SeedSpecs.RequiresOre, 10);
-                        VoxelMap = VoxelUtility.SpawnAsteroid(new MyPositionAndOrientation(mat), VoxelUtility.CreateProceduralAsteroidProvider(genSeed, Size));
-                        VoxelMap.OnPhysicsChanged += MarkForSave;
+                        if (VoxelUtility.TryFindAsteroidSeed(ref genSeed, Size, SeedSpecs.ProhibitsOre, SeedSpecs.RequiresOre, 10) || !SeedSpecs.ExcludeInvalid)
+                        {
+                            VoxelMap = VoxelUtility.SpawnAsteroid(new MyPositionAndOrientation(mat),
+                                VoxelUtility.CreateProceduralAsteroidProvider(genSeed, Size));
+                            VoxelMap.OnPhysicsChanged += MarkForSave;
+                        }
                     }
+
                     m_spawnQueued = false;
                     m_removeQueued = false;
                 }
@@ -124,6 +130,7 @@ namespace Equinox.ProceduralWorld.Voxels.Asteroids
                         var vox = VoxelMap;
                         MyAPIGateway.Utilities.InvokeOnGameThread(() => vox?.Close());
                     }
+
                     VoxelMap = null;
                     m_removeQueued = false;
                     m_removeQueued = false;

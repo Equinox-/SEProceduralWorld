@@ -27,6 +27,7 @@ namespace Equinox.ProceduralWorld.Voxels.VoxelBuilder
         {
             return CompositeShapeProviderBuilder.CreateAsteroidShape(seed, radius, 0);
         }
+
         public static CompositeShapeProviderBuilder CreateProceduralAsteroidProvider(int seed, float radius)
         {
             return CompositeShapeProviderBuilder.CreateAsteroidShape(seed, radius, 2);
@@ -35,20 +36,21 @@ namespace Equinox.ProceduralWorld.Voxels.VoxelBuilder
         // MyEntityIdentifier.ID_OBJECT_TYPE.ASTEROID
         private const int ASTEROID_TYPE = 6;
         private const int PLANET_TYPE = 7;
+
         private static long GetAsteroidEntityId(string storageName)
         {
-            return ((long)storageName.Hash64()) & 0x00FFFFFFFFFFFFFF | ((long)ASTEROID_TYPE << 56);
+            return ((long) storageName.Hash64()) & 0x00FFFFFFFFFFFFFF | ((long) ASTEROID_TYPE << 56);
         }
 
         private static long GetPlanetEntityId(string storageName)
         {
-            return ((long)storageName.Hash64()) & 0x00FFFFFFFFFFFFFF | ((long)PLANET_TYPE << 56);
+            return ((long) storageName.Hash64()) & 0x00FFFFFFFFFFFFFF | ((long) PLANET_TYPE << 56);
         }
 
         public static IMyVoxelMap SpawnAsteroid(MyPositionAndOrientation pos, CompositeShapeProviderBuilder provider)
         {
             var storage = new OctreeStorageBuilder(provider, MyVoxelCoordSystems.FindBestOctreeSize(provider.Size));
-            var storageName = $"proc_astr_{provider.Seed}_{provider.Size}_{(long)pos.Position.X}_{(long)pos.Position.Y}_{(long)pos.Position.Z}";
+            var storageName = $"proc_astr_{provider.Seed}_{provider.Size}_{(long) pos.Position.X}_{(long) pos.Position.Y}_{(long) pos.Position.Z}";
             var entityID = GetAsteroidEntityId(storageName);
             IMyEntity currEntity;
             if (MyAPIGateway.Entities.TryGetEntityById(entityID, out currEntity))
@@ -62,13 +64,12 @@ namespace Equinox.ProceduralWorld.Voxels.VoxelBuilder
             if (realEntity == null) return entity;
             MyEntities.RaiseEntityCreated(realEntity);
             MyEntities.Add(realEntity);
-            realEntity.IsReadyForReplication = true;
             return entity;
         }
 
         private static void CastProhibit<TR>(object o, out TR res) where TR : class
         {
-            res = (TR)o;
+            res = (TR) o;
         }
 
         [ProtoContract]
@@ -146,16 +147,15 @@ namespace Equinox.ProceduralWorld.Voxels.VoxelBuilder
         }
 
         private static readonly byte[] _defaultAtmosphereSettings =
-                Convert.FromBase64String(
-                    "ShLFAgAAoEHtAgAA8ECVAwAAIEFdAABIQmoSxQIAAEhC7QIAAEhClQMAAEhChQEAACBBlQEAACBBpQEAAIA/tQEAAEhCxQHl8n8/1QEAAIA/9QEAAIA/hQIAAIA/nQIAAAA/")
-            ;
+            Convert.FromBase64String(
+                "ShLFAgAAoEHtAgAA8ECVAwAAIEFdAABIQmoSxQIAAEhC7QIAAEhClQMAAEhChQEAACBBlQEAACBBpQEAAIA/tQEAAEhCxQHl8n8/1QEAAIA/9QEAAIA/hQIAAIA/nQIAAAA/");
 
         private static void MoveAtmosphereSettings<TR>(TR? o, out TR res) where TR : struct
         {
             res = o ?? MyAPIGateway.Utilities.SerializeFromBinary<TR>(_defaultAtmosphereSettings);
         }
 
-        private static float AtmosphereRadius<TR>(TR? data) where TR:struct
+        private static float AtmosphereRadius<TR>(TR? data) where TR : struct
         {
             if (data.HasValue)
             {
@@ -165,6 +165,7 @@ namespace Equinox.ProceduralWorld.Voxels.VoxelBuilder
                     return 1 + scale;
                 }
             }
+
             return 1.75f;
         }
 
@@ -183,11 +184,11 @@ namespace Equinox.ProceduralWorld.Voxels.VoxelBuilder
 
             var outerRadius = averagePlanetRadius + maxHillSize;
             var innerRadius = averagePlanetRadius + minHillSize;
-            
-            var atmosphereRadius = AtmosphereRadius(generatorDef.AtmosphereSettings);
-            atmosphereRadius *= (float)provider.Radius;
 
-            var random = new Random((int)seed);
+            var atmosphereRadius = AtmosphereRadius(generatorDef.AtmosphereSettings);
+            atmosphereRadius *= (float) provider.Radius;
+
+            var random = new Random((int) seed);
             var redAtmosphereShift = random.NextFloat(generatorDef.HostileAtmosphereColorShift.R.Min, generatorDef.HostileAtmosphereColorShift.R.Max);
             var greenAtmosphereShift = random.NextFloat(generatorDef.HostileAtmosphereColorShift.G.Min, generatorDef.HostileAtmosphereColorShift.G.Max);
             var blueAtmosphereShift = random.NextFloat(generatorDef.HostileAtmosphereColorShift.B.Min, generatorDef.HostileAtmosphereColorShift.B.Max);
@@ -198,7 +199,7 @@ namespace Equinox.ProceduralWorld.Voxels.VoxelBuilder
             atmosphereWavelengths.Y = MathHelper.Clamp(atmosphereWavelengths.Y, 0.1f, 1.0f);
             atmosphereWavelengths.Z = MathHelper.Clamp(atmosphereWavelengths.Z, 0.1f, 1.0f);
 
-            var entityId = GetPlanetEntityId($"proc_planet_{provider.Seed}_{(int)provider.Radius}_{(long)pos.X}_{(long)pos.Y}_{(long)pos.Z}");
+            var entityId = GetPlanetEntityId($"proc_planet_{provider.Seed}_{(int) provider.Radius}_{(long) pos.X}_{(long) pos.Y}_{(long) pos.Z}");
             var result = MyAPIGateway.Entities.GetEntityById(entityId);
             if (result != null)
                 return result as MyPlanet;
@@ -209,10 +210,10 @@ namespace Equinox.ProceduralWorld.Voxels.VoxelBuilder
             CastProhibit(storage, out planetInitArguments.Storage);
             var posMinCorner = pos - provider.Radius;
             planetInitArguments.PositionMinCorner = posMinCorner;
-            planetInitArguments.Radius = (float)provider.Radius;
+            planetInitArguments.Radius = (float) provider.Radius;
             planetInitArguments.AtmosphereRadius = atmosphereRadius;
-            planetInitArguments.MaxRadius = (float)outerRadius;
-            planetInitArguments.MinRadius = (float)innerRadius;
+            planetInitArguments.MaxRadius = (float) outerRadius;
+            planetInitArguments.MinRadius = (float) innerRadius;
             planetInitArguments.HasAtmosphere = generatorDef.HasAtmosphere;
             planetInitArguments.AtmosphereWavelengths = atmosphereWavelengths;
             planetInitArguments.GravityFalloff = generatorDef.GravityFalloffPower;
@@ -230,32 +231,38 @@ namespace Equinox.ProceduralWorld.Voxels.VoxelBuilder
             MyEntities.Add(planet);
             MyEntities.RaiseEntityCreated(planet);
 
-            planet.IsReadyForReplication = true;
-
             return planet;
         }
 
-        public static int FindAsteroidSeed(int seed, float size, HashSet<string> prohibitsOre, HashSet<string> requiresOre, int maxTries = 5)
+        public static bool TryFindAsteroidSeed(ref int seed, float size, HashSet<string> prohibitsOre, HashSet<string> requiresOre, int maxTries = 5)
         {
-            if (requiresOre.Count == 0 && prohibitsOre.Count == 0) return seed;
+            if (requiresOre.Count == 0 && prohibitsOre.Count == 0)
+                return true;
             var gen = AsteroidShapeGenerator.AsteroidGenerators[MyAPIGateway.Session.SessionSettings.VoxelGeneratorVersion];
-            var success = false;
+
             for (var i = 0; i < maxTries; i++)
             {
                 AsteroidShapeGenerator.CompositeShapeGeneratedDataBuilder data;
                 gen(seed, size, out data);
-                if (requiresOre.Count == 0 || requiresOre.Contains(data.DefaultMaterial.MinedOre) || data.Deposits.Any(x => requiresOre.Contains(x.Material.MinedOre)))
-                    if (prohibitsOre.Count == 0 || (!prohibitsOre.Contains(data.DefaultMaterial.MinedOre) &&
-                                                    !data.Deposits.Any(x => prohibitsOre.Contains(x.Material.MinedOre))))
+                if (requiresOre.Count == 0 || requiresOre.Contains(data.DefaultMaterial.MinedOre) || ContainsAny(data.Deposits, requiresOre))
+                    if (prohibitsOre.Count == 0 || (!prohibitsOre.Contains(data.DefaultMaterial.MinedOre) && !ContainsAny(data.Deposits, prohibitsOre)))
                     {
-                        success = true;
-                        break;
+                        return true;
                     }
+
                 seed *= 982451653;
             }
-            //            if (!success)
-            //                SessionCore.Log("Failed to create asteroid with constraints: Prohibit=[{0}], Require=[{1}]", string.Join(", ", prohibitsOre), string.Join(", ", requiresOre));
-            return seed;
+
+            return false;
+        }
+
+        // ReSharper disable once ParameterTypeCanBeEnumerable.Local
+        private static bool ContainsAny(AsteroidShapeGenerator.CompositeShapeOreDepositBuilder[] builders, HashSet<string> test)
+        {
+            foreach (var k in builders)
+                if (test.Contains(k.Material.MinedOre))
+                    return true;
+            return false;
         }
     }
 }

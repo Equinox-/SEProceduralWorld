@@ -40,7 +40,7 @@ namespace Equinox.ProceduralWorld.Manager
         private readonly MyDynamicAABBTreeD m_tree = new MyDynamicAABBTreeD(new Vector3D(10));
 
         private readonly MyConcurrentPool<List<ProceduralObject>> m_objectListPool =
-            new MyConcurrentPool<List<ProceduralObject>>(2, true);
+            new MyConcurrentPool<List<ProceduralObject>>(2);
 
         private void ObjectMoved(ProceduralObject item)
         {
@@ -111,7 +111,7 @@ namespace Equinox.ProceduralWorld.Manager
 
         private bool AddToTree(ProceduralObject t)
         {
-            if (t.m_proxyID == -1) return false;
+            if (t.m_proxyID != -1) return false;
             t.m_proxyID = m_tree.AddProxy(ref t.m_boundingBox, t, 0);
             t.OnMoved += ObjectMoved;
             t.OnRemoved += RemoveFromTree;
@@ -148,9 +148,11 @@ namespace Equinox.ProceduralWorld.Manager
 
                 foreach (var entity in m_trackedEntities.Values)
                 {
-                    m_dirtyVolumes.Enqueue(entity.PreviousView);
                     if (entity.ShouldGenerate())
+                    {
+                        m_dirtyVolumes.Enqueue(entity.PreviousView);
                         entity.UpdatePrevious();
+                    }
                 }
             }
 

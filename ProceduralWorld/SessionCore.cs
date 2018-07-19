@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using Equinox.ProceduralWorld.Buildings;
@@ -37,13 +38,13 @@ namespace Equinox.ProceduralWorld
     {
         public const bool RELEASE = true;
 
-        public static Ob_SessionManager DefaultConfiguration()
+        public static MyObjectBuilder_SessionManager DefaultConfiguration()
         {
             // ReSharper disable once UseObjectOrCollectionInitializer
-            var res = new Ob_SessionManager();
+            var res = new MyObjectBuilder_SessionManager();
             // ReSharper disable once UseObjectOrCollectionInitializer
             res.SessionComponents = new List<Ob_ModSessionComponent>();
-            res.SessionComponents.Add(new Ob_CustomLogger() { Filename = "ProceduralWorld.log", LogLevel = MyLogSeverity.Debug });
+            res.SessionComponents.Add(new Ob_CustomLogger() {Filename = "ProceduralWorld.log", LogLevel = MyLogSeverity.Debug});
             if (!RELEASE)
             {
                 res.SessionComponents.Add(new Ob_CommandDispatch());
@@ -85,16 +86,16 @@ namespace Equinox.ProceduralWorld
                                 new Ob_InfinitePlanets_PlanetDesc()
                                 {
                                     Generator = new SerializableDefinitionId(typeof(MyObjectBuilder_PlanetGeneratorDefinition), "EarthLike"),
-                                    BodyRadius = new Ob_InfinitePlanets_Range(){Min=100e3, Max=120e3},
-                                    OrbitRadius = new Ob_InfinitePlanets_Range(){Min=500e3, Max=1000e3},
-                                    Probability =  2,
-                                    MoonCount = new Ob_InfinitePlanets_Range(){Min=1, Max=1},
+                                    BodyRadius = new Ob_InfinitePlanets_Range() {Min = 100e3, Max = 120e3},
+                                    OrbitRadius = new Ob_InfinitePlanets_Range() {Min = 500e3, Max = 1000e3},
+                                    Probability = 2,
+                                    MoonCount = new Ob_InfinitePlanets_Range() {Min = 1, Max = 1},
                                     MoonTypes = new List<Ob_InfinitePlanets_MoonDesc>()
                                     {
                                         new Ob_InfinitePlanets_MoonDesc()
                                         {
                                             Generator = new SerializableDefinitionId(typeof(MyObjectBuilder_PlanetGeneratorDefinition), "Moon"),
-                                            BodyRadius = new Ob_InfinitePlanets_Range(){Min=40e3, Max=60e3},
+                                            BodyRadius = new Ob_InfinitePlanets_Range() {Min = 40e3, Max = 60e3},
                                             Probability = 1
                                         }
                                     }
@@ -102,9 +103,9 @@ namespace Equinox.ProceduralWorld
                                 new Ob_InfinitePlanets_PlanetDesc()
                                 {
                                     Generator = new SerializableDefinitionId(typeof(MyObjectBuilder_PlanetGeneratorDefinition), "Mars"),
-                                    BodyRadius = new Ob_InfinitePlanets_Range(){Min=100e3, Max=120e3},
-                                    OrbitRadius = new Ob_InfinitePlanets_Range(){Min=1500e3, Max=2500e3},
-                                    MoonCount = new Ob_InfinitePlanets_Range(){Min=0, Max=0},
+                                    BodyRadius = new Ob_InfinitePlanets_Range() {Min = 100e3, Max = 120e3},
+                                    OrbitRadius = new Ob_InfinitePlanets_Range() {Min = 1500e3, Max = 2500e3},
+                                    MoonCount = new Ob_InfinitePlanets_Range() {Min = 0, Max = 0},
                                     Probability = 2,
                                     MoonTypes = new List<Ob_InfinitePlanets_MoonDesc>()
                                     {
@@ -113,22 +114,22 @@ namespace Equinox.ProceduralWorld
                                 new Ob_InfinitePlanets_PlanetDesc()
                                 {
                                     Generator = new SerializableDefinitionId(typeof(MyObjectBuilder_PlanetGeneratorDefinition), "Alien"),
-                                    BodyRadius = new Ob_InfinitePlanets_Range(){Min=150e3, Max=250e3},
-                                    OrbitRadius = new Ob_InfinitePlanets_Range(){Min=3000e3, Max=6000e3},
-                                    Probability =  1,
-                                    MoonCount = new Ob_InfinitePlanets_Range(){Min=3, Max=6},
+                                    BodyRadius = new Ob_InfinitePlanets_Range() {Min = 150e3, Max = 250e3},
+                                    OrbitRadius = new Ob_InfinitePlanets_Range() {Min = 3000e3, Max = 6000e3},
+                                    Probability = 1,
+                                    MoonCount = new Ob_InfinitePlanets_Range() {Min = 3, Max = 6},
                                     MoonTypes = new List<Ob_InfinitePlanets_MoonDesc>()
                                     {
                                         new Ob_InfinitePlanets_MoonDesc()
                                         {
                                             Generator = new SerializableDefinitionId(typeof(MyObjectBuilder_PlanetGeneratorDefinition), "Europa"),
-                                            BodyRadius = new Ob_InfinitePlanets_Range(){Min=30e3, Max=50e3},
+                                            BodyRadius = new Ob_InfinitePlanets_Range() {Min = 30e3, Max = 50e3},
                                             Probability = 1
                                         },
                                         new Ob_InfinitePlanets_MoonDesc()
                                         {
                                             Generator = new SerializableDefinitionId(typeof(MyObjectBuilder_PlanetGeneratorDefinition), "Titan"),
-                                            BodyRadius = new Ob_InfinitePlanets_Range(){Min=75e3, Max=100e3},
+                                            BodyRadius = new Ob_InfinitePlanets_Range() {Min = 75e3, Max = 100e3},
                                             Probability = 1
                                         }
                                     }
@@ -138,10 +139,12 @@ namespace Equinox.ProceduralWorld
                     }
                 });
             }
+
             return res;
         }
 
         public Settings Settings { get; }
+
         public SessionCore()
         {
             Settings = new Settings();
@@ -160,7 +163,7 @@ namespace Equinox.ProceduralWorld
                 var config = new Ob_CompositeNameGenerator();
                 config.Generators.Add(new Ob_CompositeNameGeneratorEntry()
                 {
-                    Generator = new Ob_StatisticalNameGenerator() { StatisticsDatabase = "res:english" },
+                    Generator = new Ob_StatisticalNameGenerator() {StatisticsDatabase = "res:english"},
                     Weight = 0.9f
                 });
                 config.Generators.Add(new Ob_CompositeNameGeneratorEntry()
@@ -185,7 +188,7 @@ namespace Equinox.ProceduralWorld
                     {
                         var value =
                             MyAPIGateway.Utilities
-                                .SerializeFromXML<Ob_SessionManager>(reader.ReadToEnd());
+                                .SerializeFromXML<MyObjectBuilder_SessionManager>(reader.ReadToEnd());
                         Manager.AppendConfiguration(value);
                         return true;
                     }
@@ -195,6 +198,7 @@ namespace Equinox.ProceduralWorld
             {
                 Logger.Error("Failed to parse config:\n{0}", e.ToString());
             }
+
             return false;
         }
 
@@ -215,7 +219,7 @@ namespace Equinox.ProceduralWorld
                         var data = Encoding.UTF8.GetString(Convert.FromBase64String(content));
                         var value =
                             MyAPIGateway.Utilities
-                                .SerializeFromXML<Ob_SessionManager>(data);
+                                .SerializeFromXML<MyObjectBuilder_SessionManager>(data);
                         Manager.AppendConfiguration(value);
                         return true;
                     }
@@ -226,10 +230,12 @@ namespace Equinox.ProceduralWorld
                     }
                 }
             }
+
             return false;
         }
 
         private bool m_init = false;
+
         public override void UpdateBeforeSimulation()
         {
             if (!m_init)
@@ -250,6 +256,7 @@ namespace Equinox.ProceduralWorld
                     Logger.Error("Failed to start bootstrapper.\n{0}", e);
                 }
             }
+
             base.UpdateBeforeSimulation();
             if (!m_init)
             {
@@ -264,6 +271,7 @@ namespace Equinox.ProceduralWorld
                 {
                     Logger.Error("Failed to write default configuration.\n{0}", e);
                 }
+
                 m_init = true;
             }
         }
